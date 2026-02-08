@@ -1,0 +1,748 @@
+# Mix Stud Online 詳細設計書（MVP）
+
+Version: v1.0  
+Last Updated: 2026-02-08  
+参照要件: `docs/mvp/要件定義書_mvp.md`  
+
+---
+
+## 1. 本書の目的
+
+本書は、MVPとして以下3ゲームをリアルタイム対戦可能にするための詳細設計を定義する。
+
+- Stud Hi
+- Razz
+- Stud Hi-Lo（Stud8）
+
+対象は「実装可能な粒度」の仕様確定であり、画面/API/イベント/DB/進行ロジック/復旧/テスト方針までを含む。
+
+---
+
+## 2. 設計原則
+
+- サーバー権威モデルを徹底し、クライアントは表示と入力のみを担当する。
+- 1卓を1つの直列処理コンテキスト（Table Actor）で処理し、競合と順序崩れを防止する。
+- ゲーム進行はイベントログにより永続化し、再起動後も復元可能にする。
+- ゲーム固有ルールはプラガブルな `GameRule` 実装へ分離し、将来のHORSE拡張に備える。
+- MVPは2卓固定のため、分散システムを過剰導入せず、単一リージョン・単一ゲームサーバー構成を基本とする。
+
+---
+
+## 3. システム構成
+
+## 3.1 論理構成
+
+```mermaid
+flowchart LR
+  C["Web Client (React/TS)"] -->|HTTPS| API["API Server"]
+  C -->|WebSocket| RT["Realtime Gateway"]
+  API --> AUTH["Google OAuth"]
+  API --> DB[(PostgreSQL)]
+  RT --> GE["Game Engine (Table Actors)"]
+  GE --> DB
+  API --> DB
+```
+
+## 3.2 コンポーネント責務
+
+| コンポーネント | 主責務 |
+| --- | --- |
+| Web Client | ログイン、ロビー表示、卓表示、履歴表示、WebSocket接続管理 |
+| API Server | 認証、セッション発行、ロビー取得、履歴取得 |
+| Realtime Gateway | 接続管理、認可、コマンド受信、イベント配信 |
+| Game Engine | ルール判定、進行、タイムアウト処理、イベント生成 |
+| PostgreSQL | ユーザー、卓、席、ハンド、イベントログ、結果、監査ログ保存 |
+
+## 3.3 技術選定（MVP）
+
+| 領域 | 採用 |
+| --- | --- |
+| Frontend | React + TypeScript + Vite |
+| Backend | Node.js + TypeScript（API/Gateway/Game Engine同一プロセス） |
+| Realtime | WebSocket（JSONメッセージ） |
+| DB | PostgreSQL 16 |
+| Auth | Google OAuth 2.0 / OIDC |
+
+## 3.4 デプロイ前提（MVP）
+
+- アプリケーション: API/Gateway/Game Engineを同一サービスとして1インスタンスで稼働
+- DB: PostgreSQL単一インスタンス
+- 固定卓: 運営作成済み2卓を初期データとして投入
+- ローリング更新時は「新規手開始を一時停止 -> 進行中ハンド終了待ち -> デプロイ」を標準運用とする
+
+---
+
+## 4. ドメイン設計
+
+## 4.1 主要エンティティ
+
+| エンティティ | 説明 |
+| --- | --- |
+| User | プレイヤー。Googleアカウントと紐付く |
+| Wallet | プレイマネー残高 |
+| Table | 卓設定（ステークス固定、人数上限、現在のゲーム種別） |
+| Seat | 卓内の座席と着席状態 |
+| Hand | 1回の配札〜精算までの単位 |
+| HandPlayer | ハンド参加プレイヤーのスナップショット |
+| Pot | メイン/サイドポットの論理表現 |
+| Event | 進行ログ（正史） |
+
+## 4.2 状態モデル
+
+### テーブル状態
+
+- `WAITING`: アクティブ参加者が2未満
+- `DEALING`: 配札中
+- `BETTING`: アクション待ち
+- `SHOWDOWN`: 手札公開と判定
+- `HAND_END`: 配当確定・次ハンド準備
+
+### 席状態
+
+- `EMPTY`
+- `SEATED_WAIT_NEXT_HAND`（途中参加・次ハンド待ち）
+- `ACTIVE`
+- `SIT_OUT`
+- `DISCONNECTED`
+
+### ハンド内プレイヤー状態
+
+- `IN_HAND`
+- `FOLDED`
+- `ALL_IN`
+- `AUTO_FOLDED`（タイムアウト等）
+
+## 4.3 共通識別子
+
+- `user_id`: UUID
+- `table_id`: UUID
+- `hand_id`: UUID
+- `event_id`: UUID
+- `table_seq`: 卓内通番（1,2,3...）
+- `hand_seq`: ハンド内通番（1,2,3...）
+
+## 4.4 チップ/バイインモデル
+
+- `wallet.balance`: 卓外ウォレット残高
+- `seat.stack`: 卓内スタック
+- 着席時は `wallet -> seat` へ `buyIn` を移動
+- 退席時は `seat -> wallet` へ残額を払い戻し
+
+バイイン制約:
+
+- `buyIn <= 2000`（要件）
+- `buyIn >= 200`（本設計の暫定値）
+- `buyIn <= wallet.balance`
+- ハンド進行中のリバイ/追加入金は不可（MVP）
+
+---
+
+## 5. テーブル進行詳細
+
+## 5.1 ハンド開始条件
+
+- 次を満たすと新ハンド開始:
+  - `Seat.status in (ACTIVE)` の人数が2人以上
+  - 上記プレイヤー全員が `stack >= ante`
+- `SIT_OUT`、`SEATED_WAIT_NEXT_HAND` は不参加
+
+## 5.2 ディーラーポジション
+
+- Studでも公平性のため `dealer_seat` をハンドごとに1席時計回りで進める。
+- 配札順、同点時オッドチップ配分起点に使用する。
+
+## 5.3 ミックスローテーション
+
+- ローテーション順: `StudHi -> Razz -> Stud8 -> repeat`
+- 6ハンドごとに次ゲームへ移行
+- `table.mix_index` で現在ゲーム、`table.hands_since_rotation` で手数を管理
+
+更新ルール:
+
+1. ハンド終了時に `hands_since_rotation += 1`
+2. `hands_since_rotation == 6` なら `mix_index = (mix_index + 1) % 3`、`hands_since_rotation = 0`
+
+## 5.4 ストリート進行
+
+| Street | 配布 | ベット単位 |
+| --- | --- | --- |
+| 3rd | Hole2 + Up1 | Small Bet($20) |
+| 4th | Up1 | Small Bet($20) |
+| 5th | Up1 | Big Bet($40) |
+| 6th | Up1 | Big Bet($40) |
+| 7th | Hole1 | Big Bet($40) |
+
+## 5.5 途中参加（ハンド進行中着席）
+
+- ハンド進行中の `table.join` 成功時は `SEATED_WAIT_NEXT_HAND` とする。
+- 進行中ハンドには参加せず、次ハンド開始時に `ACTIVE` へ遷移する。
+- 待機中クライアントへは観戦情報（公開情報のみ）を配信する。
+
+## 5.6 スタック0時の扱い
+
+- ハンド精算後 `seat.stack == 0` のプレイヤーは自動 `LEAVE`。
+- 自動LEAVE時は席を解放し、ロビー人数へ即時反映する。
+- 補充不可のため、同卓再参加にはウォレット残高の範囲で再バイインが必要。
+
+---
+
+## 6. ルールエンジン設計
+
+## 6.1 ルール抽象
+
+```ts
+interface GameRule {
+  gameType: "STUD_HI" | "RAZZ" | "STUD_8";
+  determineBringIn(players: BringInCandidate[]): SeatId;
+  determineFirstToAct(street: Street, players: StreetView[]): SeatId;
+  evaluateShowdown(players: ShowdownHand[]): ShowdownResult;
+}
+```
+
+## 6.2 Bring-in判定
+
+### StudHi / Stud8
+
+比較優先順位（要件準拠）:
+
+1. ペア判定: ペア無しがBring-in対象
+2. Upcardランク: 低いランクがBring-in対象（A高）
+3. スート: `Spade > Heart > Diamond > Club`（強い順）
+
+実装上は「弱さスコア」が最も高いプレイヤーを選ぶ。
+
+### Razz
+
+比較優先順位（要件準拠）:
+
+1. ペア判定: ペア有りがBring-in対象
+2. Upcardランク: 高いランクがBring-in対象（A低）
+3. スート: `Club > Diamond > Heart > Spade`（強い順）
+
+## 6.3 アクション合法性
+
+### 共通
+
+- 非手番プレイヤーのアクションは拒否。
+- `FOLDED`/`ALL_IN` プレイヤーのアクションは拒否。
+- 1Streetあたり上限 `5bet`（1bet + 4raise）。
+- ヘッズアップ時のみキャップ解除。
+
+### 3rd Street（Bring-in局面）
+
+- Bring-in対象者に `bring_in` を強制。
+- 次手番以降の選択肢:
+  - `fold`
+  - `call`（現在不足分）
+  - `complete`（$20まで引き上げ）
+  - `raise`（complete後のみ）
+
+### 4th以降
+
+- 選択肢:
+  - `check`（toCall=0）
+  - `bet`（未ベット時）
+  - `call`
+  - `raise`
+  - `fold`
+- 4th Streetでの「オープンペア時にBig Bet可能」ルールはMVPでは採用しない（要件のStreet固定額を優先）。
+
+## 6.4 All-in/サイドポット
+
+- 不足時は保有スタック全額を投入して `ALL_IN`。
+- ベット額不足が発生しても手は継続。
+- 精算時は各プレイヤー拠出合計からポット分割を再構築。
+
+ポット再構築手順:
+
+1. 参加プレイヤーごとの総拠出額を昇順ソート
+2. 最小拠出差分ごとにポット層を作る
+3. 各層の勝者集合へ配当
+
+## 6.5 ショーダウン
+
+### 公開順
+
+- 最終ストリートで最後に攻撃的アクション（bet/raise）したプレイヤーから開始。
+- 以降時計回り。
+- 全員checkで終わった場合は最初にアクションしたプレイヤーから。
+
+### 自動マック
+
+- 既公開の勝ちハンドに負け確定なら自動マック。
+- 勝ちうる/同点可能性ありならショー強制。
+
+### Stud8分割
+
+- Hi/Loを別評価し、Lo資格は `8以下5枚`。
+- Lo資格者無しならHi総取り。
+- スクープは同一プレイヤーに両配当。
+- オッドチップは先にHi側へ割当。
+- サイドポットがある場合も各ポット単位でHi/Lo評価を独立して実施する。
+
+## 6.6 デッキ/シャッフル
+
+- 52枚標準デッキ、ジョーカー無し。
+- ハンド開始時に毎回初期化し `Fisher-Yates` でシャッフル。
+- 乱数源は `crypto` のCSPRNGを使用し、疑似乱数ライブラリを使用しない。
+- デッキ順はサーバー内メモリのみ保持し、クライアント送信禁止。
+- 監査用に `deck_hash`（平文不可逆ハッシュ）を `hands` に保存する。
+
+---
+
+## 7. リアルタイム通信設計
+
+## 7.1 メッセージ共通フォーマット
+
+```json
+{
+  "type": "table.command",
+  "requestId": "uuid",
+  "tableId": "uuid",
+  "sentAt": "2026-02-08T12:00:00.000Z",
+  "payload": {}
+}
+```
+
+サーバーイベント:
+
+```json
+{
+  "type": "table.event",
+  "tableId": "uuid",
+  "tableSeq": 128,
+  "handId": "uuid",
+  "handSeq": 44,
+  "occurredAt": "2026-02-08T12:00:01.120Z",
+  "eventName": "RaiseEvent",
+  "payload": {}
+}
+```
+
+## 7.2 クライアント -> サーバーコマンド
+
+| type | payload | 説明 |
+| --- | --- | --- |
+| `table.join` | `tableId`, `buyIn` | 着席要求 |
+| `table.sitOut` | `tableId` | SIT OUT |
+| `table.return` | `tableId` | SIT OUT解除 |
+| `table.leave` | `tableId` | LEAVE |
+| `table.act` | `action`, `amount?` | ゲームアクション |
+| `table.resume` | `tableId`, `lastTableSeq` | 再接続復元 |
+| `ping` | - | 生存確認 |
+
+## 7.3 サーバー -> クライアントイベント
+
+| eventName | 用途 |
+| --- | --- |
+| `DealInitEvent` | ハンド初期化 |
+| `DealCards3rdEvent` | 3rd配札 |
+| `DealCardEvent` | 4th〜7th配札 |
+| `PostAnteEvent` | Ante徴収 |
+| `BringInEvent` | Bring-in処理 |
+| `CompleteEvent` | Complete |
+| `BetEvent` | Bet |
+| `RaiseEvent` | Raise |
+| `CallEvent` | Call |
+| `CheckEvent` | Check |
+| `FoldEvent` | Fold |
+| `StreetAdvanceEvent` | Street遷移 |
+| `ShowdownEvent` | 公開進行 |
+| `DealEndEvent` | ハンド終了 |
+| `SeatStateChangedEvent` | 着席/SIT OUT/LEAVE |
+| `PlayerDisconnectedEvent` | 切断通知 |
+| `PlayerReconnectedEvent` | 復帰通知 |
+
+## 7.4 順序保証と欠落検知
+
+- 1卓内イベントは `table_seq` 連番で単調増加。
+- クライアントは `expectedTableSeq` を保持し、欠番時に `table.resume` 要求。
+- `requestId` でコマンド重複送信を冪等化。
+
+## 7.5 再接続
+
+1. クライアント再接続時にJWTを再送
+2. `table.resume(lastTableSeq)` を送信
+3. サーバーは差分イベント返却、差分保持外なら `table.snapshot` を返却
+4. スナップショット受領後に通常イベント購読へ遷移
+
+## 7.6 エラーコード
+
+| code | 説明 |
+| --- | --- |
+| `INVALID_ACTION` | ルール上実行不可能なアクション |
+| `NOT_YOUR_TURN` | 非手番実行 |
+| `INSUFFICIENT_CHIPS` | チップ不足 |
+| `TABLE_FULL` | 空席なし |
+| `BUYIN_OUT_OF_RANGE` | バイイン制約違反 |
+| `ALREADY_SEATED` | 同卓重複着席 |
+| `AUTH_EXPIRED` | 認証期限切れ |
+
+---
+
+## 8. API設計（HTTP）
+
+## 8.1 認証
+
+| Method | Path | 説明 |
+| --- | --- | --- |
+| `GET` | `/api/auth/google/start` | Google OAuth開始 |
+| `GET` | `/api/auth/google/callback` | コールバック受信、セッション発行 |
+| `POST` | `/api/auth/logout` | ログアウト |
+
+ログイン時仕様:
+
+- 初回ログイン時に `wallet.balance = 4000` を付与
+- 2回目以降は残高維持（補充なし）
+
+## 8.2 ロビー
+
+| Method | Path | 説明 |
+| --- | --- | --- |
+| `GET` | `/api/lobby/tables` | 2卓のサマリ一覧取得 |
+| `GET` | `/api/tables/:tableId` | 卓詳細（席、進行中ハンド概要） |
+
+`GET /api/lobby/tables` レスポンス項目:
+
+- `tableId`
+- `tableName`
+- `stakes`（例: `$20/$40 Fixed Limit`）
+- `players`（現在人数）
+- `maxPlayers`
+- `gameType`
+- `emptySeats`
+
+## 8.3 履歴
+
+| Method | Path | 説明 |
+| --- | --- | --- |
+| `GET` | `/api/history/hands?cursor=` | 自分のハンド履歴一覧 |
+| `GET` | `/api/history/hands/:handId` | ハンド詳細（ストリートごとの行動と結果） |
+
+`GET /api/history/hands/:handId` 返却項目:
+
+- `gameType`
+- `participants`
+- `streetActions`（3rd〜7th）
+- `showdown`
+- `profitLoss`
+
+---
+
+## 9. データ設計
+
+## 9.1 ER概要
+
+```mermaid
+erDiagram
+  USERS ||--|| WALLETS : has
+  TABLES ||--o{ TABLE_SEATS : contains
+  TABLES ||--o{ HANDS : runs
+  HANDS ||--o{ HAND_PLAYERS : includes
+  HANDS ||--o{ HAND_EVENTS : logs
+  HANDS ||--o{ HAND_RESULTS : settles
+  USERS ||--o{ TABLE_SEATS : occupies
+```
+
+## 9.2 テーブル定義（主要列）
+
+### `users`
+
+- `id uuid pk`
+- `google_sub text unique not null`
+- `display_name text not null`
+- `created_at timestamptz not null`
+- `updated_at timestamptz not null`
+
+### `wallets`
+
+- `user_id uuid pk fk users(id)`
+- `balance integer not null check (balance >= 0)`
+- `updated_at timestamptz not null`
+
+### `wallet_transactions`
+
+- `id uuid pk`
+- `user_id uuid fk users(id)`
+- `type text not null` (`INIT_GRANT`, `BUY_IN`, `CASH_OUT`, `HAND_RESULT`)
+- `amount integer not null`
+- `balance_after integer not null`
+- `hand_id uuid null`
+- `created_at timestamptz not null`
+
+### `tables`
+
+- `id uuid pk`
+- `name text not null`
+- `small_bet integer not null default 20`
+- `big_bet integer not null default 40`
+- `ante integer not null default 5`
+- `bring_in integer not null default 10`
+- `max_players integer not null default 6`
+- `min_players integer not null default 2`
+- `mix_index integer not null default 0`
+- `hands_since_rotation integer not null default 0`
+- `dealer_seat integer not null default 1`
+- `status text not null`
+
+### `table_seats`
+
+- `table_id uuid fk tables(id)`
+- `seat_no integer`
+- `user_id uuid fk users(id) null`
+- `status text not null`
+- `stack integer not null default 0`
+- `disconnect_streak integer not null default 0`
+- `joined_at timestamptz null`
+- `primary key (table_id, seat_no)`
+- `unique (table_id, user_id)` where `user_id is not null`
+
+### `hands`
+
+- `id uuid pk`
+- `table_id uuid fk tables(id)`
+- `hand_no bigint not null`
+- `game_type text not null`
+- `status text not null`
+- `started_at timestamptz not null`
+- `ended_at timestamptz null`
+- `winner_summary jsonb`
+- `deck_hash text not null`
+
+### `hand_players`
+
+- `hand_id uuid fk hands(id)`
+- `user_id uuid fk users(id)`
+- `seat_no integer not null`
+- `start_stack integer not null`
+- `end_stack integer null`
+- `result_delta integer null`
+- `cards_up jsonb not null`
+- `cards_down jsonb not null`
+- `state text not null`
+- `primary key (hand_id, user_id)`
+
+### `hand_events`
+
+- `id uuid pk`
+- `hand_id uuid fk hands(id)`
+- `table_id uuid not null`
+- `table_seq bigint not null`
+- `hand_seq bigint not null`
+- `event_name text not null`
+- `payload jsonb not null`
+- `created_at timestamptz not null`
+- `unique (table_id, table_seq)`
+- `unique (hand_id, hand_seq)`
+
+### `hand_results`
+
+- `id uuid pk`
+- `hand_id uuid fk hands(id)`
+- `pot_no integer not null`
+- `side text not null` (`HI`, `LO`, `SINGLE`)
+- `winner_user_id uuid fk users(id)`
+- `amount integer not null`
+
+### `table_snapshots`
+
+- `table_id uuid pk fk tables(id)`
+- `table_seq bigint not null`
+- `payload jsonb not null`
+- `created_at timestamptz not null`
+
+## 9.3 インデックス
+
+- `hand_events(table_id, table_seq desc)`（復元・再接続差分）
+- `hands(table_id, hand_no desc)`（卓の最新手取得）
+- `hand_players(user_id, hand_id desc)`（履歴画面）
+- `table_seats(table_id, status)`（ロビー人数計算）
+- `wallet_transactions(user_id, created_at desc)`（監査）
+- `table_snapshots(table_id, table_seq desc)`（高速復元）
+
+## 9.4 永続化トランザクション境界
+
+1コマンド処理で次を同一トランザクション化:
+
+1. `hand_events` 追記
+2. `table_seats` / `hands` / `hand_players` 更新
+3. 必要に応じ `wallet_transactions` 追記
+
+コミット成功後のみイベント配信する（配信先行を禁止）。
+
+---
+
+## 10. タイムアウト/切断設計
+
+## 10.1 アクションタイム
+
+- 標準30秒
+- サーバーは手番ごとに `deadline_at` を持つ
+- 期限超過時は `AutoActionCommand` を内部投入
+
+自動行動:
+
+- `check` 可能なら `CheckEvent`
+- 不可なら `FoldEvent`
+- Bring-in対象者なら `BringInEvent`
+
+## 10.2 切断時
+
+- 接続断で席状態を `DISCONNECTED` に更新
+- 手番時は通常タイムアウトロジックを適用
+- ハンド終了時に `disconnect_streak` を加算
+- `disconnect_streak >= 3` で `LEAVE` 実行
+- 復帰時は `disconnect_streak = 0`
+
+## 10.3 SIT OUT / LEAVE 実行タイミング
+
+- `SIT OUT` は即時反映し、次ハンドから不参加。
+- `LEAVE` はハンド非参加時は即時席解放。
+- ハンド参加中の `LEAVE` 要求は `LEAVE_PENDING` とし、ハンド終了直後に席解放。
+- `LEAVE_PENDING` 中は再着席コマンドを拒否。
+
+---
+
+## 11. フロントエンド設計
+
+## 11.1 画面構成
+
+| 画面 | 主なUI要素 |
+| --- | --- |
+| ログイン | Googleログインボタン |
+| ロビー | 卓一覧、人数、ゲーム種、空席、参加ボタン |
+| テーブル | 座席、カード表示、ポット、アクションボタン、タイマー |
+| 履歴 | ハンド一覧、詳細モーダル、損益表示 |
+
+## 11.2 状態管理
+
+- HTTPキャッシュ: TanStack Query
+- リアルタイム状態: クライアント内 `TableStore`
+- Storeは `tableSeq` を持ち、欠番検知で `resume` 実行
+
+## 11.3 情報表示制御
+
+- 自分のHole cardのみ表示
+- 他者Hole cardはショーダウンで公開された時のみ表示
+- 未公開カードはDOM上にも保持しない
+
+---
+
+## 12. セキュリティ設計
+
+- WebSocket接続時にJWT必須、期限切れは切断
+- 全コマンドで `user_id` と `seat.user_id` 一致検証
+- 不正/不可能アクションは `error.code` 返却し状態不変
+- 受信payloadはスキーマ検証（型・範囲・enum）
+- レート制限（例: 1ユーザーあたり10コマンド/秒）
+- 監査ログに `user_id`, `table_id`, `request_id`, `error_code` を記録
+- 他者Hole cardと未配布カードはサーバーから送信しない（ショーダウンで公開されたカードのみ例外）。
+
+---
+
+## 13. 可用性・復旧設計
+
+## 13.1 サーバー再起動復元
+
+起動時手順:
+
+1. `tables` と `table_seats` をロード
+2. `hands.status = IN_PROGRESS` を検索
+3. 該当 `hand_events` を `hand_seq` 順にリプレイ
+4. `TableState` を復元し手番タイマー再設定
+
+## 13.2 障害時整合性
+
+- DBコミット後未配信イベントは、再起動時に `table_seq` 差分から再送可能
+- クライアントは `table.resume` により最終整合へ収束
+
+---
+
+## 14. 非機能設計
+
+## 14.1 レイテンシ予算（目標）
+
+- コマンド受信〜DBコミット: 300ms以内（p95）
+- コミット〜配信: 200ms以内（p95）
+- クライアント描画反映: 500ms以内（p95）
+- E2Eで1秒以内反映を達成
+
+## 14.2 スループット
+
+- 最大同時プレイ: 12人（2卓 x 6人）
+- 想定イベント率: 20 events/sec 以下
+- 単一ノードで十分処理可能
+
+## 14.3 ログ・監視
+
+- 構造化ログ（JSON）
+- ログ種別: 認証、接続、アクション、エラー、復元
+- メトリクス:
+  - `ws_connected_clients`
+  - `table_command_latency_ms`
+  - `table_event_broadcast_latency_ms`
+  - `auto_action_total`
+  - `reconnect_resume_total`
+
+---
+
+## 15. テスト設計
+
+## 15.1 単体テスト
+
+- Bring-in判定（3ゲーム分）
+- アクション合法性（street/cap/heads-up）
+- ハンド評価（StudHi/Razz/Stud8）
+- サイドポット分配
+
+## 15.2 結合テスト
+
+- 1ハンド完全進行（3rd〜Showdown）
+- タイムアウト自動処理
+- 切断3連続で自動LEAVE
+- 再接続時差分同期/スナップショット同期
+
+## 15.3 E2Eテスト
+
+- ログイン→ロビー→着席→プレイ→履歴閲覧
+- 途中参加（次ハンドから参加、当該ハンドは観戦）
+- スタック0で自動退席
+
+---
+
+## 16. 実装フェーズ（推奨）
+
+1. 認証・ユーザー・ウォレット初期化
+2. ロビー/卓/席管理（非ゲーム）
+3. Table Actor + イベント永続化基盤
+4. StudHiルール実装
+5. Razz/Stud8追加 + ミックスローテーション
+6. 再接続・復元
+7. 履歴画面 + 監視ログ
+8. E2Eと負荷確認
+
+---
+
+## 17. 未決事項と設計判断
+
+## 17.1 要件未確定項目（要合意）
+
+- プレイヤー名変更機能（要件で未決）
+- 最低バイイン額（要件明記なし）
+- オッドチップ詳細ルール（同点複数時の配分優先）
+
+## 17.2 本設計での暫定値
+
+- 最低バイイン: `$200`（5 Big Bet）
+- オッドチップ: Hi側優先、同側複数勝者時は `dealer_seat` から時計回り優先
+- 初回ログインのみ `$4,000` 付与
+
+---
+
+## 18. 受け入れ基準（MVP）
+
+- 3ゲームが要件通りローテーションし、6ハンド単位で切替される。
+- 2〜6人でリアルタイム進行し、アクション反映が1秒以内（p95）である。
+- 切断/再接続/途中参加が要件通り動作する。
+- サーバー再起動後、進行中ハンドを復元できる。
+- 履歴画面でハンドの進行と結果を閲覧できる。
