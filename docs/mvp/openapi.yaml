@@ -1,0 +1,802 @@
+openapi: 3.0.3
+info:
+  title: Mix Stud Online MVP API仕様
+  version: 0.2.0
+  description: |
+    Mix Stud Online MVP のHTTP API仕様書。
+    認証、ロビー、卓詳細、ハンド履歴APIを定義する。
+servers:
+  - url: http://localhost:3000
+    description: ローカル開発環境
+tags:
+  - name: Auth
+    description: 認証およびセッション関連API
+  - name: Lobby
+    description: ロビーと卓一覧API
+  - name: Tables
+    description: 卓詳細API
+  - name: History
+    description: ハンド履歴API
+security:
+  - sessionCookie: []
+paths:
+  /api/auth/google/start:
+    get:
+      tags: [Auth]
+      summary: Google OAuthフロー開始
+      description: Google OAuth同意画面へリダイレクトする。
+      security: []
+      responses:
+        "302":
+          description: Google OAuth認可エンドポイントへリダイレクト
+          headers:
+            Location:
+              description: Google OAuthの遷移先URL
+              schema:
+                type: string
+                format: uri
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/auth/google/callback:
+    get:
+      tags: [Auth]
+      summary: Google OAuthコールバック処理とセッション発行
+      description: 認可コードを検証し、セッションCookieを発行してリダイレクトする。
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: セッション発行後にフロントエンドへリダイレクト
+          headers:
+            Set-Cookie:
+              description: HttpOnlyセッションCookie
+              schema:
+                type: string
+            Location:
+              description: "フロントエンドの遷移先（例: /lobby）"
+              schema:
+                type: string
+                format: uri-reference
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: 現在の認証ユーザー取得
+      description: アプリ初期表示用に現在セッションのユーザー情報を返す。
+      responses:
+        "200":
+          description: 現在セッションのユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: ログアウト
+      description: 現在のセッションを無効化し、認証Cookieを破棄する。
+      responses:
+        "204":
+          description: ログアウト成功
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/lobby/tables:
+    get:
+      tags: [Lobby]
+      summary: ロビー卓サマリ取得
+      description: MVP固定卓の一覧（人数・現在ゲーム種別を含む）を返す。
+      responses:
+        "200":
+          description: 卓サマリ一覧
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LobbyTablesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/tables/{tableId}:
+    get:
+      tags: [Tables]
+      summary: 卓詳細取得
+      description: 指定卓の席状態と進行中ハンド概要を返す。
+      parameters:
+        - $ref: "#/components/parameters/TableIdPath"
+      responses:
+        "200":
+          description: 卓詳細
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TableDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/history/hands:
+    get:
+      tags: [History]
+      summary: 自分のハンド履歴一覧取得
+      description: |
+        認証ユーザーのハンド履歴一覧をページングして返す。
+        カーソル方式（キーセットページング）を採用し、並び順は
+        `endedAt DESC, handId DESC` で固定。
+      parameters:
+        - $ref: "#/components/parameters/CursorQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: ハンド履歴一覧
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandHistoryListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/history/hands/{handId}:
+    get:
+      tags: [History]
+      summary: ハンド履歴詳細取得
+      description: ストリートごとの行動、ショーダウン、損益を詳細に返す。
+      parameters:
+        - $ref: "#/components/parameters/HandIdPath"
+      responses:
+        "200":
+          description: ハンド履歴詳細
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandHistoryDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+
+  parameters:
+    TableIdPath:
+      name: tableId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    HandIdPath:
+      name: handId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CursorQuery:
+      name: cursor
+      in: query
+      required: false
+      description: |
+        前ページのレスポンスで返された不透明カーソル。
+        クライアントは解釈・改変せず、そのまま送信すること。
+        サーバー上の形式は `base64url` の署名付きトークン。
+      schema:
+        type: string
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      description: 1ページあたりの取得件数。
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    BadRequest:
+      description: リクエスト不正
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: 認証が必要、または認証期限切れ
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: リソース未検出
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalServerError:
+      description: サーバー内部エラー
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    AuthMeResponse:
+      type: object
+      required:
+        - user
+      properties:
+        user:
+          $ref: "#/components/schemas/UserProfile"
+
+    UserProfile:
+      type: object
+      required:
+        - userId
+        - displayName
+        - walletBalance
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        walletBalance:
+          type: integer
+          minimum: 0
+
+    LobbyTablesResponse:
+      type: object
+      required:
+        - tables
+        - serverTime
+      properties:
+        tables:
+          type: array
+          items:
+            $ref: "#/components/schemas/TableSummary"
+        serverTime:
+          type: string
+          format: date-time
+
+    TableSummary:
+      type: object
+      required:
+        - tableId
+        - tableName
+        - stakes
+        - players
+        - maxPlayers
+        - gameType
+        - emptySeats
+      properties:
+        tableId:
+          type: string
+          format: uuid
+        tableName:
+          type: string
+        stakes:
+          $ref: "#/components/schemas/TableStakes"
+        players:
+          type: integer
+          minimum: 0
+          maximum: 6
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 6
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        emptySeats:
+          type: integer
+          minimum: 0
+          maximum: 6
+
+    TableStakes:
+      type: object
+      required:
+        - smallBet
+        - bigBet
+        - ante
+        - bringIn
+        - bettingStructure
+        - display
+      properties:
+        smallBet:
+          type: integer
+          example: 20
+        bigBet:
+          type: integer
+          example: 40
+        ante:
+          type: integer
+          example: 5
+        bringIn:
+          type: integer
+          example: 10
+        bettingStructure:
+          type: string
+          enum: [FIXED_LIMIT]
+          example: FIXED_LIMIT
+        display:
+          type: string
+          example: "$20/$40 Fixed Limit"
+
+    TableDetailResponse:
+      type: object
+      required:
+        - table
+      properties:
+        table:
+          $ref: "#/components/schemas/TableDetail"
+
+    TableDetail:
+      type: object
+      required:
+        - tableId
+        - tableName
+        - status
+        - gameType
+        - mixIndex
+        - handsSinceRotation
+        - dealerSeatNo
+        - stakes
+        - minPlayers
+        - maxPlayers
+        - seats
+      properties:
+        tableId:
+          type: string
+          format: uuid
+        tableName:
+          type: string
+        status:
+          $ref: "#/components/schemas/TableStatus"
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        mixIndex:
+          type: integer
+          minimum: 0
+          maximum: 2
+          description: 0=STUD_HI、1=RAZZ、2=STUD_8
+        handsSinceRotation:
+          type: integer
+          minimum: 0
+          maximum: 5
+        dealerSeatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        stakes:
+          $ref: "#/components/schemas/TableStakes"
+        minPlayers:
+          type: integer
+          minimum: 2
+          maximum: 6
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 6
+        seats:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeatView"
+        currentHand:
+          allOf:
+            - $ref: "#/components/schemas/CurrentHandSummary"
+          nullable: true
+
+    SeatView:
+      type: object
+      required:
+        - seatNo
+        - status
+        - stack
+        - isYou
+      properties:
+        seatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        status:
+          $ref: "#/components/schemas/SeatStatus"
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        displayName:
+          type: string
+          nullable: true
+        stack:
+          type: integer
+          minimum: 0
+        isYou:
+          type: boolean
+        joinedAt:
+          type: string
+          format: date-time
+          nullable: true
+        disconnectStreak:
+          type: integer
+          minimum: 0
+          nullable: true
+
+    CurrentHandSummary:
+      type: object
+      required:
+        - handId
+        - handNo
+        - status
+        - street
+        - potTotal
+      properties:
+        handId:
+          type: string
+          format: uuid
+        handNo:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/HandStatus"
+        street:
+          $ref: "#/components/schemas/Street"
+        potTotal:
+          type: integer
+          minimum: 0
+        toActSeatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+          nullable: true
+        actionDeadlineAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    HandHistoryListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandHistoryListItem"
+        nextCursor:
+          type: string
+          description: |
+            次ページ取得用のカーソル。`null` の場合は次ページなし。
+          nullable: true
+
+    HandHistoryListItem:
+      type: object
+      required:
+        - handId
+        - tableId
+        - gameType
+        - participants
+        - startedAt
+        - endedAt
+        - profitLoss
+      properties:
+        handId:
+          type: string
+          format: uuid
+        tableId:
+          type: string
+          format: uuid
+        tableName:
+          type: string
+        handNo:
+          type: integer
+          format: int64
+          minimum: 1
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandParticipant"
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+        profitLoss:
+          type: integer
+          description: 当該ハンドにおけるログインユーザーの損益（純額）。
+
+    HandHistoryDetailResponse:
+      type: object
+      required:
+        - handId
+        - tableId
+        - gameType
+        - participants
+        - streetActions
+        - showdown
+        - profitLoss
+        - startedAt
+        - endedAt
+      properties:
+        handId:
+          type: string
+          format: uuid
+        tableId:
+          type: string
+          format: uuid
+        tableName:
+          type: string
+        handNo:
+          type: integer
+          format: int64
+          minimum: 1
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandParticipant"
+        streetActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreetActionGroup"
+        showdown:
+          $ref: "#/components/schemas/ShowdownSummary"
+        profitLoss:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+
+    HandParticipant:
+      type: object
+      required:
+        - userId
+        - displayName
+        - seatNo
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        seatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        resultDelta:
+          type: integer
+          nullable: true
+        shownCardsUp:
+          type: array
+          items:
+            type: string
+          nullable: true
+        shownCardsDown:
+          type: array
+          items:
+            type: string
+          nullable: true
+
+    StreetActionGroup:
+      type: object
+      required:
+        - street
+        - actions
+      properties:
+        street:
+          $ref: "#/components/schemas/Street"
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandAction"
+
+    HandAction:
+      type: object
+      required:
+        - seq
+        - actionType
+        - seatNo
+        - occurredAt
+      properties:
+        seq:
+          type: integer
+          format: int64
+          minimum: 1
+        actionType:
+          $ref: "#/components/schemas/ActionType"
+        seatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        displayName:
+          type: string
+          nullable: true
+        amount:
+          type: integer
+          minimum: 0
+          nullable: true
+        potAfter:
+          type: integer
+          minimum: 0
+          nullable: true
+        occurredAt:
+          type: string
+          format: date-time
+
+    ShowdownSummary:
+      type: object
+      required:
+        - hasShowdown
+        - potResults
+      properties:
+        hasShowdown:
+          type: boolean
+        potResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/PotResult"
+
+    PotResult:
+      type: object
+      required:
+        - potNo
+        - side
+        - winners
+        - amount
+      properties:
+        potNo:
+          type: integer
+          minimum: 1
+        side:
+          type: string
+          enum: [SINGLE, HI, LO]
+        winners:
+          type: array
+          items:
+            $ref: "#/components/schemas/PotWinner"
+        amount:
+          type: integer
+          minimum: 0
+
+    PotWinner:
+      type: object
+      required:
+        - userId
+        - displayName
+        - amount
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        amount:
+          type: integer
+          minimum: 0
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              $ref: "#/components/schemas/ErrorCode"
+            message:
+              type: string
+            requestId:
+              type: string
+              format: uuid
+
+    GameType:
+      type: string
+      enum: [STUD_HI, RAZZ, STUD_8]
+
+    TableStatus:
+      type: string
+      enum: [WAITING, DEALING, BETTING, SHOWDOWN, HAND_END]
+
+    SeatStatus:
+      type: string
+      enum:
+        - EMPTY
+        - SEATED_WAIT_NEXT_HAND
+        - ACTIVE
+        - SIT_OUT
+        - DISCONNECTED
+        - LEAVE_PENDING
+
+    HandStatus:
+      type: string
+      enum: [IN_PROGRESS, SHOWDOWN, HAND_END]
+
+    Street:
+      type: string
+      enum: [THIRD, FOURTH, FIFTH, SIXTH, SEVENTH]
+
+    ActionType:
+      type: string
+      enum:
+        - ANTE
+        - BRING_IN
+        - COMPLETE
+        - BET
+        - RAISE
+        - CALL
+        - CHECK
+        - FOLD
+        - AUTO_CHECK
+        - AUTO_FOLD
+        - SHOW
+        - MUCK
+
+    ErrorCode:
+      type: string
+      enum:
+        - INVALID_ACTION
+        - INVALID_CURSOR
+        - NOT_YOUR_TURN
+        - INSUFFICIENT_CHIPS
+        - TABLE_FULL
+        - BUYIN_OUT_OF_RANGE
+        - ALREADY_SEATED
+        - AUTH_EXPIRED
+        - BAD_REQUEST
+        - NOT_FOUND
+        - INTERNAL_SERVER_ERROR

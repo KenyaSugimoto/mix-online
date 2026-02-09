@@ -366,7 +366,7 @@ interface GameRule {
 
 ## 7.5 再接続
 
-1. クライアント再接続時にJWTを再送
+1. クライアント再接続時にCookie Sessionで再認証（ブラウザが `HttpOnly Cookie` を送信）
 2. `table.resume(lastTableSeq)` を送信
 3. サーバーは差分イベント返却、差分保持外なら `table.snapshot` を返却
 4. スナップショット受領後に通常イベント購読へ遷移
@@ -383,6 +383,12 @@ interface GameRule {
 | `ALREADY_SEATED`     | 同卓重複着席                   |
 | `AUTH_EXPIRED`       | 認証期限切れ                   |
 
+## 7.7 契約仕様ファイル（確定）
+
+- HTTP API契約は `docs/mvp/openapi.yaml` で管理する。
+- WebSocket契約は `docs/mvp/asyncapi.yaml` で管理する。
+- クライアント/サーバー間のリアルタイム実装・テストは `docs/mvp/asyncapi.yaml` を正とする。
+
 ---
 
 ## 8. API設計（HTTP）
@@ -393,11 +399,19 @@ interface GameRule {
 | ------ | --------------------------- | -------------------------------- |
 | `GET`  | `/api/auth/google/start`    | Google OAuth開始                 |
 | `GET`  | `/api/auth/google/callback` | コールバック受信、セッション発行 |
+| `GET`  | `/api/auth/me`              | セッション中ユーザー情報取得     |
 | `POST` | `/api/auth/logout`          | ログアウト                       |
 
 ログイン時仕様:
 
 - ログイン時に `wallet.balance = 4000` を付与 (1日1回まで)
+
+認証方式（確定）:
+
+- 認証は `HttpOnly Cookie Session` を採用し、Bearer JWTは採用しない。
+- `GET /api/auth/google/callback` 成功時は `Set-Cookie` を付与し、`302` でフロントエンド（例: `/lobby`）へリダイレクトする。
+- フロントエンドは初期表示時に `GET /api/auth/me` を呼び、ログイン済みユーザー情報を取得して画面状態を初期化する。
+- `POST /api/auth/logout` ではセッションを無効化し、Cookieを破棄する。
 
 ## 8.2 ロビー
 
@@ -422,6 +436,14 @@ interface GameRule {
 | ------ | ---------------------------- | ---------------------------------------- |
 | `GET`  | `/api/history/hands?cursor=` | 自分のハンド履歴一覧                     |
 | `GET`  | `/api/history/hands/:handId` | ハンド詳細（ストリートごとの行動と結果） |
+
+`GET /api/history/hands` のページング仕様（確定）:
+
+- ページング方式は `cursor` ベース（キーセットページング）を採用する。
+- 並び順は `endedAt DESC, handId DESC` を固定とする。
+- `cursor` はサーバー生成の不透明文字列（`base64url` 形式の署名付きトークン）とし、クライアントは解釈・改変せずそのまま送信する。
+- `nextCursor` が `null` の場合は最終ページとみなす。
+- `cursor` の改ざん・不正形式・期限切れは `400` / `INVALID_CURSOR` を返す。
 
 `GET /api/history/hands/:handId` 返却項目:
 
@@ -654,7 +676,7 @@ erDiagram
 
 ## 12. セキュリティ設計
 
-- WebSocket接続時にJWT必須、期限切れは切断
+- WebSocket接続時に `HttpOnly Cookie Session` を必須とし、未認証/期限切れセッションは切断
 - 全コマンドで `user_id` と `seat.user_id` 一致検証
 - 不正/不可能アクションは `error.code` 返却し状態不変
 - 受信payloadはスキーマ検証（型・範囲・enum）

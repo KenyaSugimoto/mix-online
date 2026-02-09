@@ -1,0 +1,508 @@
+asyncapi: 2.6.0
+id: "urn:mix-stud-online:mvp:realtime"
+defaultContentType: application/json
+info:
+  title: Mix Stud Online MVP リアルタイムAPI仕様
+  version: 0.1.0
+  description: |
+    Mix Stud Online MVP のWebSocket通信に関するAsyncAPI仕様書。
+    卓操作、ゲームアクション、再接続復元、イベント配信に利用する
+    クライアントコマンドとサーバープッシュメッセージを定義する。
+
+servers:
+  local:
+    url: localhost:3000
+    protocol: ws
+    description: ローカル開発用WebSocketエンドポイント
+    security:
+      - sessionCookie: []
+
+channels:
+  /ws:
+    description: |
+      リアルタイム進行制御と状態同期を行う単一WebSocketチャネル。
+      イベント順序は卓単位で `tableSeq` の単調増加により保証する。
+      欠番を検知したクライアントは `table.resume` を送信する。
+    publish:
+      operationId: clientSendCommand
+      summary: クライアントからコマンドを送信
+      message:
+        oneOf:
+          - $ref: "#/components/messages/TableJoinCommand"
+          - $ref: "#/components/messages/TableSitOutCommand"
+          - $ref: "#/components/messages/TableReturnCommand"
+          - $ref: "#/components/messages/TableLeaveCommand"
+          - $ref: "#/components/messages/TableActCommand"
+          - $ref: "#/components/messages/TableResumeCommand"
+          - $ref: "#/components/messages/PingCommand"
+    subscribe:
+      operationId: serverPushMessage
+      summary: サーバーからイベント・エラー・スナップショットを配信
+      message:
+        oneOf:
+          - $ref: "#/components/messages/TableEventMessage"
+          - $ref: "#/components/messages/TableErrorMessage"
+          - $ref: "#/components/messages/TableSnapshotMessage"
+          - $ref: "#/components/messages/PongMessage"
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: httpApiKey
+      in: cookie
+      name: session
+      description: OAuthコールバック時に発行されるHttpOnlyセッションCookie
+
+  messages:
+    TableJoinCommand:
+      name: tableJoinCommand
+      title: table.join
+      summary: 卓への着席要求
+      payload:
+        $ref: "#/components/schemas/TableJoinCommandPayload"
+      examples:
+        - payload:
+            type: table.join
+            requestId: 5210d950-c345-4d1c-95e9-85fed5216171
+            sentAt: "2026-02-09T10:00:00.000Z"
+            payload:
+              tableId: cbf4d865-112d-4c22-8f54-95e2785e7024
+              buyIn: 1000
+
+    TableSitOutCommand:
+      name: tableSitOutCommand
+      title: table.sitOut
+      summary: 現在の席をSIT OUTへ切り替え
+      payload:
+        $ref: "#/components/schemas/TableSitOutCommandPayload"
+
+    TableReturnCommand:
+      name: tableReturnCommand
+      title: table.return
+      summary: SIT OUTを解除しプレイ復帰（次に参加可能なハンドから）
+      payload:
+        $ref: "#/components/schemas/TableReturnCommandPayload"
+
+    TableLeaveCommand:
+      name: tableLeaveCommand
+      title: table.leave
+      summary: 卓から離席（即時、またはハンド中は離席予約）
+      payload:
+        $ref: "#/components/schemas/TableLeaveCommandPayload"
+
+    TableActCommand:
+      name: tableActCommand
+      title: table.act
+      summary: 現在手番のゲームアクション送信
+      payload:
+        $ref: "#/components/schemas/TableActCommandPayload"
+      examples:
+        - payload:
+            type: table.act
+            requestId: 58b8a714-ae4f-4e15-aa85-60c85f14be57
+            sentAt: "2026-02-09T10:05:11.120Z"
+            payload:
+              tableId: cbf4d865-112d-4c22-8f54-95e2785e7024
+              action: CALL
+
+    TableResumeCommand:
+      name: tableResumeCommand
+      title: table.resume
+      summary: 最終受信シーケンス以降の差分イベント再送要求
+      payload:
+        $ref: "#/components/schemas/TableResumeCommandPayload"
+      examples:
+        - payload:
+            type: table.resume
+            requestId: 3ed8becf-f8df-49e8-a9a6-98bd26da504e
+            sentAt: "2026-02-09T10:06:00.000Z"
+            payload:
+              tableId: cbf4d865-112d-4c22-8f54-95e2785e7024
+              lastTableSeq: 127
+
+    PingCommand:
+      name: pingCommand
+      title: ping
+      summary: 生存確認コマンド
+      payload:
+        $ref: "#/components/schemas/PingCommandPayload"
+
+    TableEventMessage:
+      name: tableEventMessage
+      title: table.event
+      summary: サーバー権威の卓イベント配信メッセージ
+      payload:
+        $ref: "#/components/schemas/TableEventMessagePayload"
+      examples:
+        - payload:
+            type: table.event
+            tableId: cbf4d865-112d-4c22-8f54-95e2785e7024
+            tableSeq: 128
+            handId: 9056fdb5-1259-4186-9bc7-ce59131457f5
+            handSeq: 44
+            occurredAt: "2026-02-09T10:05:11.500Z"
+            eventName: RaiseEvent
+            payload:
+              seatNo: 4
+              amount: 40
+
+    TableErrorMessage:
+      name: tableErrorMessage
+      title: table.error
+      summary: 状態変更なしでのコマンド拒否通知
+      payload:
+        $ref: "#/components/schemas/TableErrorMessagePayload"
+      examples:
+        - payload:
+            type: table.error
+            requestId: 58b8a714-ae4f-4e15-aa85-60c85f14be57
+            tableId: cbf4d865-112d-4c22-8f54-95e2785e7024
+            code: NOT_YOUR_TURN
+            message: あなたの手番ではありません。
+            occurredAt: "2026-02-09T10:05:11.130Z"
+
+    TableSnapshotMessage:
+      name: tableSnapshotMessage
+      title: table.snapshot
+      summary: 要求範囲のイベントがない場合のスナップショット応答
+      payload:
+        $ref: "#/components/schemas/TableSnapshotMessagePayload"
+      examples:
+        - payload:
+            type: table.snapshot
+            tableId: cbf4d865-112d-4c22-8f54-95e2785e7024
+            tableSeq: 212
+            occurredAt: "2026-02-09T10:06:01.000Z"
+            payload:
+              reason: OUT_OF_RANGE
+              table:
+                status: BETTING
+                gameType: STUD_HI
+
+    PongMessage:
+      name: pongMessage
+      title: pong
+      summary: 生存確認応答
+      payload:
+        $ref: "#/components/schemas/PongMessagePayload"
+
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+
+    DateTime:
+      type: string
+      format: date-time
+
+    TableSeq:
+      type: integer
+      format: int64
+      minimum: 0
+
+    HandSeq:
+      type: integer
+      format: int64
+      minimum: 0
+
+    TableCommandAction:
+      type: string
+      enum:
+        - FOLD
+        - CHECK
+        - CALL
+        - BET
+        - RAISE
+        - COMPLETE
+        - BRING_IN
+
+    TableEventName:
+      type: string
+      enum:
+        - DealInitEvent
+        - DealCards3rdEvent
+        - DealCardEvent
+        - PostAnteEvent
+        - BringInEvent
+        - CompleteEvent
+        - BetEvent
+        - RaiseEvent
+        - CallEvent
+        - CheckEvent
+        - FoldEvent
+        - StreetAdvanceEvent
+        - ShowdownEvent
+        - DealEndEvent
+        - SeatStateChangedEvent
+        - PlayerDisconnectedEvent
+        - PlayerReconnectedEvent
+
+    RealtimeErrorCode:
+      type: string
+      enum:
+        - INVALID_ACTION
+        - NOT_YOUR_TURN
+        - INSUFFICIENT_CHIPS
+        - TABLE_FULL
+        - BUYIN_OUT_OF_RANGE
+        - ALREADY_SEATED
+        - AUTH_EXPIRED
+
+    BaseClientCommand:
+      type: object
+      required:
+        - type
+        - requestId
+        - sentAt
+        - payload
+      properties:
+        type:
+          type: string
+        requestId:
+          $ref: "#/components/schemas/UUID"
+        sentAt:
+          $ref: "#/components/schemas/DateTime"
+        payload:
+          type: object
+      additionalProperties: false
+
+    TableJoinCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.join
+            payload:
+              type: object
+              required:
+                - tableId
+                - buyIn
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+                buyIn:
+                  type: integer
+                  minimum: 200
+                  maximum: 2000
+              additionalProperties: false
+
+    TableSitOutCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.sitOut
+            payload:
+              type: object
+              required:
+                - tableId
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+              additionalProperties: false
+
+    TableReturnCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.return
+            payload:
+              type: object
+              required:
+                - tableId
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+              additionalProperties: false
+
+    TableLeaveCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.leave
+            payload:
+              type: object
+              required:
+                - tableId
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+              additionalProperties: false
+
+    TableActCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.act
+            payload:
+              type: object
+              required:
+                - tableId
+                - action
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+                action:
+                  $ref: "#/components/schemas/TableCommandAction"
+                amount:
+                  oneOf:
+                    - type: integer
+                      minimum: 0
+                    - type: "null"
+              additionalProperties: false
+
+    TableResumeCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.resume
+            payload:
+              type: object
+              required:
+                - tableId
+                - lastTableSeq
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+                lastTableSeq:
+                  $ref: "#/components/schemas/TableSeq"
+              additionalProperties: false
+
+    PingCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ping
+            payload:
+              type: object
+              additionalProperties: false
+
+    TableEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+        handSeq:
+          oneOf:
+            - $ref: "#/components/schemas/HandSeq"
+            - type: "null"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          $ref: "#/components/schemas/TableEventName"
+        payload:
+          type: object
+          description: イベントごとの拡張データ。構造は `eventName` に依存する。
+          additionalProperties: true
+      additionalProperties: false
+
+    TableErrorMessagePayload:
+      type: object
+      required:
+        - type
+        - code
+        - message
+        - occurredAt
+      properties:
+        type:
+          type: string
+          const: table.error
+        requestId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+        tableId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+        code:
+          $ref: "#/components/schemas/RealtimeErrorCode"
+        message:
+          type: string
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+      additionalProperties: false
+
+    TableSnapshotMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - occurredAt
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.snapshot
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        payload:
+          type: object
+          description: フル状態再同期に利用するスナップショット本体。
+          properties:
+            reason:
+              type: string
+              enum:
+                - OUT_OF_RANGE
+                - RESYNC_REQUIRED
+            table:
+              type: object
+              additionalProperties: true
+          additionalProperties: true
+      additionalProperties: false
+
+    PongMessagePayload:
+      type: object
+      required:
+        - type
+        - requestId
+        - occurredAt
+      properties:
+        type:
+          type: string
+          const: pong
+        requestId:
+          $ref: "#/components/schemas/UUID"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+      additionalProperties: false
