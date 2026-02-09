@@ -45,23 +45,23 @@ flowchart LR
 
 ## 3.2 コンポーネント責務
 
-| コンポーネント | 主責務 |
-| --- | --- |
-| Web Client | ログイン、ロビー表示、卓表示、履歴表示、WebSocket接続管理 |
-| API Server | 認証、セッション発行、ロビー取得、履歴取得 |
-| Realtime Gateway | 接続管理、認可、コマンド受信、イベント配信 |
-| Game Engine | ルール判定、進行、タイムアウト処理、イベント生成 |
-| PostgreSQL | ユーザー、卓、席、ハンド、イベントログ、結果、監査ログ保存 |
+| コンポーネント   | 主責務                                                     |
+| ---------------- | ---------------------------------------------------------- |
+| Web Client       | ログイン、ロビー表示、卓表示、履歴表示、WebSocket接続管理  |
+| API Server       | 認証、セッション発行、ロビー取得、履歴取得                 |
+| Realtime Gateway | 接続管理、認可、コマンド受信、イベント配信                 |
+| Game Engine      | ルール判定、進行、タイムアウト処理、イベント生成           |
+| PostgreSQL       | ユーザー、卓、席、ハンド、イベントログ、結果、監査ログ保存 |
 
 ## 3.3 技術選定（MVP）
 
-| 領域 | 採用 |
-| --- | --- |
-| Frontend | React + TypeScript + Vite |
-| Backend | Node.js + TypeScript（API/Gateway/Game Engine同一プロセス） |
-| Realtime | WebSocket（JSONメッセージ） |
-| DB | PostgreSQL 16 |
-| Auth | Google OAuth 2.0 / OIDC |
+| 領域     | 採用                                                     |
+| -------- | -------------------------------------------------------- |
+| Frontend | React + TypeScript + Vite                                |
+| Backend  | Hono + TypeScript（API/Gateway/Game Engine同一プロセス） |
+| Realtime | WebSocket（JSONメッセージ）                              |
+| DB       | PostgreSQL 16                                            |
+| Auth     | Google OAuth 2.0 / OIDC                                  |
 
 ## 3.4 デプロイ前提（MVP）
 
@@ -76,16 +76,16 @@ flowchart LR
 
 ## 4.1 主要エンティティ
 
-| エンティティ | 説明 |
-| --- | --- |
-| User | プレイヤー。Googleアカウントと紐付く |
-| Wallet | プレイマネー残高 |
-| Table | 卓設定（ステークス固定、人数上限、現在のゲーム種別） |
-| Seat | 卓内の座席と着席状態 |
-| Hand | 1回の配札〜精算までの単位 |
-| HandPlayer | ハンド参加プレイヤーのスナップショット |
-| Pot | メイン/サイドポットの論理表現 |
-| Event | 進行ログ（正史） |
+| エンティティ | 説明                                                 |
+| ------------ | ---------------------------------------------------- |
+| User         | プレイヤー。Googleアカウントと紐付く                 |
+| Wallet       | プレイマネー残高                                     |
+| Table        | 卓設定（ステークス固定、人数上限、現在のゲーム種別） |
+| Seat         | 卓内の座席と着席状態                                 |
+| Hand         | 1回の配札〜精算までの単位                            |
+| HandPlayer   | ハンド参加プレイヤーのスナップショット               |
+| Pot          | メイン/サイドポットの論理表現                        |
+| Event        | 進行ログ（正史）                                     |
 
 ## 4.2 状態モデル
 
@@ -164,19 +164,24 @@ flowchart LR
 
 ## 5.4 ストリート進行
 
-| Street | 配布 | ベット単位 |
-| --- | --- | --- |
-| 3rd | Hole2 + Up1 | Small Bet($20) |
-| 4th | Up1 | Small Bet($20) |
-| 5th | Up1 | Big Bet($40) |
-| 6th | Up1 | Big Bet($40) |
-| 7th | Hole1 | Big Bet($40) |
+| Street | 配布        | ベット単位     |
+| ------ | ----------- | -------------- |
+| 3rd    | Hole2 + Up1 | Small Bet($20) |
+| 4th    | Up1         | Small Bet($20) |
+| 5th    | Up1         | Big Bet($40)   |
+| 6th    | Up1         | Big Bet($40)   |
+| 7th    | Hole1       | Big Bet($40)   |
 
 ## 5.5 途中参加（ハンド進行中着席）
 
 - ハンド進行中の `table.join` 成功時は `SEATED_WAIT_NEXT_HAND` とする。
 - 進行中ハンドには参加せず、次ハンド開始時に `ACTIVE` へ遷移する。
 - 待機中クライアントへは観戦情報（公開情報のみ）を配信する。
+
+待機中の状態遷移:
+
+- `SEATED_WAIT_NEXT_HAND` 中に `SIT_OUT` 要求 → 即時 `SIT_OUT` へ遷移
+- `SEATED_WAIT_NEXT_HAND` 中に `LEAVE` 要求 → 即時席解放、チップは `wallet` へ払い戻し
 
 ## 5.6 スタック0時の扱い
 
@@ -245,7 +250,7 @@ interface GameRule {
   - `call`
   - `raise`
   - `fold`
-- 4th Streetでの「オープンペア時にBig Bet可能」ルールはMVPでは採用しない（要件のStreet固定額を優先）。
+- 4th Streetでの「オープンペア時にBig Bet可能」ルールは採用しない（要件のStreet固定額を優先）。
 
 ## 6.4 All-in/サイドポット
 
@@ -321,37 +326,37 @@ interface GameRule {
 
 ## 7.2 クライアント -> サーバーコマンド
 
-| type | payload | 説明 |
-| --- | --- | --- |
-| `table.join` | `tableId`, `buyIn` | 着席要求 |
-| `table.sitOut` | `tableId` | SIT OUT |
-| `table.return` | `tableId` | SIT OUT解除 |
-| `table.leave` | `tableId` | LEAVE |
-| `table.act` | `action`, `amount?` | ゲームアクション |
-| `table.resume` | `tableId`, `lastTableSeq` | 再接続復元 |
-| `ping` | - | 生存確認 |
+| type           | payload                   | 説明             |
+| -------------- | ------------------------- | ---------------- |
+| `table.join`   | `tableId`, `buyIn`        | 着席要求         |
+| `table.sitOut` | `tableId`                 | SIT OUT          |
+| `table.return` | `tableId`                 | SIT OUT解除      |
+| `table.leave`  | `tableId`                 | LEAVE            |
+| `table.act`    | `action`, `amount?`       | ゲームアクション |
+| `table.resume` | `tableId`, `lastTableSeq` | 再接続復元       |
+| `ping`         | -                         | 生存確認         |
 
 ## 7.3 サーバー -> クライアントイベント
 
-| eventName | 用途 |
-| --- | --- |
-| `DealInitEvent` | ハンド初期化 |
-| `DealCards3rdEvent` | 3rd配札 |
-| `DealCardEvent` | 4th〜7th配札 |
-| `PostAnteEvent` | Ante徴収 |
-| `BringInEvent` | Bring-in処理 |
-| `CompleteEvent` | Complete |
-| `BetEvent` | Bet |
-| `RaiseEvent` | Raise |
-| `CallEvent` | Call |
-| `CheckEvent` | Check |
-| `FoldEvent` | Fold |
-| `StreetAdvanceEvent` | Street遷移 |
-| `ShowdownEvent` | 公開進行 |
-| `DealEndEvent` | ハンド終了 |
-| `SeatStateChangedEvent` | 着席/SIT OUT/LEAVE |
-| `PlayerDisconnectedEvent` | 切断通知 |
-| `PlayerReconnectedEvent` | 復帰通知 |
+| eventName                 | 用途               |
+| ------------------------- | ------------------ |
+| `DealInitEvent`           | ハンド初期化       |
+| `DealCards3rdEvent`       | 3rd配札            |
+| `DealCardEvent`           | 4th〜7th配札       |
+| `PostAnteEvent`           | Ante徴収           |
+| `BringInEvent`            | Bring-in処理       |
+| `CompleteEvent`           | Complete           |
+| `BetEvent`                | Bet                |
+| `RaiseEvent`              | Raise              |
+| `CallEvent`               | Call               |
+| `CheckEvent`              | Check              |
+| `FoldEvent`               | Fold               |
+| `StreetAdvanceEvent`      | Street遷移         |
+| `ShowdownEvent`           | 公開進行           |
+| `DealEndEvent`            | ハンド終了         |
+| `SeatStateChangedEvent`   | 着席/SIT OUT/LEAVE |
+| `PlayerDisconnectedEvent` | 切断通知           |
+| `PlayerReconnectedEvent`  | 復帰通知           |
 
 ## 7.4 順序保証と欠落検知
 
@@ -368,15 +373,15 @@ interface GameRule {
 
 ## 7.6 エラーコード
 
-| code | 説明 |
-| --- | --- |
-| `INVALID_ACTION` | ルール上実行不可能なアクション |
-| `NOT_YOUR_TURN` | 非手番実行 |
-| `INSUFFICIENT_CHIPS` | チップ不足 |
-| `TABLE_FULL` | 空席なし |
-| `BUYIN_OUT_OF_RANGE` | バイイン制約違反 |
-| `ALREADY_SEATED` | 同卓重複着席 |
-| `AUTH_EXPIRED` | 認証期限切れ |
+| code                 | 説明                           |
+| -------------------- | ------------------------------ |
+| `INVALID_ACTION`     | ルール上実行不可能なアクション |
+| `NOT_YOUR_TURN`      | 非手番実行                     |
+| `INSUFFICIENT_CHIPS` | チップ不足                     |
+| `TABLE_FULL`         | 空席なし                       |
+| `BUYIN_OUT_OF_RANGE` | バイイン制約違反               |
+| `ALREADY_SEATED`     | 同卓重複着席                   |
+| `AUTH_EXPIRED`       | 認証期限切れ                   |
 
 ---
 
@@ -384,23 +389,22 @@ interface GameRule {
 
 ## 8.1 認証
 
-| Method | Path | 説明 |
-| --- | --- | --- |
-| `GET` | `/api/auth/google/start` | Google OAuth開始 |
-| `GET` | `/api/auth/google/callback` | コールバック受信、セッション発行 |
-| `POST` | `/api/auth/logout` | ログアウト |
+| Method | Path                        | 説明                             |
+| ------ | --------------------------- | -------------------------------- |
+| `GET`  | `/api/auth/google/start`    | Google OAuth開始                 |
+| `GET`  | `/api/auth/google/callback` | コールバック受信、セッション発行 |
+| `POST` | `/api/auth/logout`          | ログアウト                       |
 
 ログイン時仕様:
 
-- 初回ログイン時に `wallet.balance = 4000` を付与
-- 2回目以降は残高維持（補充なし）
+- ログイン時に `wallet.balance = 4000` を付与 (1日1回まで)
 
 ## 8.2 ロビー
 
-| Method | Path | 説明 |
-| --- | --- | --- |
-| `GET` | `/api/lobby/tables` | 2卓のサマリ一覧取得 |
-| `GET` | `/api/tables/:tableId` | 卓詳細（席、進行中ハンド概要） |
+| Method | Path                   | 説明                           |
+| ------ | ---------------------- | ------------------------------ |
+| `GET`  | `/api/lobby/tables`    | 2卓のサマリ一覧取得            |
+| `GET`  | `/api/tables/:tableId` | 卓詳細（席、進行中ハンド概要） |
 
 `GET /api/lobby/tables` レスポンス項目:
 
@@ -414,10 +418,10 @@ interface GameRule {
 
 ## 8.3 履歴
 
-| Method | Path | 説明 |
-| --- | --- | --- |
-| `GET` | `/api/history/hands?cursor=` | 自分のハンド履歴一覧 |
-| `GET` | `/api/history/hands/:handId` | ハンド詳細（ストリートごとの行動と結果） |
+| Method | Path                         | 説明                                     |
+| ------ | ---------------------------- | ---------------------------------------- |
+| `GET`  | `/api/history/hands?cursor=` | 自分のハンド履歴一覧                     |
+| `GET`  | `/api/history/hands/:handId` | ハンド詳細（ストリートごとの行動と結果） |
 
 `GET /api/history/hands/:handId` 返却項目:
 
@@ -469,6 +473,12 @@ erDiagram
 - `balance_after integer not null`
 - `hand_id uuid null`
 - `created_at timestamptz not null`
+
+`HAND_RESULT` 記録粒度:
+
+- 1ハンドにつき1レコードを生成する
+- `amount` はメインポット・サイドポットを含む net 損益（例: メイン -200、サイド +100 → amount = -100）
+- ポット単位の詳細は `hand_results` テーブルで追跡する
 
 ### `tables`
 
@@ -570,6 +580,20 @@ erDiagram
 
 コミット成功後のみイベント配信する（配信先行を禁止）。
 
+## 9.5 スナップショット更新
+
+スナップショットは再接続時の高速な状態復元を目的とする。
+
+更新タイミング:
+
+- ハンド終了時（`DealEndEvent` 発行後）に更新する
+- 1卓につき最新1件のみ保持する
+
+利用シナリオ:
+
+- 再接続時、`lastTableSeq` 以降のイベントが保持範囲外の場合にスナップショットを返却
+- サーバー再起動後の復元では `hand_events` リプレイを優先し、スナップショットは補助的に使用
+
 ---
 
 ## 10. タイムアウト/切断設計
@@ -607,12 +631,12 @@ erDiagram
 
 ## 11.1 画面構成
 
-| 画面 | 主なUI要素 |
-| --- | --- |
-| ログイン | Googleログインボタン |
-| ロビー | 卓一覧、人数、ゲーム種、空席、参加ボタン |
+| 画面     | 主なUI要素                                           |
+| -------- | ---------------------------------------------------- |
+| ログイン | Googleログインボタン                                 |
+| ロビー   | 卓一覧、人数、ゲーム種、空席、参加ボタン             |
 | テーブル | 座席、カード表示、ポット、アクションボタン、タイマー |
-| 履歴 | ハンド一覧、詳細モーダル、損益表示 |
+| 履歴     | ハンド一覧、詳細モーダル、損益表示                   |
 
 ## 11.2 状態管理
 
