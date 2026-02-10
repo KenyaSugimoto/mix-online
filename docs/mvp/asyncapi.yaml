@@ -143,8 +143,116 @@ components:
             occurredAt: "2026-02-09T10:05:11.500Z"
             eventName: RaiseEvent
             payload:
+              street: THIRD
               seatNo: 4
               amount: 40
+              stackAfter: 860
+              potAfter: 290
+              streetBetTo: 40
+              nextToActSeatNo: 5
+              isAllIn: false
+        - payload:
+            type: table.event
+            tableId: cbf4d865-112d-4c22-8f54-95e2785e7024
+            tableSeq: 94
+            handId: 9056fdb5-1259-4186-9bc7-ce59131457f5
+            handSeq: 3
+            occurredAt: "2026-02-09T10:03:00.120Z"
+            eventName: DealCards3rdEvent
+            payload:
+              street: THIRD
+              bringInSeatNo: 1
+              cards:
+                - seatNo: 1
+                  cards:
+                    - position: HOLE_1
+                      visibility: DOWN_HIDDEN
+                      card: null
+                    - position: HOLE_2
+                      visibility: DOWN_HIDDEN
+                      card: null
+                    - position: UP_3
+                      visibility: UP
+                      card:
+                        rank: K
+                        suit: H
+                - seatNo: 4
+                  cards:
+                    - position: HOLE_1
+                      visibility: DOWN_SELF
+                      card:
+                        rank: A
+                        suit: S
+                    - position: HOLE_2
+                      visibility: DOWN_SELF
+                      card:
+                        rank: "5"
+                        suit: D
+                    - position: UP_3
+                      visibility: UP
+                      card:
+                        rank: "9"
+                        suit: C
+        - payload:
+            type: table.event
+            tableId: cbf4d865-112d-4c22-8f54-95e2785e7024
+            tableSeq: 211
+            handId: 9056fdb5-1259-4186-9bc7-ce59131457f5
+            handSeq: 59
+            occurredAt: "2026-02-09T10:12:31.003Z"
+            eventName: ShowdownEvent
+            payload:
+              hasShowdown: true
+              showdownOrder:
+                - 2
+                - 4
+              players:
+                - seatNo: 2
+                  userId: 818ac8d1-efbe-44ee-90ed-e435f6d0e57d
+                  displayName: Alice
+                  action: SHOW
+                  cardsUp:
+                    - rank: K
+                      suit: C
+                    - rank: K
+                      suit: S
+                    - rank: "9"
+                      suit: S
+                    - rank: "8"
+                      suit: C
+                  cardsDown:
+                    - rank: A
+                      suit: H
+                    - rank: A
+                      suit: D
+                    - rank: "2"
+                      suit: S
+                  handLabel: Two Pair (Aces and Kings)
+                - seatNo: 4
+                  userId: 1a500a3b-b6ad-4fd8-b4f5-3f3a3b5f0103
+                  displayName: Bob
+                  action: MUCK
+                  cardsUp:
+                    - rank: J
+                      suit: S
+                    - rank: "7"
+                      suit: C
+                    - rank: "7"
+                      suit: D
+                    - rank: "3"
+                      suit: H
+                  cardsDown: []
+                  handLabel: null
+              potResults:
+                - potNo: 1
+                  side: SINGLE
+                  amount: 680
+                  winners:
+                    - seatNo: 2
+                      userId: 818ac8d1-efbe-44ee-90ed-e435f6d0e57d
+                      displayName: Alice
+                      amount: 680
+                      handLabel: Two Pair (Aces and Kings)
 
     TableErrorMessage:
       name: tableErrorMessage
@@ -237,6 +345,846 @@ components:
         - PlayerDisconnectedEvent
         - PlayerReconnectedEvent
 
+    SeatNo:
+      type: integer
+      minimum: 1
+      maximum: 6
+
+    GameType:
+      type: string
+      enum:
+        - STUD_HI
+        - RAZZ
+        - STUD_8
+
+    Street:
+      type: string
+      enum:
+        - THIRD
+        - FOURTH
+        - FIFTH
+        - SIXTH
+        - SEVENTH
+
+    SeatStatus:
+      type: string
+      enum:
+        - EMPTY
+        - SEATED_WAIT_NEXT_HAND
+        - ACTIVE
+        - SIT_OUT
+        - DISCONNECTED
+        - LEAVE_PENDING
+
+    CardRank:
+      type: string
+      enum:
+        - "A"
+        - "K"
+        - "Q"
+        - "J"
+        - "T"
+        - "9"
+        - "8"
+        - "7"
+        - "6"
+        - "5"
+        - "4"
+        - "3"
+        - "2"
+
+    CardSuit:
+      type: string
+      enum:
+        - S
+        - H
+        - D
+        - C
+
+    Card:
+      type: object
+      required:
+        - rank
+        - suit
+      properties:
+        rank:
+          $ref: "#/components/schemas/CardRank"
+        suit:
+          $ref: "#/components/schemas/CardSuit"
+      additionalProperties: false
+
+    CardVisibility:
+      type: string
+      enum:
+        - UP
+        - DOWN_SELF
+        - DOWN_HIDDEN
+
+    ThirdStreetCardPosition:
+      type: string
+      enum:
+        - HOLE_1
+        - HOLE_2
+        - UP_3
+
+    ShowdownAction:
+      type: string
+      enum:
+        - SHOW
+        - MUCK
+
+    PotSide:
+      type: string
+      enum:
+        - SINGLE
+        - HI
+        - LO
+
+    DealEndReason:
+      type: string
+      enum:
+        - SHOWDOWN
+        - UNCONTESTED
+        - AUTO_END
+
+    SeatStateChangeReason:
+      type: string
+      enum:
+        - JOIN
+        - SIT_OUT
+        - RETURN
+        - LEAVE_PENDING
+        - LEAVE
+        - AUTO_LEAVE_ZERO_STACK
+        - NEXT_HAND_ACTIVATE
+        - SYSTEM
+
+    StakeSnapshot:
+      type: object
+      required:
+        - smallBet
+        - bigBet
+        - ante
+        - bringIn
+      properties:
+        smallBet:
+          type: integer
+          minimum: 0
+        bigBet:
+          type: integer
+          minimum: 0
+        ante:
+          type: integer
+          minimum: 0
+        bringIn:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    HandParticipantSnapshot:
+      type: object
+      required:
+        - seatNo
+        - userId
+        - displayName
+        - startStack
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        startStack:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    SeatUserSummary:
+      type: object
+      required:
+        - userId
+        - displayName
+      properties:
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+      additionalProperties: false
+
+    DealtCardView:
+      type: object
+      required:
+        - visibility
+        - card
+      properties:
+        visibility:
+          $ref: "#/components/schemas/CardVisibility"
+        card:
+          oneOf:
+            - $ref: "#/components/schemas/Card"
+            - type: "null"
+      additionalProperties: false
+
+    ThirdStreetDealtCardView:
+      type: object
+      required:
+        - position
+        - visibility
+        - card
+      properties:
+        position:
+          $ref: "#/components/schemas/ThirdStreetCardPosition"
+        visibility:
+          $ref: "#/components/schemas/CardVisibility"
+        card:
+          oneOf:
+            - $ref: "#/components/schemas/Card"
+            - type: "null"
+      additionalProperties: false
+
+    ThirdStreetSeatCards:
+      type: object
+      required:
+        - seatNo
+        - cards
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        cards:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/ThirdStreetDealtCardView"
+      additionalProperties: false
+
+    StreetDealCard:
+      type: object
+      required:
+        - seatNo
+        - visibility
+        - card
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        visibility:
+          $ref: "#/components/schemas/CardVisibility"
+        card:
+          oneOf:
+            - $ref: "#/components/schemas/Card"
+            - type: "null"
+      additionalProperties: false
+
+    SeatContribution:
+      type: object
+      required:
+        - seatNo
+        - amount
+        - stackAfter
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        amount:
+          type: integer
+          minimum: 0
+        stackAfter:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    ChipActionEventPayload:
+      type: object
+      required:
+        - street
+        - seatNo
+        - amount
+        - stackAfter
+        - potAfter
+        - streetBetTo
+        - nextToActSeatNo
+        - isAllIn
+      properties:
+        street:
+          $ref: "#/components/schemas/Street"
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        amount:
+          type: integer
+          minimum: 0
+        stackAfter:
+          type: integer
+          minimum: 0
+        potAfter:
+          type: integer
+          minimum: 0
+        streetBetTo:
+          type: integer
+          minimum: 0
+        nextToActSeatNo:
+          oneOf:
+            - $ref: "#/components/schemas/SeatNo"
+            - type: "null"
+        isAllIn:
+          type: boolean
+      additionalProperties: false
+
+    PotWinner:
+      type: object
+      required:
+        - seatNo
+        - userId
+        - displayName
+        - amount
+        - handLabel
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        amount:
+          type: integer
+          minimum: 0
+        handLabel:
+          oneOf:
+            - type: string
+            - type: "null"
+      additionalProperties: false
+
+    PotResult:
+      type: object
+      required:
+        - potNo
+        - side
+        - amount
+        - winners
+      properties:
+        potNo:
+          type: integer
+          minimum: 1
+        side:
+          $ref: "#/components/schemas/PotSide"
+        amount:
+          type: integer
+          minimum: 0
+        winners:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PotWinner"
+      additionalProperties: false
+
+    SeatChipResult:
+      type: object
+      required:
+        - seatNo
+        - userId
+        - displayName
+        - delta
+        - stackAfter
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        delta:
+          type: integer
+        stackAfter:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    DealInitEventPayload:
+      type: object
+      required:
+        - handNo
+        - gameType
+        - street
+        - dealerSeatNo
+        - mixIndex
+        - handsSinceRotation
+        - stakes
+        - participants
+      properties:
+        handNo:
+          type: integer
+          format: int64
+          minimum: 1
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        street:
+          type: string
+          const: THIRD
+        dealerSeatNo:
+          $ref: "#/components/schemas/SeatNo"
+        mixIndex:
+          type: integer
+          minimum: 0
+          maximum: 2
+        handsSinceRotation:
+          type: integer
+          minimum: 0
+          maximum: 5
+        stakes:
+          $ref: "#/components/schemas/StakeSnapshot"
+        participants:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/HandParticipantSnapshot"
+      additionalProperties: false
+
+    DealCards3rdEventPayload:
+      type: object
+      required:
+        - street
+        - bringInSeatNo
+        - cards
+      properties:
+        street:
+          type: string
+          const: THIRD
+        bringInSeatNo:
+          $ref: "#/components/schemas/SeatNo"
+        cards:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/ThirdStreetSeatCards"
+      additionalProperties: false
+
+    DealCardEventPayload:
+      type: object
+      required:
+        - street
+        - cards
+        - toActSeatNo
+        - potAfter
+      properties:
+        street:
+          type: string
+          enum:
+            - FOURTH
+            - FIFTH
+            - SIXTH
+            - SEVENTH
+        cards:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/StreetDealCard"
+        toActSeatNo:
+          oneOf:
+            - $ref: "#/components/schemas/SeatNo"
+            - type: "null"
+        potAfter:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    PostAnteEventPayload:
+      type: object
+      required:
+        - street
+        - contributions
+        - potAfter
+      properties:
+        street:
+          type: string
+          const: THIRD
+        contributions:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/SeatContribution"
+        potAfter:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    BringInEventPayload:
+      type: object
+      required:
+        - street
+        - seatNo
+        - amount
+        - stackAfter
+        - potAfter
+        - nextToActSeatNo
+        - isAllIn
+      properties:
+        street:
+          type: string
+          const: THIRD
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        amount:
+          type: integer
+          minimum: 0
+        stackAfter:
+          type: integer
+          minimum: 0
+        potAfter:
+          type: integer
+          minimum: 0
+        nextToActSeatNo:
+          oneOf:
+            - $ref: "#/components/schemas/SeatNo"
+            - type: "null"
+        isAllIn:
+          type: boolean
+      additionalProperties: false
+
+    CompleteEventPayload:
+      type: object
+      required:
+        - street
+        - seatNo
+        - amount
+        - stackAfter
+        - potAfter
+        - streetBetTo
+        - nextToActSeatNo
+        - isAllIn
+      properties:
+        street:
+          type: string
+          const: THIRD
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        amount:
+          type: integer
+          minimum: 0
+        stackAfter:
+          type: integer
+          minimum: 0
+        potAfter:
+          type: integer
+          minimum: 0
+        streetBetTo:
+          type: integer
+          minimum: 0
+        nextToActSeatNo:
+          oneOf:
+            - $ref: "#/components/schemas/SeatNo"
+            - type: "null"
+        isAllIn:
+          type: boolean
+      additionalProperties: false
+
+    BetEventPayload:
+      $ref: "#/components/schemas/ChipActionEventPayload"
+
+    RaiseEventPayload:
+      $ref: "#/components/schemas/ChipActionEventPayload"
+
+    CallEventPayload:
+      $ref: "#/components/schemas/ChipActionEventPayload"
+
+    CheckEventPayload:
+      type: object
+      required:
+        - street
+        - seatNo
+        - potAfter
+        - nextToActSeatNo
+      properties:
+        street:
+          $ref: "#/components/schemas/Street"
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        potAfter:
+          type: integer
+          minimum: 0
+        nextToActSeatNo:
+          oneOf:
+            - $ref: "#/components/schemas/SeatNo"
+            - type: "null"
+      additionalProperties: false
+
+    FoldEventPayload:
+      type: object
+      required:
+        - street
+        - seatNo
+        - potAfter
+        - nextToActSeatNo
+        - remainingPlayers
+      properties:
+        street:
+          $ref: "#/components/schemas/Street"
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        potAfter:
+          type: integer
+          minimum: 0
+        nextToActSeatNo:
+          oneOf:
+            - $ref: "#/components/schemas/SeatNo"
+            - type: "null"
+        remainingPlayers:
+          type: integer
+          minimum: 1
+          maximum: 6
+      additionalProperties: false
+
+    StreetAdvanceEventPayload:
+      type: object
+      required:
+        - fromStreet
+        - toStreet
+        - potTotal
+        - activeSeatNos
+        - nextToActSeatNo
+        - tableStatus
+        - reason
+      properties:
+        fromStreet:
+          $ref: "#/components/schemas/Street"
+        toStreet:
+          oneOf:
+            - $ref: "#/components/schemas/Street"
+            - type: "null"
+        potTotal:
+          type: integer
+          minimum: 0
+        activeSeatNos:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/SeatNo"
+        nextToActSeatNo:
+          oneOf:
+            - $ref: "#/components/schemas/SeatNo"
+            - type: "null"
+        tableStatus:
+          type: string
+          enum:
+            - BETTING
+            - SHOWDOWN
+            - HAND_END
+        reason:
+          oneOf:
+            - type: string
+              const: BETTING_ROUND_COMPLETE
+              description: ベッティングラウンドが正規に完了し、次ストリートへ遷移した。
+            - type: string
+              const: ALL_IN_RUNOUT
+              description: アクション不能（全員all-in等）のため残りストリートをランアウト進行した。
+            - type: string
+              const: HAND_CLOSED
+              description: "ハンド継続条件が消滅（例: 残り1人）してハンド終了状態へ遷移した。"
+      additionalProperties: false
+
+    ShowdownPlayer:
+      type: object
+      required:
+        - seatNo
+        - userId
+        - displayName
+        - action
+        - cardsUp
+        - cardsDown
+        - handLabel
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        action:
+          $ref: "#/components/schemas/ShowdownAction"
+        cardsUp:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+        cardsDown:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+        handLabel:
+          oneOf:
+            - type: string
+            - type: "null"
+      additionalProperties: false
+
+    ShowdownEventPayload:
+      type: object
+      description: |
+        Showdown が発生した場合にのみ配信される。
+        uncontested（全員foldなど）で Showdown 不要の場合は本イベントを送信せず、
+        `DealEndEvent.endReason=UNCONTESTED` で終局を表現する。
+      required:
+        - hasShowdown
+        - showdownOrder
+        - players
+        - potResults
+      properties:
+        hasShowdown:
+          type: boolean
+          const: true
+        showdownOrder:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/SeatNo"
+        players:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ShowdownPlayer"
+        potResults:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PotResult"
+      additionalProperties: false
+
+    DealEndEventPayload:
+      type: object
+      required:
+        - endReason
+        - finalPot
+        - results
+        - nextDealerSeatNo
+        - nextGameType
+        - mixIndex
+        - handsSinceRotation
+      properties:
+        endReason:
+          $ref: "#/components/schemas/DealEndReason"
+        finalPot:
+          type: integer
+          minimum: 0
+        results:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/SeatChipResult"
+        nextDealerSeatNo:
+          $ref: "#/components/schemas/SeatNo"
+        nextGameType:
+          $ref: "#/components/schemas/GameType"
+        mixIndex:
+          type: integer
+          minimum: 0
+          maximum: 2
+        handsSinceRotation:
+          type: integer
+          minimum: 0
+          maximum: 5
+      additionalProperties: false
+
+    SeatStateChangedEventPayload:
+      type: object
+      required:
+        - seatNo
+        - previousStatus
+        - currentStatus
+        - reason
+        - user
+        - stack
+        - appliesFrom
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        previousStatus:
+          $ref: "#/components/schemas/SeatStatus"
+        currentStatus:
+          $ref: "#/components/schemas/SeatStatus"
+        reason:
+          $ref: "#/components/schemas/SeatStateChangeReason"
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/SeatUserSummary"
+            - type: "null"
+        stack:
+          type: integer
+          minimum: 0
+        appliesFrom:
+          type: string
+          enum:
+            - IMMEDIATE
+            - NEXT_HAND
+      additionalProperties: false
+
+    PlayerDisconnectedEventPayload:
+      type: object
+      required:
+        - seatNo
+        - userId
+        - displayName
+        - seatStatus
+        - disconnectStreak
+        - willAutoLeave
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        seatStatus:
+          type: string
+          const: DISCONNECTED
+        disconnectStreak:
+          type: integer
+          minimum: 1
+        willAutoLeave:
+          type: boolean
+      additionalProperties: false
+
+    PlayerReconnectedEventPayload:
+      type: object
+      required:
+        - seatNo
+        - userId
+        - displayName
+        - restoredSeatStatus
+        - disconnectStreakResetTo
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        restoredSeatStatus:
+          type: string
+          enum:
+            - ACTIVE
+            - SIT_OUT
+            - LEAVE_PENDING
+        disconnectStreakResetTo:
+          type: integer
+          const: 0
+      additionalProperties: false
+
     RealtimeErrorCode:
       type: string
       enum:
@@ -262,6 +1210,9 @@ components:
           $ref: "#/components/schemas/UUID"
         sentAt:
           $ref: "#/components/schemas/DateTime"
+          description: |
+            クライアント送信時刻（参照用途）。順序や正史判定には利用しない。
+            サーバー時刻 `occurredAt` / `tableSeq` を正とする。
         payload:
           type: object
       additionalProperties: false
@@ -358,6 +1309,9 @@ components:
                 action:
                   $ref: "#/components/schemas/TableCommandAction"
                 amount:
+                  description: |
+                    `BET` / `RAISE` / `COMPLETE` / `BRING_IN` のときは数値を指定する。
+                    `CHECK` / `FOLD` / `CALL` では `null` を推奨（0との意味差を避けるため）。
                   oneOf:
                     - type: integer
                       minimum: 0
@@ -396,7 +1350,455 @@ components:
               type: object
               additionalProperties: false
 
-    TableEventMessagePayload:
+    DealInitEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: DealInitEvent
+        payload:
+          $ref: "#/components/schemas/DealInitEventPayload"
+      additionalProperties: false
+
+    DealCards3rdEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: DealCards3rdEvent
+        payload:
+          $ref: "#/components/schemas/DealCards3rdEventPayload"
+      additionalProperties: false
+
+    DealCardEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: DealCardEvent
+        payload:
+          $ref: "#/components/schemas/DealCardEventPayload"
+      additionalProperties: false
+
+    PostAnteEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: PostAnteEvent
+        payload:
+          $ref: "#/components/schemas/PostAnteEventPayload"
+      additionalProperties: false
+
+    BringInEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: BringInEvent
+        payload:
+          $ref: "#/components/schemas/BringInEventPayload"
+      additionalProperties: false
+
+    CompleteEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: CompleteEvent
+        payload:
+          $ref: "#/components/schemas/CompleteEventPayload"
+      additionalProperties: false
+
+    BetEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: BetEvent
+        payload:
+          $ref: "#/components/schemas/BetEventPayload"
+      additionalProperties: false
+
+    RaiseEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: RaiseEvent
+        payload:
+          $ref: "#/components/schemas/RaiseEventPayload"
+      additionalProperties: false
+
+    CallEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: CallEvent
+        payload:
+          $ref: "#/components/schemas/CallEventPayload"
+      additionalProperties: false
+
+    CheckEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: CheckEvent
+        payload:
+          $ref: "#/components/schemas/CheckEventPayload"
+      additionalProperties: false
+
+    FoldEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: FoldEvent
+        payload:
+          $ref: "#/components/schemas/FoldEventPayload"
+      additionalProperties: false
+
+    StreetAdvanceEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: StreetAdvanceEvent
+        payload:
+          $ref: "#/components/schemas/StreetAdvanceEventPayload"
+      additionalProperties: false
+
+    ShowdownEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: ShowdownEvent
+        payload:
+          $ref: "#/components/schemas/ShowdownEventPayload"
+      additionalProperties: false
+
+    DealEndEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - handId
+        - handSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handSeq:
+          $ref: "#/components/schemas/HandSeq"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: DealEndEvent
+        payload:
+          $ref: "#/components/schemas/DealEndEventPayload"
+      additionalProperties: false
+
+    SeatStateChangedEventMessagePayload:
       type: object
       required:
         - type
@@ -424,12 +1826,99 @@ components:
         occurredAt:
           $ref: "#/components/schemas/DateTime"
         eventName:
-          $ref: "#/components/schemas/TableEventName"
+          type: string
+          const: SeatStateChangedEvent
         payload:
-          type: object
-          description: イベントごとの拡張データ。構造は `eventName` に依存する。
-          additionalProperties: true
+          $ref: "#/components/schemas/SeatStateChangedEventPayload"
       additionalProperties: false
+
+    PlayerDisconnectedEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+        handSeq:
+          oneOf:
+            - $ref: "#/components/schemas/HandSeq"
+            - type: "null"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: PlayerDisconnectedEvent
+        payload:
+          $ref: "#/components/schemas/PlayerDisconnectedEventPayload"
+      additionalProperties: false
+
+    PlayerReconnectedEventMessagePayload:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - occurredAt
+        - eventName
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          $ref: "#/components/schemas/TableSeq"
+        handId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+        handSeq:
+          oneOf:
+            - $ref: "#/components/schemas/HandSeq"
+            - type: "null"
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        eventName:
+          type: string
+          const: PlayerReconnectedEvent
+        payload:
+          $ref: "#/components/schemas/PlayerReconnectedEventPayload"
+      additionalProperties: false
+
+    TableEventMessagePayload:
+      oneOf:
+        - $ref: "#/components/schemas/DealInitEventMessagePayload"
+        - $ref: "#/components/schemas/DealCards3rdEventMessagePayload"
+        - $ref: "#/components/schemas/DealCardEventMessagePayload"
+        - $ref: "#/components/schemas/PostAnteEventMessagePayload"
+        - $ref: "#/components/schemas/BringInEventMessagePayload"
+        - $ref: "#/components/schemas/CompleteEventMessagePayload"
+        - $ref: "#/components/schemas/BetEventMessagePayload"
+        - $ref: "#/components/schemas/RaiseEventMessagePayload"
+        - $ref: "#/components/schemas/CallEventMessagePayload"
+        - $ref: "#/components/schemas/CheckEventMessagePayload"
+        - $ref: "#/components/schemas/FoldEventMessagePayload"
+        - $ref: "#/components/schemas/StreetAdvanceEventMessagePayload"
+        - $ref: "#/components/schemas/ShowdownEventMessagePayload"
+        - $ref: "#/components/schemas/DealEndEventMessagePayload"
+        - $ref: "#/components/schemas/SeatStateChangedEventMessagePayload"
+        - $ref: "#/components/schemas/PlayerDisconnectedEventMessagePayload"
+        - $ref: "#/components/schemas/PlayerReconnectedEventMessagePayload"
 
     TableErrorMessagePayload:
       type: object
@@ -443,10 +1932,16 @@ components:
           type: string
           const: table.error
         requestId:
+          description: |
+            コマンド起因エラーの場合に設定される。セッション期限切れ等の
+            非コマンド起因エラーでは `null` の場合がある。
           oneOf:
             - $ref: "#/components/schemas/UUID"
             - type: "null"
         tableId:
+          description: |
+            卓コンテキストを特定できる場合に設定される。接続直後の認証エラー等
+            卓未確定時は `null` の場合がある。
           oneOf:
             - $ref: "#/components/schemas/UUID"
             - type: "null"
@@ -487,6 +1982,10 @@ components:
                 - RESYNC_REQUIRED
             table:
               type: object
+              description: |
+                再同期用の卓スナップショット。実装では少なくとも以下を含むことを推奨:
+                `status`, `gameType`, `stakes`, `seats`, `currentHand`,
+                `dealerSeatNo`, `mixIndex`, `handsSinceRotation`。
               additionalProperties: true
           additionalProperties: true
       additionalProperties: false
