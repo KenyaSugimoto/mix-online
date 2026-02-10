@@ -32,3 +32,9 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+# Serena
+.serena/
+
+# VSCode
+.vscode/
