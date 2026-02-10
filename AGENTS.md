@@ -1,31 +1,37 @@
-# Repository Guidelines
+# リポジトリガイドライン
 
-## Project Structure & Module Organization
+## プロジェクト構造とモジュール構成
 
-This is a pnpm workspace monorepo. Workspace packages live under `apps/` and `packages/` as defined in `pnpm-workspace.yaml`. Shared TypeScript configuration is centralized in `tsconfig.base.json`. Documentation is kept in `docs/`, with MVP materials under `docs/mvp/` (requirements and design documents, plus API specs such as `openapi.yaml` and `asyncapi.yaml`). Generated outputs should be placed in per-package `dist/` directories and are ignored by tooling.
+このプロジェクトは pnpm workspace を使用したモノレポ構成です。ワークスペースパッケージは `pnpm-workspace.yaml` で定義されている通り、`apps/` および `packages/` 配下に配置されます。共有の TypeScript 設定は `tsconfig.base.json` に集約されています。ドキュメントは `docs/` ディレクトリで管理し、MVP 関連の資料（要件、設計書、OpenAPI/AsyncAPI スペックなど）は `docs/mvp/` 配下にあります。ビルド成果物は各パッケージの `dist/` ディレクトリに出力され、ツールによって無視される設定になっています。
 
-## Build, Test, and Development Commands
+## ビルド、テスト、および開発コマンド
 
-All commands are run from the repo root with pnpm:
+すべてのコマンドはリポジトリのルートから pnpm を使用して実行します：
 
-- `pnpm dev`: run all workspace apps in parallel (delegates to each package’s `dev` script).
-- `pnpm build`: build every workspace package.
-- `pnpm typecheck`: run TypeScript type checks across the workspace.
-- `pnpm lint`: run Biome lint/format checks for the whole repo.
-- `pnpm lint:fix`: apply Biome fixes and formatting.
+- `pnpm dev`: すべてのワークスペースアプリを並列で実行します（各パッケージの `dev` スクリプトを呼び出します）。
+- `pnpm build`: すべてのワークスペースパッケージをビルドします。
+- `pnpm typecheck`: ワークスペース全体の TypeScript 型チェックを実行します。
+- `pnpm lint`: Biome を使用してリポジトリ全体の Lint/フォーマットチェックを実行します。
+- `pnpm lint:fix`: Biome による修正とフォーマットを適用します。
+- `pnpm test`: ワークスペース全体のテスト（Vitest）を実行します。
 
-## Coding Style & Naming Conventions
+## コーディングスタイルと命名規則
 
-Formatting and linting are enforced by Biome (`biome.json`). Use 2-space indentation, double quotes, and semicolons in JavaScript/TypeScript. Prefer conventional naming: `camelCase` for variables and functions, `PascalCase` for classes/components, and `kebab-case` for file and folder names unless a package’s existing style differs.
+フォーマットと Lint は Biome (`biome.json`) によって強制されます。JavaScript/TypeScript では、2スペースのインデント、ダブルクォート、セミコロンの使用を推奨します。命名規則は、変数や関数には `camelCase`、クラスやコンポーネントには `PascalCase`、ファイルやフォルダ名には（既存のスタイルが異なる場合を除き）`kebab-case` を使用してください。
 
-## Testing Guidelines
+## テスティングガイドライン
 
-There is no test framework configured yet and no top-level `tests/` directory. If you add tests, create a clear structure (for example `tests/` or `__tests__/` within each package), document the chosen framework, and add a single workspace command (e.g., `pnpm test`) that runs all tests. Use consistent test file names such as `*.test.ts` or `*.spec.ts`.
+テストフレームワークとして **Vitest** を導入しています。
 
-## Commit & Pull Request Guidelines
+- `pnpm test`: ワークスペース全体のテスト（vitest run）を実行します。CIで使用されます。
+- `pnpm -r test:watch`: 各パッケージでウォッチモードでテストを実行します。
+- テストファイル命名規則: `*.test.ts` または `*.spec.ts` とし、原則として対象ファイルと同じ階層の `__tests__/` ディレクトリに配置します。
+- 共用パッケージ（`packages/shared`）など、ロジックが集中する場所には必ず単体テストを追加してください。
 
-Git history indicates short, descriptive commit messages (sometimes in Japanese and with emoji). Keep commit summaries concise and aligned with existing style. For pull requests, include a clear description of changes and purpose, link relevant documents in `docs/`, and provide screenshots or samples when user-facing behavior changes.
+## コミットおよびプルリクエストのガイドライン
 
-## Documentation Updates
+Git の履歴には、短く簡潔な（時には日本語や絵文字を含む）コミットメッセージが使用されています。コミットの要約は簡潔に保ち、既存のスタイルに合わせてください。プルリクエストの際は、変更内容と目的を明確に記載し、`docs/` 内の関連ドキュメントへのリンクを含め、ユーザーの目に触れる動作が変更される場合はスクリーンショットやサンプルを添付してください。
 
-Documentation is a primary artifact for this repo today. Keep sections short, structured, and cross-link related documents when updating files under `docs/mvp/`.
+## ドキュメントの更新
+
+現在、このリポジトリにおいてドキュメントは主要な成果物です。各セクションは短く構造的に保ち、`docs/mvp/` 配下のファイルを更新する際は関連ドキュメントへの相互リンクを維持してください。
