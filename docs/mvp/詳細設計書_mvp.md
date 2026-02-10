@@ -60,15 +60,23 @@ flowchart LR
 | Frontend | React + TypeScript + Vite                                |
 | Backend  | Hono + TypeScript（API/Gateway/Game Engine同一プロセス） |
 | Realtime | WebSocket（JSONメッセージ）                              |
-| DB       | PostgreSQL 16                                            |
+| DB       | Supabase (PostgreSQL)                                    |
 | Auth     | Google OAuth 2.0 / OIDC                                  |
 
 ## 3.4 デプロイ前提（MVP）
 
 - アプリケーション: API/Gateway/Game Engineを同一サービスとして1インスタンスで稼働
-- DB: PostgreSQL単一インスタンス
+- DB: Supabase（マネージドPostgreSQL）を利用
 - 固定卓: 運営作成済み2卓を初期データとして投入
 - ローリング更新時は「新規手開始を一時停止 -> 進行中ハンド終了待ち -> デプロイ」を標準運用とする
+
+## 3.5 DBマイグレーション方針
+
+- マイグレーションは **Supabase CLI** (`supabase migration`) を使用する
+- マイグレーションファイルは生SQL形式で `supabase/migrations/` 配下に配置する
+- ローカル開発環境は `supabase start`（Docker）でSupabase互換のPostgreSQLを起動する
+- 本番適用は `supabase db push` でリモートプロジェクトへ反映する
+- DDLの設計成果物は `docs/mvp/ddl/` に保持する（参照用）
 
 ---
 
