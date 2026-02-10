@@ -366,6 +366,19 @@ interface GameRule {
 | `PlayerDisconnectedEvent` | 切断通知           |
 | `PlayerReconnectedEvent`  | 復帰通知           |
 
+### 7.3.1 イベントpayload設計メモ（実装指針）
+
+- 正式なスキーマ定義は `docs/mvp/asyncapi.yaml` を正とする（本節は要点のみ）。
+- `DealCards3rdEvent` は `bringInSeatNo` を含め、3rd配札直後にBring-in担当を特定可能にする。
+- `BringInEvent` は `isAllIn` を含め、ショートスタックのbring-in all-inを明示する。
+- `CompleteEvent` は `street=THIRD` 固定の独立payloadを使い、`seatNo`, `amount`, `stackAfter`, `potAfter`, `streetBetTo`, `nextToActSeatNo`, `isAllIn` を含む。
+- `DealCardEvent`（4th〜7th）は `toActSeatNo` を含む。`DealCards3rdEvent` と合わせて「誰の番か」をイベントで一貫表示できる。
+- `StreetAdvanceEvent.reason` は以下:
+  - `BETTING_ROUND_COMPLETE`: 正規遷移
+  - `ALL_IN_RUNOUT`: 全員all-in等でランアウト
+  - `HAND_CLOSED`: 継続条件消滅（例: 残り1人）で終局
+- `ShowdownEvent` はShowdown発生時のみ送る。uncontested終局では送らず、`DealEndEvent.endReason=UNCONTESTED` で表現する。
+
 ## 7.4 順序保証と欠落検知
 
 - 1卓内イベントは `table_seq` 連番で単調増加。
@@ -379,6 +392,8 @@ interface GameRule {
 3. サーバーは差分イベント返却、差分保持外なら `table.snapshot` を返却
 4. スナップショット受領後に通常イベント購読へ遷移
 
+`table.snapshot.payload.table` には、最低限 `status`, `gameType`, `stakes`, `seats`, `currentHand`, `dealerSeatNo`, `mixIndex`, `handsSinceRotation` を含める想定とする。
+
 ## 7.6 エラーコード
 
 | code                 | 説明                           |
@@ -390,6 +405,8 @@ interface GameRule {
 | `BUYIN_OUT_OF_RANGE` | バイイン制約違反               |
 | `ALREADY_SEATED`     | 同卓重複着席                   |
 | `AUTH_EXPIRED`       | 認証期限切れ                   |
+
+`table.error` の `requestId` / `tableId` は、非コマンド起因・卓未確定のエラー（例: 接続直後の `AUTH_EXPIRED`）では `null` を許容する。
 
 ## 7.7 契約仕様ファイル（確定）
 
