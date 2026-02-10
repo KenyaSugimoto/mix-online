@@ -1178,6 +1178,7 @@ components:
           type: string
           enum:
             - ACTIVE
+            - SEATED_WAIT_NEXT_HAND
             - SIT_OUT
             - LEAVE_PENDING
         disconnectStreakResetTo:

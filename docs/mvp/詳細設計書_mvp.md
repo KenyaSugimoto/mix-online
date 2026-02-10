@@ -112,6 +112,7 @@ flowchart LR
 - `ACTIVE`
 - `SIT_OUT`
 - `DISCONNECTED`
+- `LEAVE_PENDING`（ハンド終了待ち離席）
 
 ### ハンド内プレイヤー状態
 
@@ -119,6 +120,11 @@ flowchart LR
 - `FOLDED`
 - `ALL_IN`
 - `AUTO_FOLDED`（タイムアウト等）
+
+状態遷移の図解は以下を参照:
+
+- [`画面設計書_mvp.md`](./画面設計書_mvp.md)
+- [`状態遷移図_mvp.md`](./状態遷移図_mvp.md)
 
 ## 4.3 共通識別子
 
@@ -778,6 +784,7 @@ erDiagram
 - ログイン→ロビー→着席→プレイ→履歴閲覧
 - 途中参加（次ハンドから参加、当該ハンドは観戦）
 - スタック0で自動退席
+- 具体シナリオは [E2Eシナリオ集_mvp.md](./E2Eシナリオ集_mvp.md) を参照
 
 ---
 
