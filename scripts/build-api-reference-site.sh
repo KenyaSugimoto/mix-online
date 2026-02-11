@@ -17,72 +17,11 @@ rm -rf "${OUTPUT_DIR}"
 mkdir -p "${OUTPUT_DIR}/openapi"
 
 pnpm --package=@redocly/cli@latest dlx redocly build-docs "${OPENAPI_SPEC}" --title "Mix Stud Online OpenAPI" -o "${OUTPUT_DIR}/openapi/index.html"
-mkdir -p "${OUTPUT_DIR}/asyncapi"
-cp "${ASYNCAPI_SPEC}" "${OUTPUT_DIR}/asyncapi/asyncapi.yaml"
 
-cat > "${OUTPUT_DIR}/asyncapi/index.html" <<'HTML'
-<!doctype html>
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mix Stud Online AsyncAPI</title>
-    <script src="https://unpkg.com/@asyncapi/web-component@latest/lib/asyncapi-web-component.js"></script>
-    <style>
-      body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #f7fbff;
-        color: #1f2a37;
-      }
-
-      main {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 24px 20px 40px;
-      }
-
-      a {
-        color: #0f6cc8;
-      }
-
-      .note {
-        margin: 0 0 16px;
-      }
-
-      .frame {
-        border: 1px solid #d6e2f0;
-        border-radius: 12px;
-        overflow: hidden;
-        background: #fff;
-      }
-
-      asyncapi-component {
-        height: calc(100vh - 180px);
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>AsyncAPI Reference</h1>
-      <p class="note">
-        うまく表示されない場合は
-        <a href="./asyncapi.yaml">asyncapi.yaml</a>
-        を直接参照してください。
-      </p>
-      <div class="frame">
-        <asyncapi-component
-          schema-url="./asyncapi.yaml"
-          config='{"show":{"errors":true}}'
-        ></asyncapi-component>
-      </div>
-      <noscript>
-        JavaScript が無効な環境では表示できません。<a href="./asyncapi.yaml">asyncapi.yaml</a> を参照してください。
-      </noscript>
-    </main>
-  </body>
-</html>
-HTML
+ASYNCAPI_HOME="${OUTPUT_DIR}/.asyncapi-home"
+mkdir -p "${ASYNCAPI_HOME}"
+HOME="${ASYNCAPI_HOME}" ASYNCAPI_DISABLE_ANALYTICS=true pnpm --package=@asyncapi/cli@latest dlx asyncapi generate fromTemplate "${ASYNCAPI_SPEC}" "@asyncapi/html-template@latest" -o "${OUTPUT_DIR}/asyncapi" --force-write --no-interactive
+rm -rf "${ASYNCAPI_HOME}"
 
 cat > "${OUTPUT_DIR}/index.html" <<'HTML'
 <!doctype html>
