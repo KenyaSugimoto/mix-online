@@ -25,6 +25,7 @@ import {
 } from "@mix-online/shared";
 import type { SessionUser } from "../auth-session";
 import { createStandardDeck } from "../testing/fixed-deck-harness";
+import { resolveGameRule } from "./game-rule";
 import {
   type TableActorRegistry,
   createTableActorRegistry,
@@ -869,7 +870,10 @@ export class RealtimeTableService {
       });
     }
 
-    const bringInSeatNo = this.determineBringInSeat(hand.players);
+    const bringInSeatNo = this.determineBringInSeat(
+      table.gameType,
+      hand.players,
+    );
     hand.bringInSeatNo = bringInSeatNo;
 
     const dealCards3rdEvent: PendingEvent = {
@@ -927,39 +931,18 @@ export class RealtimeTableService {
     return [dealInitEvent, postAnteEvent, dealCards3rdEvent, bringInEvent];
   }
 
-  private determineBringInSeat(players: HandPlayerState[]): number {
-    const rankValue = (rank: CardValue["rank"]): number => {
-      if (rank === "A") return 14;
-      if (rank === "K") return 13;
-      if (rank === "Q") return 12;
-      if (rank === "J") return 11;
-      if (rank === "T") return 10;
-      return Number.parseInt(rank, 10);
-    };
-
-    const suitWeakScore = (suit: CardValue["suit"]): number => {
-      if (suit === "C") return 4;
-      if (suit === "D") return 3;
-      if (suit === "H") return 2;
-      return 1;
-    };
-
-    const ordered = [...players].sort((left, right) => {
-      const leftUp = left.cardsUp.at(0);
-      const rightUp = right.cardsUp.at(0);
-      if (!leftUp || !rightUp) {
-        return left.seatNo - right.seatNo;
-      }
-
-      const byRank = rankValue(leftUp.rank) - rankValue(rightUp.rank);
-      if (byRank !== 0) {
-        return byRank;
-      }
-
-      return suitWeakScore(rightUp.suit) - suitWeakScore(leftUp.suit);
-    });
-
-    return ordered[0]?.seatNo ?? players[0]?.seatNo ?? 1;
+  private determineBringInSeat(
+    gameType: GameTypeType,
+    players: HandPlayerState[],
+  ): number {
+    const gameRule = resolveGameRule(gameType);
+    return gameRule.determineBringIn(
+      players.map((player) => ({
+        seatNo: player.seatNo,
+        upCards: player.cardsUp,
+        hasPairOnBoard: false,
+      })),
+    );
   }
 
   private resolveNextToAct(hand: HandState, fromSeatNo: number): number | null {
