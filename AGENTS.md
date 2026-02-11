@@ -51,7 +51,7 @@ AIエージェントは、実装タスクを開始する前に以下を必ず適
 
 - マイグレーション管理: **Supabase CLI** (`supabase migration`) を使用予定
 - ローカル開発: `supabase start` でDocker上にSupabase互換環境を起動
-- DDL設計成果物: `docs/mvp/ddl/` に生SQLとして保持（テーブル定義・インデックス・初期データ）
+- DDL正本: `supabase/migrations/` に生SQLとして保持（テーブル定義・インデックス・初期データ）
 - 本番適用: `supabase db push` でリモートプロジェクトへ反映
 
 ## ドキュメントの更新

@@ -5,7 +5,7 @@ Last Updated: 2026-02-11
 参照要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 参照設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)  
 契約仕様: [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml)  
-DDL: [`001_create_tables.sql`](./ddl/001_create_tables.sql)  
+DDL: [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql)  
 
 ---
 

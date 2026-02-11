@@ -55,7 +55,7 @@ Last Updated: 2026-02-11
 
 - 目的: DBスキーマと永続化境界を先に安定させる
 - 主タスク:
-  - `docs/mvp/ddl/` と `supabase/migrations/` の整合を取る
+  - `supabase/migrations/` をDDL正本として運用し、差分管理手順を固定する
   - Repository層のインターフェースを定義
   - seed投入・ローカル起動手順を確立
 - 完了条件:

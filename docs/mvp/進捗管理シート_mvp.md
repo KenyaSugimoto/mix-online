@@ -45,7 +45,7 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M1-02 | seed投入/ローカル起動/DBリセット手順を確立（`supabase start` 前提） | P0 | NOT_STARTED | マイグレーション適用手順が成立している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`003_seed_initial_data.sql`](./ddl/003_seed_initial_data.sql) |
+| M1-02 | seed投入/ローカル起動/DBリセット手順を確立（`supabase start` 前提） | P0 | NOT_STARTED | マイグレーション適用手順が成立している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`20260211190200_seed_initial_data.sql`](../../supabase/migrations/20260211190200_seed_initial_data.sql) |
 
 ## Next
 
@@ -60,17 +60,17 @@ Last Updated: 2026-02-11
 | ID | Task | Priority | Status | Completed At | Link |
 | --- | --- | --- | --- | --- | --- |
 | M0-01 | `pnpm lint/typecheck/test` を全てグリーン化し、失敗時の修正方針を確立 | P0 | DONE | 2026-02-11 | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
-| M0-02 | `packages/shared` の共通型を契約準拠で再定義（OpenAPI/AsyncAPI/DDL enum整合） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
+| M0-02 | `packages/shared` の共通型を契約準拠で再定義（OpenAPI/AsyncAPI/DDL enum整合） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql) |
 | M0-03 | API/WSの入力バリデーション + 共通エラー応答基盤（`requestId`/`error.code`）を実装 | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M0-04 | テスト基盤整備（unit/integration/e2e、固定デッキハーネス、テストデータ初期化） | P0 | DONE | 2026-02-11 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
-| M1-01 | Supabaseマイグレーション雛形作成（`docs/mvp/ddl` と `supabase/migrations` の一致） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
+| M1-01 | Supabaseマイグレーション雛形作成（`supabase/migrations` 正本化） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql) |
 
 ## Backlog
 
 | ID | Task | Priority | Status | 受け入れ観点（要約） | Link |
 | --- | --- | --- | --- | --- | --- |
 | M1-03 | Repository層とトランザクション境界を定義（`hand_events` 正史、配信先行禁止） | P0 | NOT_STARTED | 1コマンド=1TXで永続化後配信を担保 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M1-04 | 主要テーブルCRUDテスト（users/wallets/tables/table_seats/hands/hand_events） | P0 | NOT_STARTED | FK/UNIQUE/CHECK制約と基本操作を検証 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`ddl`](./ddl/) |
+| M1-04 | 主要テーブルCRUDテスト（users/wallets/tables/table_seats/hands/hand_events） | P0 | NOT_STARTED | FK/UNIQUE/CHECK制約と基本操作を検証 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`supabase/migrations`](../../supabase/migrations/) |
 | M2-04 | `/api/history/hands` 実装（cursor署名、`endedAt DESC, handId DESC`） | P0 | NOT_STARTED | 正常ページング + 改ざんcursorで `INVALID_CURSOR` | [`openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M2-05 | `/api/history/hands/:handId` 実装（streetActions/showdown/profitLoss） | P0 | NOT_STARTED | 一覧/詳細の整合、未存在時404 | [`openapi.yaml`](./openapi.yaml) |
 | M2-06 | HTTP契約テスト（OpenAPI準拠チェック、自動化） | P0 | NOT_STARTED | MVP対象エンドポイントの正常/異常系を固定 | [`openapi.yaml`](./openapi.yaml), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
@@ -118,7 +118,7 @@ Last Updated: 2026-02-11
 | --- | --- | --- | --- | --- |
 | 2026-02-11 | 実装推進方式 | AIエージェント委譲 + DoD厳格運用 | 速度より品質を優先するため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | 2026-02-11 | 品質ゲート運用（M0-01） | `pnpm lint` → `pnpm typecheck` → `pnpm test` の固定順と一次切り分け手順を採用 | 失敗時の調査順序を固定し、復旧時間のばらつきを減らすため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
-| 2026-02-11 | 共通型契約同期（M0-02） | `packages/shared` で契約由来enumを定数化し、契約整合テストを導入 | OpenAPI/AsyncAPI/DDLとの差分を早期検知し、下流実装の型逸脱を防ぐため | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
+| 2026-02-11 | 共通型契約同期（M0-02） | `packages/shared` で契約由来enumを定数化し、契約整合テストを導入 | OpenAPI/AsyncAPI/DDLとの差分を早期検知し、下流実装の型逸脱を防ぐため | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql) |
 | 2026-02-11 | テスト基盤整備（M0-04） | server テストを unit/integration/e2e 層へ分割し、固定デッキ・テストデータ初期化・シナリオID固定を導入 | シナリオ実装前に土台を固定して、後続タスクの追加コストと回帰リスクを下げるため | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-11 | 入力検証/共通エラー基盤完了（M0-03） | HTTP requestId付与・共通error.code応答・WSコマンド基本検証・requestId重複検知基盤を確定 | M1以降でAPI/WS実装を進める際のエラー仕様ドリフトを防ぐため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
 
