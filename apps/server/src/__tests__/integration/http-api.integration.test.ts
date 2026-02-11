@@ -1,7 +1,9 @@
 import {
+  ActionType,
   BettingStructure,
   GameType,
   HandStatus,
+  PotSide,
   SeatStatus,
   Street,
   TableStatus,
@@ -311,6 +313,112 @@ describe("HTTP統合テスト", () => {
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe("INVALID_CURSOR");
+  });
+
+  it("/api/history/hands/:handId が履歴詳細を返す", async () => {
+    const { app, cookie } = createAuthenticatedApp();
+    const response = await app.request(
+      "/api/history/hands/d1b2c3d4-0003-4000-8000-000000000003",
+      {
+        headers: {
+          cookie,
+        },
+      },
+    );
+    const body = (await response.json()) as {
+      handId: string;
+      tableId: string;
+      gameType: string;
+      participants: Array<{ userId: string; seatNo: number }>;
+      streetActions: Array<{
+        street: string;
+        actions: Array<{ seq: number; actionType: string; isAuto: boolean }>;
+      }>;
+      showdown: {
+        hasShowdown: boolean;
+        potResults: Array<{ potNo: number; side: string; amount: number }>;
+      };
+      profitLoss: number;
+      startedAt: string;
+      endedAt: string;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.handId).toBe("d1b2c3d4-0003-4000-8000-000000000003");
+    expect(body.gameType).toBe(GameType.STUD_HI);
+    expect(body.participants).toHaveLength(2);
+    expect(body.streetActions[0]?.street).toBe(Street.THIRD);
+    expect(body.streetActions[0]?.actions[0]?.actionType).toBe(ActionType.ANTE);
+    expect(body.showdown.hasShowdown).toBe(true);
+    expect(body.showdown.potResults[0]?.side).toBe(PotSide.SINGLE);
+  });
+
+  it("一覧と詳細で handId/tableId/profitLoss が整合する", async () => {
+    const { app, cookie } = createAuthenticatedApp();
+    const listResponse = await app.request("/api/history/hands", {
+      headers: {
+        cookie,
+      },
+    });
+    const listBody = (await listResponse.json()) as {
+      items: Array<{
+        handId: string;
+        tableId: string;
+        profitLoss: number;
+      }>;
+    };
+    const firstListItem = listBody.items[0];
+    expect(firstListItem).toBeDefined();
+
+    const detailResponse = await app.request(
+      `/api/history/hands/${firstListItem?.handId}`,
+      {
+        headers: {
+          cookie,
+        },
+      },
+    );
+    const detailBody = (await detailResponse.json()) as {
+      handId: string;
+      tableId: string;
+      profitLoss: number;
+    };
+
+    expect(detailResponse.status).toBe(200);
+    expect(detailBody.handId).toBe(firstListItem?.handId);
+    expect(detailBody.tableId).toBe(firstListItem?.tableId);
+    expect(detailBody.profitLoss).toBe(firstListItem?.profitLoss);
+  });
+
+  it("/api/history/hands/:handId で未存在handは NOT_FOUND を返す", async () => {
+    const { app, cookie } = createAuthenticatedApp();
+    const response = await app.request(
+      "/api/history/hands/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      {
+        headers: {
+          cookie,
+        },
+      },
+    );
+    const body = (await response.json()) as {
+      error: { code: string };
+    };
+
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("認証なしで /api/history/hands/:handId を呼ぶと AUTH_EXPIRED を返す", async () => {
+    const app = createApp();
+    const response = await app.request(
+      "/api/history/hands/d1b2c3d4-0003-4000-8000-000000000003",
+    );
+    const body = (await response.json()) as {
+      error: { code: string };
+    };
+
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe("AUTH_EXPIRED");
   });
 
   it("x-request-id を受け取った場合はレスポンスに同値を返す", async () => {

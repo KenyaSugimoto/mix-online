@@ -14,10 +14,7 @@ import {
 } from "./auth-session";
 import { HttpAppError, toHttpErrorResponse } from "./error-response";
 import { decodeHistoryCursor, encodeHistoryCursor } from "./history-cursor";
-import {
-  type HandHistoryListItemRecord,
-  compareHistoryOrder,
-} from "./history-hand";
+import { compareHistoryOrder } from "./history-hand";
 import { toLobbyTablesResponse } from "./lobby-table";
 import {
   type HistoryRepository,
@@ -273,6 +270,28 @@ export const createApp = (options: CreateAppOptions = {}) => {
       items: pageItems,
       nextCursor,
     });
+  });
+
+  app.get("/api/history/hands/:handId", async (c) => {
+    const session = requireSession({
+      cookieHeader: c.req.header("cookie"),
+      sessionStore,
+      now: now(),
+    });
+    const handId = validateUuid(c.req.param("handId"), "handId");
+    const hand = await historyRepository.getHandDetail(
+      session.user.userId,
+      handId,
+    );
+
+    if (hand === null) {
+      throw new HttpAppError(
+        "NOT_FOUND",
+        `handId=${handId} の履歴は存在しません。`,
+      );
+    }
+
+    return c.json(hand);
   });
 
   return app;
