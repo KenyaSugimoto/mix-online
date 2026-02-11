@@ -4,17 +4,12 @@ import type {
   SeatStatus,
   TableEventName,
   TableStatus,
+  WalletTransactionType,
 } from "@mix-online/shared";
 
 export type JsonScalar = string | number | boolean | null;
 export type JsonValue = JsonScalar | JsonObject | JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
-
-export type WalletTransactionType =
-  | "INIT_GRANT"
-  | "BUY_IN"
-  | "CASH_OUT"
-  | "HAND_RESULT";
 
 export type HandEventInsert = {
   handId: string;

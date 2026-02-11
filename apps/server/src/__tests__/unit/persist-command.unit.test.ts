@@ -1,3 +1,11 @@
+import {
+  HandPlayerState,
+  HandStatus,
+  SeatStatus,
+  TableEventName,
+  TableStatus,
+  WalletTransactionType,
+} from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import type {
   CommandRepository,
@@ -66,7 +74,7 @@ const createHandEvent = (): HandEventInsert => ({
   tableId: "00000000-0000-4000-8000-000000000302",
   tableSeq: 10,
   handSeq: 4,
-  eventName: "RaiseEvent",
+  eventName: TableEventName.RaiseEvent,
   payload: {
     actorUserId: "00000000-0000-4000-8000-000000000001",
     amount: 40,
@@ -86,32 +94,32 @@ describe("persistCommandAndPublish", () => {
         handEvent,
         table: {
           tableId: handEvent.tableId,
-          status: "BETTING",
+          status: TableStatus.BETTING,
         },
         seats: [
           {
             tableId: handEvent.tableId,
             seatNo: 1,
-            status: "ACTIVE",
+            status: SeatStatus.ACTIVE,
             stack: 960,
           },
         ],
         hand: {
           handId: handEvent.handId,
           tableId: handEvent.tableId,
-          status: "IN_PROGRESS",
+          status: HandStatus.IN_PROGRESS,
         },
         handPlayers: [
           {
             handId: handEvent.handId,
             userId: "00000000-0000-4000-8000-000000000001",
-            state: "IN_HAND",
+            state: HandPlayerState.IN_HAND,
           },
         ],
         walletTransactions: [
           {
             userId: "00000000-0000-4000-8000-000000000001",
-            type: "HAND_RESULT",
+            type: WalletTransactionType.HAND_RESULT,
             amount: 80,
             balanceAfter: 4080,
             handId: handEvent.handId,

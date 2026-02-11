@@ -1,3 +1,4 @@
+import { SeatStatus } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import {
   assignActiveSeats,
@@ -20,7 +21,7 @@ describe("テストデータ初期化", () => {
   it("初期座席は全席 EMPTY で生成される", () => {
     const seats = createInitialSeats();
     expect(seats).toHaveLength(6);
-    expect(seats.every((seat) => seat.status === "EMPTY")).toBe(true);
+    expect(seats.every((seat) => seat.status === SeatStatus.EMPTY)).toBe(true);
     expect(seats.every((seat) => seat.userId === null)).toBe(true);
   });
 
@@ -30,25 +31,25 @@ describe("テストデータ初期化", () => {
 
     expect(seats[0]).toMatchObject({
       seatNo: 1,
-      status: "ACTIVE",
+      status: SeatStatus.ACTIVE,
       userId: users[0]?.userId,
       stack: 1000,
     });
     expect(seats[1]).toMatchObject({
       seatNo: 2,
-      status: "ACTIVE",
+      status: SeatStatus.ACTIVE,
       userId: users[1]?.userId,
       stack: 1000,
     });
-    expect(seats[2]?.status).toBe("EMPTY");
+    expect(seats[2]?.status).toBe(SeatStatus.EMPTY);
   });
 
   it("createTestDataSeed で卓・席・ユーザーの初期セットを生成できる", () => {
     const seed = createTestDataSeed();
     expect(seed.users).toHaveLength(6);
     expect(seed.table.tableName).toBe("Test Table 1");
-    expect(seed.seats.filter((seat) => seat.status === "ACTIVE")).toHaveLength(
-      2,
-    );
+    expect(
+      seed.seats.filter((seat) => seat.status === SeatStatus.ACTIVE),
+    ).toHaveLength(2);
   });
 });

@@ -1,3 +1,4 @@
+import { TableStatus } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import { HttpAppError } from "../../error-response";
 import {
@@ -20,7 +21,9 @@ describe("入力バリデーション", () => {
 
   it("state クエリは TableStatus のみ許可する", () => {
     expect(validateOptionalTableStatus(undefined)).toBeUndefined();
-    expect(validateOptionalTableStatus("WAITING")).toBe("WAITING");
+    expect(validateOptionalTableStatus(TableStatus.WAITING)).toBe(
+      TableStatus.WAITING,
+    );
     expect(() => validateOptionalTableStatus("INVALID")).toThrow(HttpAppError);
   });
 

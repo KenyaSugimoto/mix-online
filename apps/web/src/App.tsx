@@ -1,7 +1,7 @@
-import type { GameType } from "@mix-online/shared";
+import { GAME_TYPES } from "@mix-online/shared";
 
 export function App() {
-  const gameTypes: GameType[] = ["STUD_HI", "RAZZ", "STUD_8"];
+  const gameTypes = GAME_TYPES;
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
