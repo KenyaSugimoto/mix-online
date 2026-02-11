@@ -4,6 +4,7 @@ Version: v1.1
 Last Updated: 2026-02-11  
 参照要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 参照設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)  
+APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md)  
 進捗管理: [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md)
 
 ---
@@ -184,3 +185,10 @@ Last Updated: 2026-02-11
 
 - いずれかの修正後は、必ず `pnpm lint` → `pnpm typecheck` → `pnpm test` を通しで再実行する
 - PR前の最終報告には3コマンドの実行結果を明記する
+
+## 10. APIリファレンス閲覧運用（MVP）
+
+- `openapi.yaml` は GitHub Pages 上で自動生成されたHTMLを参照する。
+- `asyncapi.yaml` は GitHub Pages 上の参照ページ（yamlリンク）から閲覧する（暫定）。
+- 生成手順は `scripts/build-api-reference-site.sh` を正とし、`main` push 時に `.github/workflows/docs-pages.yml` で自動反映する。
+- 詳細な閲覧URLとローカル確認手順は [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) を参照する。
