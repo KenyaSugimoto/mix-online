@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { HttpAppError } from "../error-response";
+import { HttpAppError } from "../../error-response";
 import {
   isUuid,
   validateOptionalTableStatus,
   validateUuid,
   validateWsBaseCommand,
-} from "../validation";
+} from "../../validation";
 
 describe("入力バリデーション", () => {
   it("UUID形式の文字列を判定できる", () => {

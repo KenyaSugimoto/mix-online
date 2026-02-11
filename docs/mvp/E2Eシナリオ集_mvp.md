@@ -11,7 +11,6 @@
 - 詳細設計: [詳細設計書_mvp.md](./詳細設計書_mvp.md)
 - HTTP契約: [openapi.yaml](./openapi.yaml)
 - WebSocket契約: [asyncapi.yaml](./asyncapi.yaml)
-- 補足メモ: [memo.md](./memo.md)
 
 ## 3. 共通前提
 
@@ -485,3 +484,18 @@
 1. シナリオIDをそのままE2Eテスト名（`describe/it`）に採用する。
 2. `HP -> NG -> ED` の順で段階的にCIへ導入し、失敗時の切り分けを容易にする。
 3. 配当検証シナリオ（ED-04〜ED-08）は、`potResults` と最終スタックの両方を必ず照合する。
+
+## 7. テスト基盤（M0-04）
+
+- unit テスト:
+  - `apps/server/src/__tests__/unit/`
+- integration テスト:
+  - `apps/server/src/__tests__/integration/`
+- e2e テスト:
+  - `apps/server/src/__tests__/e2e/`
+- 固定デッキハーネス:
+  - `apps/server/src/testing/fixed-deck-harness.ts`
+- テストデータ初期化:
+  - `apps/server/src/testing/test-data-seed.ts`
+- シナリオID固定一覧:
+  - `apps/server/src/testing/e2e-scenarios.ts`

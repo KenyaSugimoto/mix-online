@@ -8,7 +8,10 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "pnpm -r typecheck",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:unit": "vitest run apps/server/src/__tests__/unit packages/shared/src/__tests__",
+    "test:integration": "vitest run apps/server/src/__tests__/integration",
+    "test:e2e": "vitest run apps/server/src/__tests__/e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
