@@ -33,7 +33,7 @@ Last Updated: 2026-02-11
 | M0 | 品質ゲート固定（lint/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
-| M3 | Realtime + Game Engine成立 | NOT_STARTED | 0% | TBA | TBA | Phase 3 |
+| M3 | Realtime + Game Engine成立 | IN_PROGRESS | 9% | Codex | 2026-02-11 | M3-01完了、M3-02着手 |
 | M4 | Web統合（ロビー〜プレイ） | NOT_STARTED | 0% | TBA | TBA | Phase 4 |
 | M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
 
@@ -45,13 +45,13 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| - | - | - | - | - | - |
+| M3-02 | Table Actor基盤（卓単位直列処理、`tableSeq/handSeq` 採番） | P0 | IN_PROGRESS | 順序逆転・競合なしを担保 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| - | - | - | - | - | - |
+| M3-03 | 席管理コマンド（join/sitOut/return/leave）と状態遷移実装 | P0 | NOT_STARTED | M3-02 完了 | [`状態遷移図_mvp.md`](./状態遷移図_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 
 ## Done
 
@@ -71,12 +71,13 @@ Last Updated: 2026-02-11
 | M2-04 | `/api/history/hands` 実装（cursor署名、`endedAt DESC, handId DESC`） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`history-cursor.ts`](../../apps/server/src/history-cursor.ts), [`history-repository.ts`](../../apps/server/src/repository/history-repository.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts) |
 | M2-05 | `/api/history/hands/:handId` 実装（streetActions/showdown/profitLoss） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`history-hand.ts`](../../apps/server/src/history-hand.ts), [`history-repository.ts`](../../apps/server/src/repository/history-repository.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts) |
 | M2-06 | HTTP契約テスト（OpenAPI準拠チェック、自動化） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`http-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/http-contract.integration.test.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M3-01 | WebSocketゲートウェイ実装（`/ws`、コマンド検証、`table.error`） | P0 | DONE | 2026-02-11 | [`asyncapi.yaml`](./asyncapi.yaml), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
 
 ## Backlog
 
 | ID | Task | Priority | Status | 受け入れ観点（要約） | Link |
 | --- | --- | --- | --- | --- | --- |
-| M3-01 | WebSocketゲートウェイ実装（`/ws`、コマンド検証、`table.error`） | P0 | NOT_STARTED | AsyncAPIのcommand/error schema準拠 | [`asyncapi.yaml`](./asyncapi.yaml) |
+| M3-01 | WebSocketゲートウェイ実装（`/ws`、コマンド検証、`table.error`） | P0 | DONE | AsyncAPIのcommand/error schema準拠 | [`asyncapi.yaml`](./asyncapi.yaml) |
 | M3-02 | Table Actor基盤（卓単位直列処理、`tableSeq/handSeq` 採番） | P0 | NOT_STARTED | 順序逆転・競合なしを担保 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M3-03 | 席管理コマンド（join/sitOut/return/leave）と状態遷移実装 | P0 | NOT_STARTED | `SEATED_WAIT_NEXT_HAND`/`LEAVE_PENDING` を含む遷移整合 | [`状態遷移図_mvp.md`](./状態遷移図_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | NOT_STARTED | ハンド開始条件・Bring-in確定・pot整合 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
@@ -140,6 +141,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | M2-06 HTTP契約テスト固定 | OpenAPIで定義したMVP対象HTTP API（Auth/Lobby/Tables/History）の正常系・異常系を統合契約テストとして追加し、継続検証を自動化 | M2完了条件である「契約逸脱をCIで即検知できる状態」を満たすため | [`openapi.yaml`](./openapi.yaml), [`http-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/http-contract.integration.test.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-11 | AsyncAPI表示方式の更新（LOCAL-DOCS-RENDER-04） | AsyncAPI表示を Web Component 直描画から AsyncAPI CLI + html-template による静的HTML生成へ切替 | ブラウザ実行時パーサー依存の表示エラーを回避し、Pages表示の再現性を高めるため | [`build-api-reference-site.sh`](../../scripts/build-api-reference-site.sh), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
 | 2026-02-11 | 契約リテラル再発防止ルール導入（LOCAL-CONTRACT-LITERAL-01） | `apps/` 配下で `FIXED_LIMIT` / `STUD_*` の文字列直書きを検出する `pnpm check:contract-literals` を導入し、CI/PRテンプレート/運用ルールへ組み込む | 契約値変更時の追従漏れとテスト期待値のハードコード再発を防ぐため | [`check-contract-literals.sh`](../../scripts/check-contract-literals.sh), [`ci.yml`](../../.github/workflows/ci.yml), [`github-operations.md`](../../.agent/rules/github-operations.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| 2026-02-11 | M3-01 WebSocketゲートウェイ初期実装 | `ws` サーバーを `/ws` に追加し、セッション必須化・コマンド基本検証・`ping/pong`・`table.error` 応答を先行実装 | M3の後続タスク（Table Actor、席管理、進行制御）を段階実装できる最小Realtime基盤を先に固定するため | [`asyncapi.yaml`](./asyncapi.yaml), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
 
 ---
 
@@ -171,4 +173,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了 | なし（M2完了） | 仕様未決事項（DEC-01）が残存 | M3-01（WebSocketゲートウェイ）着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01完了 | M3-02（Table Actor基盤） | 仕様未決事項（DEC-01）が残存 | M3-02（Table Actor基盤）継続 |

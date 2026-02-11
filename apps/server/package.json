@@ -17,10 +17,12 @@
   "dependencies": {
     "@hono/node-server": "^1.14.0",
     "@mix-online/shared": "workspace:*",
-    "hono": "^4.7.2"
+    "hono": "^4.7.2",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
