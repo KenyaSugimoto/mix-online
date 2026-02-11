@@ -667,6 +667,14 @@ erDiagram
 - `hand_events(hand_id, table_id) -> hands(id, table_id)` の複合FKで、`hand_id` と `table_id` の不一致イベントを禁止する。
 - 上記FK制約と同一トランザクション更新により、復元・差分配信の前提となるイベント整合性をDB層で担保する。
 
+実装基準（M1-03）:
+
+- Repository契約は `apps/server/src/repository/command-repository.ts` を正とする。
+- `persistCommandAndPublish`（`apps/server/src/repository/persist-command.ts`）で
+  `withTransaction` 内に `hand_events` 追記 + 関連更新を集約する。
+- `publisher.publish` は `withTransaction` 成功後にのみ実行し、配信先行を禁止する。
+- 単体テストは `apps/server/src/__tests__/unit/persist-command.unit.test.ts` で順序保証と失敗時挙動を検証する。
+
 ## 9.5 スナップショット更新
 
 スナップショットは再接続時の高速な状態復元を目的とする。

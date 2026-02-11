@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { GameType } from "@mix-online/shared";
+import { GameType, TableStatus } from "@mix-online/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HttpAppError, toHttpErrorResponse } from "./error-response";
@@ -84,7 +84,7 @@ export const createApp = () => {
         maxPlayers: 6,
         gameType: GameType.STUD_HI,
         emptySeats: 6,
-        status: "WAITING",
+        status: TableStatus.WAITING,
       },
       {
         tableId: "22222222-2222-4222-8222-222222222222",
@@ -94,7 +94,7 @@ export const createApp = () => {
         maxPlayers: 6,
         gameType: GameType.STUD_HI,
         emptySeats: 6,
-        status: "WAITING",
+        status: TableStatus.WAITING,
       },
     ];
 

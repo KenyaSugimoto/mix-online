@@ -1,3 +1,5 @@
+import { GameType, SeatStatus } from "@mix-online/shared";
+
 export type TestUserSeed = {
   userId: string;
   displayName: string;
@@ -14,12 +16,17 @@ export type TestTableSeed = {
   minPlayers: number;
   maxPlayers: number;
   dealerSeatNo: number;
-  gameType: "STUD_HI";
+  gameType: typeof GameType.STUD_HI;
 };
+
+export type TestSeatStatus =
+  | typeof SeatStatus.EMPTY
+  | typeof SeatStatus.ACTIVE
+  | typeof SeatStatus.SEATED_WAIT_NEXT_HAND;
 
 export type TestSeatSeed = {
   seatNo: number;
-  status: "EMPTY" | "ACTIVE" | "SEATED_WAIT_NEXT_HAND";
+  status: TestSeatStatus;
   userId: string | null;
   stack: number;
 };
@@ -60,13 +67,13 @@ export const createTestTable = (): TestTableSeed => ({
   minPlayers: 2,
   maxPlayers: 6,
   dealerSeatNo: 1,
-  gameType: "STUD_HI",
+  gameType: GameType.STUD_HI,
 });
 
 export const createInitialSeats = (): TestSeatSeed[] =>
   Array.from({ length: 6 }, (_, i) => ({
     seatNo: i + 1,
-    status: "EMPTY",
+    status: SeatStatus.EMPTY,
     userId: null,
     stack: 0,
   }));
@@ -84,7 +91,7 @@ export const assignActiveSeats = (
 
     return {
       ...seat,
-      status: "ACTIVE",
+      status: SeatStatus.ACTIVE,
       userId: user.userId,
       stack: buyIn,
     };
