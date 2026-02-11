@@ -31,7 +31,7 @@ Last Updated: 2026-02-11
 | Milestone | 内容 | Status | Progress | Owner | Target Date | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | M0 | 品質ゲート固定（lint/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
-| M1 | DB/マイグレーション運用確立 | IN_PROGRESS | 50% | Codex | TBA | M1-01〜M1-02完了、M1-03へ移行 |
+| M1 | DB/マイグレーション運用確立 | IN_PROGRESS | 75% | Codex | TBA | M1-01〜M1-03完了、M1-04へ移行 |
 | M2 | ロビー/履歴API実装 | NOT_STARTED | 0% | TBA | TBA | Phase 2 |
 | M3 | Realtime + Game Engine成立 | NOT_STARTED | 0% | TBA | TBA | Phase 3 |
 | M4 | Web統合（ロビー〜プレイ） | NOT_STARTED | 0% | TBA | TBA | Phase 4 |
@@ -45,7 +45,7 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M1-03 | Repository層とトランザクション境界を定義（`hand_events` 正史、配信先行禁止） | P0 | NOT_STARTED | 1コマンド=1TXで永続化後配信を担保 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M1-04 | 主要テーブルCRUDテスト（users/wallets/tables/table_seats/hands/hand_events） | P0 | NOT_STARTED | FK/UNIQUE/CHECK制約と基本操作を検証 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`supabase/migrations`](../../supabase/migrations/) |
 
 ## Next
 
@@ -65,12 +65,12 @@ Last Updated: 2026-02-11
 | M0-04 | テスト基盤整備（unit/integration/e2e、固定デッキハーネス、テストデータ初期化） | P0 | DONE | 2026-02-11 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M1-01 | Supabaseマイグレーション雛形作成（`supabase/migrations` 正本化） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql) |
 | M1-02 | seed投入/ローカル起動/DBリセット手順を確立（`supabase start` 前提） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`README.md`](../../supabase/migrations/README.md), [`20260211190200_seed_initial_data.sql`](../../supabase/migrations/20260211190200_seed_initial_data.sql) |
+| M1-03 | Repository層とトランザクション境界を定義（`hand_events` 正史、配信先行禁止） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`apps/server/src/repository/command-repository.ts`](../../apps/server/src/repository/command-repository.ts), [`apps/server/src/repository/persist-command.ts`](../../apps/server/src/repository/persist-command.ts) |
 
 ## Backlog
 
 | ID | Task | Priority | Status | 受け入れ観点（要約） | Link |
 | --- | --- | --- | --- | --- | --- |
-| M1-04 | 主要テーブルCRUDテスト（users/wallets/tables/table_seats/hands/hand_events） | P0 | NOT_STARTED | FK/UNIQUE/CHECK制約と基本操作を検証 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`supabase/migrations`](../../supabase/migrations/) |
 | M2-04 | `/api/history/hands` 実装（cursor署名、`endedAt DESC, handId DESC`） | P0 | NOT_STARTED | 正常ページング + 改ざんcursorで `INVALID_CURSOR` | [`openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M2-05 | `/api/history/hands/:handId` 実装（streetActions/showdown/profitLoss） | P0 | NOT_STARTED | 一覧/詳細の整合、未存在時404 | [`openapi.yaml`](./openapi.yaml) |
 | M2-06 | HTTP契約テスト（OpenAPI準拠チェック、自動化） | P0 | NOT_STARTED | MVP対象エンドポイントの正常/異常系を固定 | [`openapi.yaml`](./openapi.yaml), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
@@ -123,6 +123,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | 入力検証/共通エラー基盤完了（M0-03） | HTTP requestId付与・共通error.code応答・WSコマンド基本検証・requestId重複検知基盤を確定 | M1以降でAPI/WS実装を進める際のエラー仕様ドリフトを防ぐため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
 | 2026-02-11 | DBローカル運用手順の固定（M1-02） | `supabase start` 前提で `pnpm db:start/db:reset/db:status/db:stop` を標準手順として採用し、seed適用確認SQLと期待値を文書化 | 開発者ごとの差異を減らし、マイグレーション再現性と初期データ検証のばらつきを防ぐため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`README.md`](../../supabase/migrations/README.md) |
 | 2026-02-11 | Colima向け`db:start`フォールバック導入 | `pnpm db:start` で通常起動失敗時に DB 最小構成へ自動フォールバックする運用を採用 | Colima環境でも起動手順を共通化し、M1以降のDB検証を安定化するため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`README.md`](../../supabase/migrations/README.md) |
+| 2026-02-11 | Repository境界定義（M1-03） | `apps/server/src/repository` に CommandRepository契約と `persistCommandAndPublish` を導入し、1コマンド=1TX + コミット後配信を実装基準化 | `hand_events` を正史とする整合性前提をコード境界として先行固定し、配信先行による順序破綻を防ぐため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`apps/server/src/repository/command-repository.ts`](../../apps/server/src/repository/command-repository.ts), [`apps/server/src/repository/persist-command.ts`](../../apps/server/src/repository/persist-command.ts) |
 | 2026-02-11 | PR本文テンプレート改善（LOCAL-PR-TEMPLATE-01） | Before/After、Impact詳細、Risks/Rollback欄を追加したテンプレートに更新 | レビュワーが「何がどう変わるか」を短時間で判断できるようにするため | [`pull_request_template.md`](../../.github/pull_request_template.md) |
 
 ---
@@ -155,4 +156,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-02完了 | - | 仕様未決事項（DEC-01）が残存 | M1-03 着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-03完了 | - | 仕様未決事項（DEC-01）が残存 | M1-04 着手 |
