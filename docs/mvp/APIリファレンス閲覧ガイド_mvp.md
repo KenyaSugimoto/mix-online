@@ -23,7 +23,7 @@ Last Updated: 2026-02-11
 補足:
 
 - `openapi/` は `openapi.yaml` から生成されたHTMLリファレンス
-- `asyncapi/` は `asyncapi.yaml` を AsyncAPI Web Component で可視化したHTMLリファレンス
+- `asyncapi/` は `asyncapi.yaml` から AsyncAPI CLI（`@asyncapi/html-template`）で生成したHTMLリファレンス
 
 ※ GitHub Pages が未有効な場合は、リポジトリ設定で `GitHub Actions` をソースに設定する。
 
@@ -50,4 +50,3 @@ Last Updated: 2026-02-11
 
 - API仕様の正本は従来どおり `docs/mvp/openapi.yaml` / `docs/mvp/asyncapi.yaml` とする。
 - HTMLは配布物であり、Git管理対象には含めない（Workflowで都度生成）。
-- AsyncAPI表示は `@asyncapi/web-component`（CDN配信）に依存するため、CDN到達不可環境では `asyncapi.yaml` 直接参照へフォールバックする。
