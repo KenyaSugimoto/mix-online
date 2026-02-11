@@ -1,12 +1,4 @@
-import { serve } from "@hono/node-server";
-import { createApp } from "./app";
+import { startRealtimeServer } from "./realtime/server";
 
-const port = 3000;
-const app = createApp();
-
-console.log(`Server is running on http://localhost:${port}`);
-
-serve({
-  fetch: app.fetch,
-  port,
-});
+const realtimeServer = startRealtimeServer({ port: 3000 });
+console.log(`Server is running on http://localhost:${realtimeServer.port}`);
