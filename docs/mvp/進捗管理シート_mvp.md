@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.5  
+Version: v1.6  
 Last Updated: 2026-02-11  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -45,20 +45,25 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M0-01 | `pnpm lint/typecheck/test` を全てグリーン化し、失敗時の修正方針を確立 | P0 | DONE | 3コマンド成功、実行手順を共有 | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| M1-01 | Supabaseマイグレーション雛形作成（`docs/mvp/ddl` と `supabase/migrations` の一致） | P0 | NOT_STARTED | DDL参照箇所が確定している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M0-02 | `packages/shared` の共通型を契約準拠で再定義（OpenAPI/AsyncAPI/DDL enum整合） | P0 | DONE | 契約仕様のenum一覧が確定している | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
-| M0-03 | API/WSの入力バリデーション + 共通エラー応答基盤（`requestId`/`error.code`）を実装 | P0 | DONE | エラーコード一覧とメッセージ方針が確定している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
-| M0-04 | テスト基盤整備（unit/integration/e2e、固定デッキハーネス、テストデータ初期化） | P0 | DONE | E2EシナリオIDが確定している | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
-| M1-01 | Supabaseマイグレーション雛形作成（`docs/mvp/ddl` と `supabase/migrations` の一致） | P0 | NOT_STARTED | DDL参照箇所が確定している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
 | M1-02 | seed投入/ローカル起動/DBリセット手順を確立（`supabase start` 前提） | P0 | NOT_STARTED | マイグレーション適用手順が成立している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`003_seed_initial_data.sql`](./ddl/003_seed_initial_data.sql) |
 | M2-01 | `/api/lobby/tables` を OpenAPI準拠で本実装化（仮実装除去） | P0 | NOT_STARTED | OpenAPI該当schemaが確定している | [`openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M2-02 | `/api/tables/:tableId` を OpenAPI準拠で実装（席状態・進行中ハンド要約含む） | P0 | NOT_STARTED | テーブル/席状態モデルが確定している | [`openapi.yaml`](./openapi.yaml), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M2-03 | 認証API基盤（Google callback後のCookie session、`/api/auth/me`、`/api/auth/logout`）を実装 | P0 | NOT_STARTED | OAuth redirect/Cookie方針が確定している | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`openapi.yaml`](./openapi.yaml) |
+
+## Done（M0クローズ）
+
+| ID | Task | Priority | Status | Completed At | Link |
+| --- | --- | --- | --- | --- | --- |
+| M0-01 | `pnpm lint/typecheck/test` を全てグリーン化し、失敗時の修正方針を確立 | P0 | DONE | 2026-02-11 | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| M0-02 | `packages/shared` の共通型を契約準拠で再定義（OpenAPI/AsyncAPI/DDL enum整合） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
+| M0-03 | API/WSの入力バリデーション + 共通エラー応答基盤（`requestId`/`error.code`）を実装 | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
+| M0-04 | テスト基盤整備（unit/integration/e2e、固定デッキハーネス、テストデータ初期化） | P0 | DONE | 2026-02-11 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ## Backlog
 
@@ -147,4 +152,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了 | M1-01（Supabaseマイグレーション雛形） | 仕様未決事項（DEC-01）が残存 | M1-01 着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了 | - | 仕様未決事項（DEC-01）が残存 | M1-01 着手 |
