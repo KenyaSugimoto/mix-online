@@ -28,6 +28,16 @@ export type WsBaseCommand = {
 
 export const isUuid = (value: string): boolean => UUID_REGEX.test(value);
 
+export const resolveRequestId = (
+  headerRequestId: string | undefined,
+  createRequestId: () => string,
+): string => {
+  if (headerRequestId && isUuid(headerRequestId)) {
+    return headerRequestId;
+  }
+  return createRequestId();
+};
+
 export const validateUuid = (value: string, fieldName: string): string => {
   if (!isUuid(value)) {
     throw new HttpAppError(

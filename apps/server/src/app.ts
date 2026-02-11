@@ -3,7 +3,11 @@ import { GameType } from "@mix-online/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HttpAppError, toHttpErrorResponse } from "./error-response";
-import { validateOptionalTableStatus, validateUuid } from "./validation";
+import {
+  resolveRequestId,
+  validateOptionalTableStatus,
+  validateUuid,
+} from "./validation";
 
 export type AppVariables = {
   requestId: string;
@@ -17,10 +21,7 @@ export const createApp = () => {
   // requestId を各リクエストに付与（クライアント指定が不正な場合は再採番）
   app.use("/*", async (c, next) => {
     const headerRequestId = c.req.header("x-request-id");
-    const requestId =
-      headerRequestId && /^[0-9a-f-]{36}$/i.test(headerRequestId)
-        ? headerRequestId
-        : randomUUID();
+    const requestId = resolveRequestId(headerRequestId, () => randomUUID());
     c.set("requestId", requestId);
     await next();
   });
