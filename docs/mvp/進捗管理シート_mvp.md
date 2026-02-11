@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.11  
+Version: v1.12  
 Last Updated: 2026-02-11  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -128,6 +128,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | PR本文テンプレート改善（LOCAL-PR-TEMPLATE-01） | Before/After、Impact詳細、Risks/Rollback欄を追加したテンプレートに更新 | レビュワーが「何がどう変わるか」を短時間で判断できるようにするため | [`pull_request_template.md`](../../.github/pull_request_template.md) |
 | 2026-02-11 | APIリファレンス閲覧改善（LOCAL-DOCS-RENDER-01） | OpenAPIはHTML自動生成、AsyncAPIはPages上の参照導線を提供する運用を採用 | GitHubブラウザで契約仕様を確認しやすくし、手動PDF更新を不要にするため | [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md), [`docs-pages.yml`](../../.github/workflows/docs-pages.yml) |
 | 2026-02-11 | Pages自動有効化 + AsyncAPI HTML化（LOCAL-DOCS-RENDER-02） | `configure-pages` に `enablement: true` を追加し、AsyncAPIを Web Component でHTML表示する運用へ更新 | Pages未初期化時の404失敗を防ぎ、OpenAPI/AsyncAPIの閲覧導線を同一UXで提供するため | [`docs-pages.yml`](../../.github/workflows/docs-pages.yml), [`build-api-reference-site.sh`](../../scripts/build-api-reference-site.sh), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
+| 2026-02-11 | AsyncAPIガバナンスエラー解消（LOCAL-DOCS-RENDER-03） | `asyncapi.yaml` の snapshot 例不足・messageId不足・metadata不足（tags/contact/license）を補完し、validateで error/warning を解消 | AsyncAPIの生成/可視化で失敗しない契約ドキュメント基盤を維持するため | [`asyncapi.yaml`](./asyncapi.yaml), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
 
 ---
 
