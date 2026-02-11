@@ -1,6 +1,6 @@
 # Mix Stud Online APIリファレンス閲覧ガイド（MVP）
 
-Version: v1.0  
+Version: v1.1  
 Last Updated: 2026-02-11  
 関連仕様: [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml)  
 実装ガイド: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)
@@ -10,8 +10,7 @@ Last Updated: 2026-02-11
 ## 1. 目的
 
 - GitHubブラウザ上で `openapi.yaml` / `asyncapi.yaml` を直接読む負荷を下げる。
-- OpenAPIのHTMLリファレンスを自動更新し、手動PDF更新を不要にする。
-- AsyncAPIは当面 `asyncapi.yaml` へのブラウザ向け導線を提供する。
+- OpenAPI / AsyncAPI のHTMLリファレンスを自動更新し、手動PDF更新を不要にする。
 
 ---
 
@@ -24,7 +23,7 @@ Last Updated: 2026-02-11
 補足:
 
 - `openapi/` は `openapi.yaml` から生成されたHTMLリファレンス
-- `asyncapi/` は `asyncapi.yaml` 参照ページ（暫定運用）
+- `asyncapi/` は `asyncapi.yaml` を AsyncAPI Web Component で可視化したHTMLリファレンス
 
 ※ GitHub Pages が未有効な場合は、リポジトリ設定で `GitHub Actions` をソースに設定する。
 
@@ -51,3 +50,4 @@ Last Updated: 2026-02-11
 
 - API仕様の正本は従来どおり `docs/mvp/openapi.yaml` / `docs/mvp/asyncapi.yaml` とする。
 - HTMLは配布物であり、Git管理対象には含めない（Workflowで都度生成）。
+- AsyncAPI表示は `@asyncapi/web-component`（CDN配信）に依存するため、CDN到達不可環境では `asyncapi.yaml` 直接参照へフォールバックする。

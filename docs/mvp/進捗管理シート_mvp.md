@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.10  
+Version: v1.11  
 Last Updated: 2026-02-11  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -127,6 +127,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | 主要テーブルCRUD検証方針（M1-04） | Docker上のローカルPostgreSQLに対する統合テストで、users/wallets/tables/table_seats/hands/hand_events のCRUDと制約（FK/UNIQUE/CHECK）を実行検証する方針を採用 | DDL記述のみの確認ではなく実行時制約まで担保し、M2以降のRepository/API実装の土台品質を固定するため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql), [`db-schema.integration.test.ts`](../../apps/server/src/__tests__/integration/db-schema.integration.test.ts) |
 | 2026-02-11 | PR本文テンプレート改善（LOCAL-PR-TEMPLATE-01） | Before/After、Impact詳細、Risks/Rollback欄を追加したテンプレートに更新 | レビュワーが「何がどう変わるか」を短時間で判断できるようにするため | [`pull_request_template.md`](../../.github/pull_request_template.md) |
 | 2026-02-11 | APIリファレンス閲覧改善（LOCAL-DOCS-RENDER-01） | OpenAPIはHTML自動生成、AsyncAPIはPages上の参照導線を提供する運用を採用 | GitHubブラウザで契約仕様を確認しやすくし、手動PDF更新を不要にするため | [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md), [`docs-pages.yml`](../../.github/workflows/docs-pages.yml) |
+| 2026-02-11 | Pages自動有効化 + AsyncAPI HTML化（LOCAL-DOCS-RENDER-02） | `configure-pages` に `enablement: true` を追加し、AsyncAPIを Web Component でHTML表示する運用へ更新 | Pages未初期化時の404失敗を防ぎ、OpenAPI/AsyncAPIの閲覧導線を同一UXで提供するため | [`docs-pages.yml`](../../.github/workflows/docs-pages.yml), [`build-api-reference-site.sh`](../../scripts/build-api-reference-site.sh), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
 
 ---
 
