@@ -33,7 +33,7 @@ Last Updated: 2026-02-11
 | M0 | 品質ゲート固定（lint/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
-| M3 | Realtime + Game Engine成立 | IN_PROGRESS | 27% | Codex | 2026-02-11 | M3-01〜M3-03完了、M3-04着手 |
+| M3 | Realtime + Game Engine成立 | IN_PROGRESS | 36% | Codex | 2026-02-11 | M3-01〜M3-04完了、M3-05着手 |
 | M4 | Web統合（ロビー〜プレイ） | NOT_STARTED | 0% | TBA | TBA | Phase 4 |
 | M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
 
@@ -45,13 +45,13 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | IN_PROGRESS | ハンド開始条件・Bring-in確定・pot整合 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M3-05 | アクション合法性実装（手番、toCall、5bet cap、heads-up例外） | P0 | IN_PROGRESS | NG-04〜NG-07, ED-11 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M3-05 | アクション合法性実装（手番、toCall、5bet cap、heads-up例外） | P0 | NOT_STARTED | M3-04 完了 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M3-06 | `GameRule` 実装（StudHi/Razz/Stud8 Bring-in/先手判定） | P0 | NOT_STARTED | M3-05 完了 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Done
 
@@ -74,6 +74,7 @@ Last Updated: 2026-02-11
 | M3-01 | WebSocketゲートウェイ実装（`/ws`、コマンド検証、`table.error`） | P0 | DONE | 2026-02-11 | [`asyncapi.yaml`](./asyncapi.yaml), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
 | M3-02 | Table Actor基盤（卓単位直列処理、`tableSeq/handSeq` 採番） | P0 | DONE | 2026-02-11 | [`table-actor.ts`](../../apps/server/src/realtime/table-actor.ts), [`table-actor.unit.test.ts`](../../apps/server/src/__tests__/unit/table-actor.unit.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M3-03 | 席管理コマンド（join/sitOut/return/leave）と状態遷移実装 | P0 | DONE | 2026-02-11 | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
+| M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | DONE | 2026-02-11 | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`fixed-deck-harness.ts`](../../apps/server/src/testing/fixed-deck-harness.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ## Backlog
 
@@ -82,7 +83,8 @@ Last Updated: 2026-02-11
 | M3-01 | WebSocketゲートウェイ実装（`/ws`、コマンド検証、`table.error`） | P0 | DONE | AsyncAPIのcommand/error schema準拠 | [`asyncapi.yaml`](./asyncapi.yaml) |
 | M3-02 | Table Actor基盤（卓単位直列処理、`tableSeq/handSeq` 採番） | P0 | DONE | 順序逆転・競合なしを担保 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M3-03 | 席管理コマンド（join/sitOut/return/leave）と状態遷移実装 | P0 | DONE | `SEATED_WAIT_NEXT_HAND`/`LEAVE_PENDING` を含む遷移整合 | [`状態遷移図_mvp.md`](./状態遷移図_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
-| M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | IN_PROGRESS | ハンド開始条件・Bring-in確定・pot整合 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | DONE | ハンド開始条件・Bring-in確定・pot整合 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M3-05 | アクション合法性実装（手番、toCall、5bet cap、heads-up例外） | P0 | IN_PROGRESS | NG-04〜NG-07, ED-11 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | NOT_STARTED | ハンド開始条件・Bring-in確定・pot整合 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-05 | アクション合法性実装（手番、toCall、5bet cap、heads-up例外） | P0 | NOT_STARTED | NG-04〜NG-07, ED-11 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-06 | `GameRule` 実装（StudHi/Razz/Stud8 Bring-in/先手判定） | P0 | NOT_STARTED | ED-01/ED-02 を再現可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -147,6 +149,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | M3-01 WebSocketゲートウェイ初期実装 | `ws` サーバーを `/ws` に追加し、セッション必須化・コマンド基本検証・`ping/pong`・`table.error` 応答を先行実装 | M3の後続タスク（Table Actor、席管理、進行制御）を段階実装できる最小Realtime基盤を先に固定するため | [`asyncapi.yaml`](./asyncapi.yaml), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
 | 2026-02-11 | M3-02 Table Actor直列基盤の先行固定 | 卓ごとの処理キュー (`TableActor`) と `tableSeq/handSeq` 採番器を独立実装し、並行投入時の順序保証を単体テストで固定 | 席管理・ゲーム進行・再接続処理を後続タスクで実装する際に、順序逆転と競合を土台で防止するため | [`table-actor.ts`](../../apps/server/src/realtime/table-actor.ts), [`table-actor.unit.test.ts`](../../apps/server/src/__tests__/unit/table-actor.unit.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-11 | M3-03 席管理コマンド実装 | `table.join/sitOut/return/leave` を `RealtimeTableService` 上で実装し、`SeatStateChangedEvent` を `table.event` として配信する構成に更新 | M3-04以降のハンド進行実装に入る前に、席遷移とRealtime配信の整合を固定するため | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
+| 2026-02-11 | M3-04 ハンド開始〜3rd配札基盤実装 | 2人目着席時に `DealInit -> PostAnte -> DealCards3rd -> BringIn` を自動発行し、`tableSeq/handSeq` の連番を維持する初期進行基盤を実装 | M3-05以降のアクション合法性・ゲームルール・ショーダウン実装を進めるためのハンド状態土台が必要なため | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ---
 
@@ -178,4 +181,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-03完了 | M3-04（ハンド開始〜3rd配札基盤） | 仕様未決事項（DEC-01）が残存 | M3-04（ハンド開始〜3rd配札基盤）継続 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-04完了 | M3-05（アクション合法性） | 仕様未決事項（DEC-01）が残存 | M3-05（アクション合法性）継続 |

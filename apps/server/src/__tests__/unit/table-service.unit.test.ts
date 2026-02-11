@@ -48,11 +48,12 @@ describe("RealtimeTableService 席管理", () => {
       return;
     }
 
-    expect(join.event.tableSeq).toBe(1);
-    expect(join.event.eventName).toBe(TableEventName.SeatStateChangedEvent);
-    expect(join.event.payload.previousStatus).toBe(SeatStatus.EMPTY);
-    expect(join.event.payload.currentStatus).toBe(SeatStatus.ACTIVE);
-    expect(join.event.payload.reason).toBe("JOIN");
+    const joinEvent = join.events[0];
+    expect(joinEvent?.tableSeq).toBe(1);
+    expect(joinEvent?.eventName).toBe(TableEventName.SeatStateChangedEvent);
+    expect(joinEvent?.payload.previousStatus).toBe(SeatStatus.EMPTY);
+    expect(joinEvent?.payload.currentStatus).toBe(SeatStatus.ACTIVE);
+    expect(joinEvent?.payload.reason).toBe("JOIN");
 
     const sitOut = await service.executeCommand({
       command: createCommand({ type: "table.sitOut" }),
@@ -63,9 +64,10 @@ describe("RealtimeTableService 席管理", () => {
     if (!sitOut.ok) {
       return;
     }
-    expect(sitOut.event.tableSeq).toBe(2);
-    expect(sitOut.event.payload.currentStatus).toBe(SeatStatus.SIT_OUT);
-    expect(sitOut.event.payload.reason).toBe("SIT_OUT");
+    const sitOutEvent = sitOut.events[0];
+    expect(sitOutEvent?.tableSeq).toBe(2);
+    expect(sitOutEvent?.payload.currentStatus).toBe(SeatStatus.SIT_OUT);
+    expect(sitOutEvent?.payload.reason).toBe("SIT_OUT");
 
     const back = await service.executeCommand({
       command: createCommand({ type: "table.return" }),
@@ -76,9 +78,10 @@ describe("RealtimeTableService 席管理", () => {
     if (!back.ok) {
       return;
     }
-    expect(back.event.tableSeq).toBe(3);
-    expect(back.event.payload.currentStatus).toBe(SeatStatus.ACTIVE);
-    expect(back.event.payload.reason).toBe("RETURN");
+    const backEvent = back.events[0];
+    expect(backEvent?.tableSeq).toBe(3);
+    expect(backEvent?.payload.currentStatus).toBe(SeatStatus.ACTIVE);
+    expect(backEvent?.payload.reason).toBe("RETURN");
 
     const leave = await service.executeCommand({
       command: createCommand({ type: "table.leave" }),
@@ -89,9 +92,10 @@ describe("RealtimeTableService 席管理", () => {
     if (!leave.ok) {
       return;
     }
-    expect(leave.event.tableSeq).toBe(4);
-    expect(leave.event.payload.currentStatus).toBe(SeatStatus.EMPTY);
-    expect(leave.event.payload.reason).toBe("LEAVE");
+    const leaveEvent = leave.events[0];
+    expect(leaveEvent?.tableSeq).toBe(4);
+    expect(leaveEvent?.payload.currentStatus).toBe(SeatStatus.EMPTY);
+    expect(leaveEvent?.payload.reason).toBe("LEAVE");
   });
 
   it("buyIn 範囲外を拒否する", async () => {
@@ -190,5 +194,55 @@ describe("RealtimeTableService 席管理", () => {
     if (!duplicate.ok) {
       expect(duplicate.error.code).toBe(RealtimeErrorCode.ALREADY_SEATED);
     }
+  });
+
+  it("2人目着席で DealInit/PostAnte/DealCards3rd/BringIn を自動発行する", async () => {
+    const service = createRealtimeTableService();
+
+    const firstJoin = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(1),
+      occurredAt: NOW,
+    });
+    expect(firstJoin.ok).toBe(true);
+
+    const secondJoin = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(2),
+      occurredAt: NOW,
+    });
+    expect(secondJoin.ok).toBe(true);
+    if (!secondJoin.ok) {
+      return;
+    }
+
+    const eventNames = secondJoin.events.map((event) => event.eventName);
+    expect(eventNames).toEqual([
+      "SeatStateChangedEvent",
+      "DealInitEvent",
+      "PostAnteEvent",
+      "DealCards3rdEvent",
+      "BringInEvent",
+    ]);
+
+    expect(secondJoin.events.map((event) => event.tableSeq)).toEqual([
+      2, 3, 4, 5, 6,
+    ]);
+    expect(secondJoin.events[1]?.handSeq).toBe(1);
+    expect(secondJoin.events[4]?.handSeq).toBe(4);
+
+    const postAnte = secondJoin.events[2];
+    expect(postAnte?.payload.potAfter).toBe(10);
+
+    const bringIn = secondJoin.events[4];
+    expect(bringIn?.payload.street).toBe("THIRD");
+    expect(bringIn?.payload.amount).toBe(10);
+    expect(bringIn?.payload.potAfter).toBe(20);
   });
 });

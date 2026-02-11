@@ -169,7 +169,9 @@ export class WsGateway {
       }
 
       trackedConnection.currentTableId = result.tableId;
-      this.broadcastToTable(result.tableId, result.event, session.user);
+      for (const event of result.events) {
+        this.broadcastToTable(result.tableId, event, session.user);
+      }
     });
   }
 
