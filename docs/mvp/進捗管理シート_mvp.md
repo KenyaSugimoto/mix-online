@@ -45,13 +45,13 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M3-07 | Showdown評価・Hi/Lo分配・サイドポット・オッドチップ実装 | P0 | IN_PROGRESS | HP-06/HP-07, ED-04〜ED-08 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M3-08 | タイムアウト/切断処理（AutoAction、disconnect streak>=3で自動LEAVE） | P0 | IN_PROGRESS | NG-10、AUTO_CHECK/AUTO_FOLD履歴反映 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M3-08 | タイムアウト/切断処理（AutoAction、disconnect streak>=3で自動LEAVE） | P0 | NOT_STARTED | M3-07 完了 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M3-09 | 再接続復元（`table.resume` 差分再送 + `table.snapshot` フォールバック） | P0 | NOT_STARTED | M3-08 完了 | [`asyncapi.yaml`](./asyncapi.yaml), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ## Done
 
@@ -77,6 +77,7 @@ Last Updated: 2026-02-11
 | M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | DONE | 2026-02-11 | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`fixed-deck-harness.ts`](../../apps/server/src/testing/fixed-deck-harness.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-05 | アクション合法性実装（手番、toCall、5bet cap、heads-up例外） | P0 | DONE | 2026-02-11 | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-06 | `GameRule` 実装（StudHi/Razz/Stud8 Bring-in/先手判定） | P0 | DONE | 2026-02-11 | [`game-rule.ts`](../../apps/server/src/realtime/game-rule.ts), [`game-rule.unit.test.ts`](../../apps/server/src/__tests__/unit/game-rule.unit.test.ts), [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M3-07 | Showdown評価・Hi/Lo分配・サイドポット・オッドチップ実装 | P0 | DONE | 2026-02-11 | [`showdown-evaluator.ts`](../../apps/server/src/realtime/showdown-evaluator.ts), [`showdown-evaluator.unit.test.ts`](../../apps/server/src/__tests__/unit/showdown-evaluator.unit.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ## Backlog
 
@@ -88,7 +89,7 @@ Last Updated: 2026-02-11
 | M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | DONE | ハンド開始条件・Bring-in確定・pot整合 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-05 | アクション合法性実装（手番、toCall、5bet cap、heads-up例外） | P0 | DONE | NG-04〜NG-07, ED-11 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-06 | `GameRule` 実装（StudHi/Razz/Stud8 Bring-in/先手判定） | P0 | DONE | ED-01/ED-02 を再現可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M3-07 | Showdown評価・Hi/Lo分配・サイドポット・オッドチップ実装 | P0 | IN_PROGRESS | HP-06/HP-07, ED-04〜ED-08 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M3-07 | Showdown評価・Hi/Lo分配・サイドポット・オッドチップ実装 | P0 | DONE | HP-06/HP-07, ED-04〜ED-08 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | NOT_STARTED | ハンド開始条件・Bring-in確定・pot整合 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-05 | アクション合法性実装（手番、toCall、5bet cap、heads-up例外） | P0 | NOT_STARTED | NG-04〜NG-07, ED-11 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-06 | `GameRule` 実装（StudHi/Razz/Stud8 Bring-in/先手判定） | P0 | NOT_STARTED | ED-01/ED-02 を再現可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -156,6 +157,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | M3-04 ハンド開始〜3rd配札基盤実装 | 2人目着席時に `DealInit -> PostAnte -> DealCards3rd -> BringIn` を自動発行し、`tableSeq/handSeq` の連番を維持する初期進行基盤を実装 | M3-05以降のアクション合法性・ゲームルール・ショーダウン実装を進めるためのハンド状態土台が必要なため | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-11 | M3-05 アクション合法性実装 | `table.act` を実装し、手番検証・toCall時CHECK拒否・5bet cap（マルチウェイ）・heads-up cap解除をルールとして組み込んだ | M3-06以降のゲームルール差し替えとショーダウン実装へ進む前に、ベッティング入力の正当性を固定するため | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-11 | M3-06 GameRule抽象の実装 | StudHi/Stud8/Razz で Bring-in/先手判定を切り替える `GameRule` を追加し、テーブル進行側からルール参照する構成へ更新 | ルール依存ロジックを分離して、M3-07以降のショーダウン評価やゲーム種拡張時の差分影響を局所化するため | [`game-rule.ts`](../../apps/server/src/realtime/game-rule.ts), [`game-rule.unit.test.ts`](../../apps/server/src/__tests__/unit/game-rule.unit.test.ts), [`table-service.ts`](../../apps/server/src/realtime/table-service.ts) |
+| 2026-02-11 | M3-07 Showdown評価/分配ロジック実装 | Showdown評価器を追加し、Stud8 Hi/Lo分配・サイドポット・オッドチップ（Hi優先/ディーラー起点）を単体テストで固定 | HP-06/HP-07 と ED-04〜ED-08 をコード上で再現し、M3-08以降の進行/復元実装の前に配当ロジックを先に確定するため | [`showdown-evaluator.ts`](../../apps/server/src/realtime/showdown-evaluator.ts), [`showdown-evaluator.unit.test.ts`](../../apps/server/src/__tests__/unit/showdown-evaluator.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ---
 
@@ -187,4 +189,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-06完了 | M3-07（Showdown/分配） | 仕様未決事項（DEC-01）が残存 | M3-07（Showdown/分配）継続 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-07完了 | M3-08（タイムアウト/切断処理） | 仕様未決事項（DEC-01）が残存 | M3-08（タイムアウト/切断処理）継続 |
