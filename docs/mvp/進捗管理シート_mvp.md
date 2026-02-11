@@ -31,7 +31,7 @@ Last Updated: 2026-02-11
 | Milestone | 内容 | Status | Progress | Owner | Target Date | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | M0 | 品質ゲート固定（lint/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
-| M1 | DB/マイグレーション運用確立 | IN_PROGRESS | 75% | Codex | TBA | M1-01〜M1-03完了、M1-04へ移行 |
+| M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
 | M2 | ロビー/履歴API実装 | NOT_STARTED | 0% | TBA | TBA | Phase 2 |
 | M3 | Realtime + Game Engine成立 | NOT_STARTED | 0% | TBA | TBA | Phase 3 |
 | M4 | Web統合（ロビー〜プレイ） | NOT_STARTED | 0% | TBA | TBA | Phase 4 |
@@ -45,13 +45,12 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M1-04 | 主要テーブルCRUDテスト（users/wallets/tables/table_seats/hands/hand_events） | P0 | NOT_STARTED | FK/UNIQUE/CHECK制約と基本操作を検証 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`supabase/migrations`](../../supabase/migrations/) |
+| M2-01 | `/api/lobby/tables` を OpenAPI準拠で本実装化（仮実装除去） | P0 | NOT_STARTED | OpenAPI該当schemaが確定している | [`openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M2-01 | `/api/lobby/tables` を OpenAPI準拠で本実装化（仮実装除去） | P0 | NOT_STARTED | OpenAPI該当schemaが確定している | [`openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M2-02 | `/api/tables/:tableId` を OpenAPI準拠で実装（席状態・進行中ハンド要約含む） | P0 | NOT_STARTED | テーブル/席状態モデルが確定している | [`openapi.yaml`](./openapi.yaml), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M2-03 | 認証API基盤（Google callback後のCookie session、`/api/auth/me`、`/api/auth/logout`）を実装 | P0 | NOT_STARTED | OAuth redirect/Cookie方針が確定している | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`openapi.yaml`](./openapi.yaml) |
 
@@ -66,6 +65,7 @@ Last Updated: 2026-02-11
 | M1-01 | Supabaseマイグレーション雛形作成（`supabase/migrations` 正本化） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql) |
 | M1-02 | seed投入/ローカル起動/DBリセット手順を確立（`supabase start` 前提） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`README.md`](../../supabase/migrations/README.md), [`20260211190200_seed_initial_data.sql`](../../supabase/migrations/20260211190200_seed_initial_data.sql) |
 | M1-03 | Repository層とトランザクション境界を定義（`hand_events` 正史、配信先行禁止） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`apps/server/src/repository/command-repository.ts`](../../apps/server/src/repository/command-repository.ts), [`apps/server/src/repository/persist-command.ts`](../../apps/server/src/repository/persist-command.ts) |
+| M1-04 | 主要テーブルCRUDテスト（users/wallets/tables/table_seats/hands/hand_events） | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql), [`db-schema.integration.test.ts`](../../apps/server/src/__tests__/integration/db-schema.integration.test.ts) |
 
 ## Backlog
 
@@ -124,6 +124,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | DBローカル運用手順の固定（M1-02） | `supabase start` 前提で `pnpm db:start/db:reset/db:status/db:stop` を標準手順として採用し、seed適用確認SQLと期待値を文書化 | 開発者ごとの差異を減らし、マイグレーション再現性と初期データ検証のばらつきを防ぐため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`README.md`](../../supabase/migrations/README.md) |
 | 2026-02-11 | Colima向け`db:start`フォールバック導入 | `pnpm db:start` で通常起動失敗時に DB 最小構成へ自動フォールバックする運用を採用 | Colima環境でも起動手順を共通化し、M1以降のDB検証を安定化するため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`README.md`](../../supabase/migrations/README.md) |
 | 2026-02-11 | Repository境界定義（M1-03） | `apps/server/src/repository` に CommandRepository契約と `persistCommandAndPublish` を導入し、1コマンド=1TX + コミット後配信を実装基準化 | `hand_events` を正史とする整合性前提をコード境界として先行固定し、配信先行による順序破綻を防ぐため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`apps/server/src/repository/command-repository.ts`](../../apps/server/src/repository/command-repository.ts), [`apps/server/src/repository/persist-command.ts`](../../apps/server/src/repository/persist-command.ts) |
+| 2026-02-11 | 主要テーブルCRUD検証方針（M1-04） | Docker上のローカルPostgreSQLに対する統合テストで、users/wallets/tables/table_seats/hands/hand_events のCRUDと制約（FK/UNIQUE/CHECK）を実行検証する方針を採用 | DDL記述のみの確認ではなく実行時制約まで担保し、M2以降のRepository/API実装の土台品質を固定するため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql), [`db-schema.integration.test.ts`](../../apps/server/src/__tests__/integration/db-schema.integration.test.ts) |
 | 2026-02-11 | PR本文テンプレート改善（LOCAL-PR-TEMPLATE-01） | Before/After、Impact詳細、Risks/Rollback欄を追加したテンプレートに更新 | レビュワーが「何がどう変わるか」を短時間で判断できるようにするため | [`pull_request_template.md`](../../.github/pull_request_template.md) |
 
 ---
@@ -156,4 +157,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-03完了 | - | 仕様未決事項（DEC-01）が残存 | M1-04 着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了 | - | 仕様未決事項（DEC-01）が残存 | M2-01 着手 |
