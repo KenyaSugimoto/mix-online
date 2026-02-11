@@ -643,6 +643,7 @@ components:
         - seq
         - actionType
         - seatNo
+        - isAuto
         - occurredAt
       properties:
         seq:
@@ -655,6 +656,11 @@ components:
           type: integer
           minimum: 1
           maximum: 6
+        isAuto:
+          type: boolean
+          description: |
+            タイムアウト等による自動行動かどうか。
+            `actionType` が `AUTO_CHECK` / `AUTO_FOLD` の場合は `true`。
         userId:
           type: string
           format: uuid
@@ -772,6 +778,10 @@ components:
 
     ActionType:
       type: string
+      description: |
+        履歴APIで返すアクション種別。
+        `AUTO_CHECK` / `AUTO_FOLD` は、Realtime の `CheckEvent` / `FoldEvent` に含まれる
+        `isAuto=true` から導出される。
       enum:
         - ANTE
         - BRING_IN

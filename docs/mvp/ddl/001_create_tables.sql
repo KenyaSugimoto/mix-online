@@ -89,7 +89,8 @@ CREATE TABLE hands (
   started_at      timestamptz NOT NULL DEFAULT now(),
   ended_at        timestamptz,
   winner_summary  jsonb,
-  deck_hash       text        NOT NULL
+  deck_hash       text        NOT NULL,
+  UNIQUE (id, table_id)
 );
 
 -- ----------------------------------------------------------
@@ -114,7 +115,7 @@ CREATE TABLE hand_players (
 -- ----------------------------------------------------------
 CREATE TABLE hand_events (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  hand_id     uuid        NOT NULL REFERENCES hands(id) ON DELETE CASCADE,
+  hand_id     uuid        NOT NULL,
   table_id    uuid        NOT NULL,
   table_seq   bigint      NOT NULL,
   hand_seq    bigint      NOT NULL,
@@ -127,6 +128,10 @@ CREATE TABLE hand_events (
               )),
   payload     jsonb       NOT NULL DEFAULT '{}'::jsonb,
   created_at  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT fk_hand_events_table
+    FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE CASCADE,
+  CONSTRAINT fk_hand_events_hand_table
+    FOREIGN KEY (hand_id, table_id) REFERENCES hands(id, table_id) ON DELETE CASCADE,
   UNIQUE (table_id, table_seq),
   UNIQUE (hand_id, hand_seq)
 );
