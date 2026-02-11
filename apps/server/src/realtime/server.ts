@@ -3,6 +3,10 @@ import { serve } from "@hono/node-server";
 import { WebSocketServer } from "ws";
 import { createApp } from "../app";
 import { type SessionStore, createInMemorySessionStore } from "../auth-session";
+import {
+  type RealtimeTableService,
+  createRealtimeTableService,
+} from "./table-service";
 import { type WsGateway, createWsGateway } from "./ws-gateway";
 
 export type RealtimeServer = {
@@ -17,14 +21,22 @@ type StartRealtimeServerOptions = {
   port?: number;
   sessionStore?: SessionStore;
   now?: () => Date;
+  tableService?: RealtimeTableService;
+  actionTimeoutMs?: number;
 };
 
 export const startRealtimeServer = (
   options: StartRealtimeServerOptions = {},
 ): RealtimeServer => {
   const sessionStore = options.sessionStore ?? createInMemorySessionStore();
+  const tableService = options.tableService ?? createRealtimeTableService();
   const app = createApp({ sessionStore, now: options.now });
-  const wsGateway = createWsGateway({ sessionStore, now: options.now });
+  const wsGateway = createWsGateway({
+    sessionStore,
+    now: options.now,
+    tableService,
+    actionTimeoutMs: options.actionTimeoutMs,
+  });
 
   const server = serve({
     fetch: app.fetch,

@@ -702,4 +702,92 @@ describe("RealtimeTableService 席管理", () => {
     expect(autoAction.events[1]?.payload.currentStatus).toBe(SeatStatus.EMPTY);
     expect(autoAction.events[1]?.payload.reason).toBe("LEAVE");
   });
+
+  it("HP-09 table.resume で差分イベントを連番再送できる", async () => {
+    const service = createRealtimeTableService();
+
+    await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(1),
+      occurredAt: NOW,
+    });
+    await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(2),
+      occurredAt: NOW,
+    });
+
+    const resumed = await service.resumeFrom({
+      tableId: TABLE_ID,
+      lastTableSeq: 2,
+      occurredAt: NOW,
+    });
+
+    expect(resumed.kind).toBe("events");
+    if (resumed.kind !== "events") {
+      return;
+    }
+    expect(resumed.events.length).toBeGreaterThan(0);
+    expect(resumed.events[0]?.tableSeq).toBe(3);
+    for (let index = 1; index < resumed.events.length; index += 1) {
+      expect(resumed.events[index]?.tableSeq).toBe(
+        (resumed.events[index - 1]?.tableSeq ?? 0) + 1,
+      );
+    }
+  });
+
+  it("HP-11 差分保持外の table.resume は snapshot を返す", async () => {
+    const service = createRealtimeTableService({ retainedEventLimit: 2 });
+
+    await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(1),
+      occurredAt: NOW,
+    });
+    await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(2),
+      occurredAt: NOW,
+    });
+
+    const resumed = await service.resumeFrom({
+      tableId: TABLE_ID,
+      lastTableSeq: 1,
+      occurredAt: NOW,
+    });
+
+    expect(resumed.kind).toBe("snapshot");
+    if (resumed.kind !== "snapshot") {
+      return;
+    }
+    expect(resumed.snapshot.type).toBe("table.snapshot");
+    expect(resumed.snapshot.payload.reason).toBe("OUT_OF_RANGE");
+    expect(resumed.snapshot.payload.table).toMatchObject({
+      status: expect.any(String),
+      gameType: expect.any(String),
+      stakes: {
+        smallBet: expect.any(Number),
+        bigBet: expect.any(Number),
+        ante: expect.any(Number),
+        bringIn: expect.any(Number),
+      },
+      seats: expect.any(Array),
+      currentHand: expect.anything(),
+      dealerSeatNo: expect.any(Number),
+      mixIndex: expect.any(Number),
+      handsSinceRotation: expect.any(Number),
+    });
+  });
 });

@@ -11,6 +11,7 @@ import {
   SeatStateChangeReason,
   SeatStatus,
   type SeatStatus as SeatStatusType,
+  SnapshotReason,
   Street,
   TableEventName,
   TableStatus,
@@ -128,8 +129,63 @@ type TableServiceResult =
       error: TableServiceError;
     };
 
+export type TableSnapshotMessage = {
+  type: "table.snapshot";
+  tableId: string;
+  tableSeq: number;
+  occurredAt: string;
+  payload: {
+    reason:
+      | typeof SnapshotReason.OUT_OF_RANGE
+      | typeof SnapshotReason.RESYNC_REQUIRED;
+    table: {
+      status: TableStatusType;
+      gameType: GameTypeType;
+      stakes: {
+        smallBet: number;
+        bigBet: number;
+        ante: number;
+        bringIn: number;
+      };
+      seats: Array<{
+        seatNo: number;
+        status: SeatStatusType;
+        stack: number;
+        disconnectStreak: number;
+        user: {
+          userId: string;
+          displayName: string;
+        } | null;
+      }>;
+      currentHand: {
+        handId: string;
+        handNo: number;
+        status: HandStatus;
+        street: Street;
+        potTotal: number;
+        toActSeatNo: number | null;
+        actionDeadlineAt: string | null;
+      } | null;
+      dealerSeatNo: number;
+      mixIndex: number;
+      handsSinceRotation: number;
+    };
+  };
+};
+
+export type TableResumeResult =
+  | {
+      kind: "events";
+      events: TableEventMessage[];
+    }
+  | {
+      kind: "snapshot";
+      snapshot: TableSnapshotMessage;
+    };
+
 type RealtimeTableServiceOptions = {
   actorRegistry?: TableActorRegistry;
+  retainedEventLimit?: number;
 };
 
 type PendingEvent = {
@@ -168,11 +224,17 @@ const createDefaultTableState = (tableId: string): TableState => ({
 
 export class RealtimeTableService {
   private readonly actorRegistry: TableActorRegistry;
+  private readonly retainedEventLimit: number;
   private readonly tables = new Map<string, TableState>();
   private readonly walletByUserId = new Map<string, number>();
+  private readonly eventHistoryByTableId = new Map<
+    string,
+    TableEventMessage[]
+  >();
 
   constructor(options: RealtimeTableServiceOptions = {}) {
     this.actorRegistry = options.actorRegistry ?? createTableActorRegistry();
+    this.retainedEventLimit = options.retainedEventLimit ?? 256;
   }
 
   async executeCommand(params: {
@@ -487,6 +549,43 @@ export class RealtimeTableService {
     return table?.currentHand?.toActSeatNo ?? null;
   }
 
+  async resumeFrom(params: {
+    tableId: string;
+    lastTableSeq: number;
+    occurredAt: Date;
+  }): Promise<TableResumeResult> {
+    const actor = this.actorRegistry.getOrCreate(params.tableId);
+    return actor.enqueue(() => {
+      const history = this.eventHistoryByTableId.get(params.tableId) ?? [];
+      const latestSeq = history[history.length - 1]?.tableSeq ?? 0;
+      const earliestSeq = history[0]?.tableSeq ?? latestSeq + 1;
+
+      if (params.lastTableSeq >= latestSeq) {
+        return {
+          kind: "events",
+          events: [],
+        };
+      }
+
+      if (history.length === 0 || params.lastTableSeq < earliestSeq - 1) {
+        return {
+          kind: "snapshot",
+          snapshot: this.createSnapshotMessage({
+            tableId: params.tableId,
+            tableSeq: latestSeq,
+            occurredAt: params.occurredAt,
+            reason: SnapshotReason.OUT_OF_RANGE,
+          }),
+        };
+      }
+
+      return {
+        kind: "events",
+        events: history.filter((event) => event.tableSeq > params.lastTableSeq),
+      };
+    });
+  }
+
   private mapEvents(params: {
     tableId: string;
     events: PendingEvent[];
@@ -494,8 +593,8 @@ export class RealtimeTableService {
     allocateTableSeq: () => number;
     allocateHandSeq: (handId: string) => number;
   }): TableEventMessage[] {
-    return params.events.map((event) => ({
-      type: "table.event",
+    const mapped: TableEventMessage[] = params.events.map((event) => ({
+      type: "table.event" as const,
       tableId: params.tableId,
       tableSeq: params.allocateTableSeq(),
       handId: event.handId,
@@ -504,6 +603,84 @@ export class RealtimeTableService {
       eventName: event.eventName,
       payload: event.payload,
     }));
+    this.appendEventHistory(params.tableId, mapped);
+    return mapped;
+  }
+
+  private appendEventHistory(
+    tableId: string,
+    events: TableEventMessage[],
+  ): void {
+    if (events.length === 0) {
+      return;
+    }
+
+    const history = this.eventHistoryByTableId.get(tableId) ?? [];
+    history.push(...events);
+    if (history.length > this.retainedEventLimit) {
+      const removeCount = history.length - this.retainedEventLimit;
+      history.splice(0, removeCount);
+    }
+    this.eventHistoryByTableId.set(tableId, history);
+  }
+
+  private createSnapshotMessage(params: {
+    tableId: string;
+    tableSeq: number;
+    occurredAt: Date;
+    reason:
+      | typeof SnapshotReason.OUT_OF_RANGE
+      | typeof SnapshotReason.RESYNC_REQUIRED;
+  }): TableSnapshotMessage {
+    const table =
+      this.tables.get(params.tableId) ??
+      createDefaultTableState(params.tableId);
+    return {
+      type: "table.snapshot",
+      tableId: params.tableId,
+      tableSeq: params.tableSeq,
+      occurredAt: params.occurredAt.toISOString(),
+      payload: {
+        reason: params.reason,
+        table: {
+          status: table.status,
+          gameType: table.gameType,
+          stakes: {
+            smallBet: table.smallBet,
+            bigBet: table.bigBet,
+            ante: table.ante,
+            bringIn: table.bringIn,
+          },
+          seats: table.seats.map((seat) => ({
+            seatNo: seat.seatNo,
+            status: seat.status,
+            stack: seat.stack,
+            disconnectStreak: seat.disconnectStreak,
+            user:
+              seat.userId && seat.displayName
+                ? {
+                    userId: seat.userId,
+                    displayName: seat.displayName,
+                  }
+                : null,
+          })),
+          currentHand: table.currentHand
+            ? {
+                handId: table.currentHand.handId,
+                handNo: table.currentHand.handNo,
+                status: table.currentHand.status,
+                street: table.currentHand.street,
+                potTotal: table.currentHand.potTotal,
+                toActSeatNo: table.currentHand.toActSeatNo,
+                actionDeadlineAt: null,
+              }
+            : null,
+          dealerSeatNo: table.dealerSeatNo,
+          mixIndex: table.mixIndex,
+          handsSinceRotation: table.handsSinceRotation,
+        },
+      },
+    };
   }
 
   private resolveTableId(payload: Record<string, unknown>): string | null {

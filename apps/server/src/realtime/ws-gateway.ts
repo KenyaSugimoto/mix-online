@@ -181,6 +181,42 @@ export class WsGateway {
         return;
       }
 
+      if (baseCommand.type === "table.resume") {
+        const resumeTableId = commandContext.tableId;
+        const lastTableSeq = baseCommand.payload.lastTableSeq;
+        if (
+          resumeTableId === null ||
+          typeof lastTableSeq !== "number" ||
+          !Number.isInteger(lastTableSeq) ||
+          lastTableSeq < 0
+        ) {
+          this.sendTableError({
+            connection: trackedConnection,
+            code: RealtimeErrorCodeMap.INVALID_ACTION,
+            message: "table.resume の payload が不正です。",
+            occurredAt,
+            context: commandContext,
+          });
+          return;
+        }
+
+        const resumeResult = await this.tableService.resumeFrom({
+          tableId: resumeTableId,
+          lastTableSeq,
+          occurredAt,
+        });
+        trackedConnection.currentTableId = resumeTableId;
+        if (resumeResult.kind === "events") {
+          for (const event of resumeResult.events) {
+            trackedConnection.socket.send(JSON.stringify(event));
+          }
+        } else {
+          trackedConnection.socket.send(JSON.stringify(resumeResult.snapshot));
+        }
+        this.scheduleAutoAction(resumeTableId);
+        return;
+      }
+
       const result = await this.tableService.executeCommand({
         command: {
           type: baseCommand.type,
