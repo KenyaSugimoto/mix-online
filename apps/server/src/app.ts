@@ -1,6 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import {
+  type SessionStore,
+  type SessionUser,
+  clearOauthStateCookie,
+  clearSessionCookie,
+  createInMemorySessionStore,
+  createOauthStateCookie,
+  createSessionCookie,
+  getOauthStateFromCookie,
+  getSessionIdFromCookie,
+} from "./auth-session";
 import { HttpAppError, toHttpErrorResponse } from "./error-response";
 import { toLobbyTablesResponse } from "./lobby-table";
 import {
@@ -21,7 +32,33 @@ export type AppVariables = {
 type CreateAppOptions = {
   lobbyTableRepository?: LobbyTableRepository;
   tableDetailRepository?: TableDetailRepository;
+  sessionStore?: SessionStore;
   now?: () => Date;
+};
+
+const MVP_AUTH_USER: SessionUser = {
+  userId: "f1b2c3d4-9999-4999-8999-999999999999",
+  displayName: "MVP User",
+  walletBalance: 4000,
+};
+
+const requireSession = (params: {
+  cookieHeader: string | undefined;
+  sessionStore: SessionStore;
+  now: Date;
+}) => {
+  const sessionId = getSessionIdFromCookie(params.cookieHeader);
+
+  if (!sessionId) {
+    throw new HttpAppError("AUTH_EXPIRED");
+  }
+
+  const session = params.sessionStore.findById(sessionId, params.now);
+  if (!session) {
+    throw new HttpAppError("AUTH_EXPIRED");
+  }
+
+  return session;
 };
 
 export const createApp = (options: CreateAppOptions = {}) => {
@@ -30,6 +67,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
     options.lobbyTableRepository ?? createMvpLobbyTableRepository();
   const tableDetailRepository =
     options.tableDetailRepository ?? createMvpTableDetailRepository();
+  const sessionStore = options.sessionStore ?? createInMemorySessionStore();
   const now = options.now ?? (() => new Date());
 
   app.use("/*", cors());
@@ -85,6 +123,67 @@ export const createApp = (options: CreateAppOptions = {}) => {
   // API routes
   app.get("/api/health", (c) => {
     return c.json({ status: "ok", requestId: c.get("requestId") });
+  });
+
+  app.get("/api/auth/google/start", (c) => {
+    const state = randomUUID();
+    const redirectUrl =
+      "https://accounts.google.com/o/oauth2/v2/auth?client_id=mvp-client&response_type=code&scope=openid%20email%20profile&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fgoogle%2Fcallback";
+    const location = `${redirectUrl}&state=${encodeURIComponent(state)}`;
+
+    c.header("Set-Cookie", createOauthStateCookie(state));
+    c.header("Location", location);
+    return c.body(null, 302);
+  });
+
+  app.get("/api/auth/google/callback", (c) => {
+    const code = c.req.query("code");
+    const state = c.req.query("state");
+
+    if (!code || !state) {
+      throw new HttpAppError(
+        "BAD_REQUEST",
+        "code と state は必須のクエリパラメータです。",
+      );
+    }
+
+    const stateFromCookie = getOauthStateFromCookie(c.req.header("cookie"));
+    if (!stateFromCookie || stateFromCookie !== state) {
+      throw new HttpAppError(
+        "AUTH_EXPIRED",
+        "認証セッションが無効です。再度ログインをやり直してください。",
+      );
+    }
+
+    const session = sessionStore.create(MVP_AUTH_USER, now());
+    c.header("Set-Cookie", createSessionCookie(session.sessionId));
+    c.header("Set-Cookie", clearOauthStateCookie(), { append: true });
+    c.header("Location", "/lobby");
+    return c.body(null, 302);
+  });
+
+  app.get("/api/auth/me", (c) => {
+    const session = requireSession({
+      cookieHeader: c.req.header("cookie"),
+      sessionStore,
+      now: now(),
+    });
+
+    return c.json({
+      user: session.user,
+    });
+  });
+
+  app.post("/api/auth/logout", (c) => {
+    const session = requireSession({
+      cookieHeader: c.req.header("cookie"),
+      sessionStore,
+      now: now(),
+    });
+    sessionStore.delete(session.sessionId);
+    c.header("Set-Cookie", clearSessionCookie());
+
+    return c.body(null, 204);
   });
 
   app.get("/api/lobby/tables", async (c) => {
