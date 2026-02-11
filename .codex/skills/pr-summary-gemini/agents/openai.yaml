@@ -1,4 +1,0 @@
-interface:
-  display_name: "PR Summary with Gemini"
-  short_description: "Generate PR summaries via Gemini CLI workflow"
-  default_prompt: "Generate PR summary/body draft via Gemini CLI from git diff and test logs."
