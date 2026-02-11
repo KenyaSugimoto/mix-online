@@ -3,7 +3,7 @@ import {
   HttpAppError,
   toHttpErrorResponse,
   toTableErrorMessage,
-} from "../error-response";
+} from "../../error-response";
 
 describe("エラー応答基盤", () => {
   it("HTTPエラーを code と status に正規化する", () => {
