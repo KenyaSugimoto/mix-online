@@ -189,6 +189,6 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 ## 10. APIリファレンス閲覧運用（MVP）
 
 - `openapi.yaml` は GitHub Pages 上で自動生成されたHTMLを参照する。
-- `asyncapi.yaml` は GitHub Pages 上の参照ページ（yamlリンク）から閲覧する（暫定）。
+- `asyncapi.yaml` は GitHub Pages 上で AsyncAPI Web Component によりHTML表示する。
 - 生成手順は `scripts/build-api-reference-site.sh` を正とし、`main` push 時に `.github/workflows/docs-pages.yml` で自動反映する。
 - 詳細な閲覧URLとローカル確認手順は [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) を参照する。

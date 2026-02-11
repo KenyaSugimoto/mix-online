@@ -8,6 +8,16 @@ info:
     Mix Stud Online MVP のWebSocket通信に関するAsyncAPI仕様書。
     卓操作、ゲームアクション、再接続復元、イベント配信に利用する
     クライアントコマンドとサーバープッシュメッセージを定義する。
+  contact:
+    name: Mix Stud Online Team
+    url: https://github.com/KenyaSugimoto/mix-online
+    email: noreply@mix-online.example
+  license:
+    name: Proprietary
+
+tags:
+  - name: realtime
+    description: WebSocket経由のコマンド送受信と卓状態同期。
 
 servers:
   local:
@@ -56,6 +66,7 @@ components:
   messages:
     TableJoinCommand:
       name: tableJoinCommand
+      messageId: table.join.command
       title: table.join
       summary: 卓への着席要求
       payload:
@@ -71,6 +82,7 @@ components:
 
     TableSitOutCommand:
       name: tableSitOutCommand
+      messageId: table.sitOut.command
       title: table.sitOut
       summary: 現在の席をSIT OUTへ切り替え
       payload:
@@ -78,6 +90,7 @@ components:
 
     TableReturnCommand:
       name: tableReturnCommand
+      messageId: table.return.command
       title: table.return
       summary: SIT OUTを解除しプレイ復帰（次に参加可能なハンドから）
       payload:
@@ -85,6 +98,7 @@ components:
 
     TableLeaveCommand:
       name: tableLeaveCommand
+      messageId: table.leave.command
       title: table.leave
       summary: 卓から離席（即時、またはハンド中は離席予約）
       payload:
@@ -92,6 +106,7 @@ components:
 
     TableActCommand:
       name: tableActCommand
+      messageId: table.act.command
       title: table.act
       summary: 現在手番のゲームアクション送信
       payload:
@@ -107,6 +122,7 @@ components:
 
     TableResumeCommand:
       name: tableResumeCommand
+      messageId: table.resume.command
       title: table.resume
       summary: 最終受信シーケンス以降の差分イベント再送要求
       payload:
@@ -122,6 +138,7 @@ components:
 
     PingCommand:
       name: pingCommand
+      messageId: ping.command
       title: ping
       summary: 生存確認コマンド
       payload:
@@ -129,6 +146,7 @@ components:
 
     TableEventMessage:
       name: tableEventMessage
+      messageId: table.event.message
       title: table.event
       summary: サーバー権威の卓イベント配信メッセージ
       payload:
@@ -256,6 +274,7 @@ components:
 
     TableErrorMessage:
       name: tableErrorMessage
+      messageId: table.error.message
       title: table.error
       summary: 状態変更なしでのコマンド拒否通知
       payload:
@@ -271,6 +290,7 @@ components:
 
     TableSnapshotMessage:
       name: tableSnapshotMessage
+      messageId: table.snapshot.message
       title: table.snapshot
       summary: 要求範囲のイベントがない場合のスナップショット応答
       payload:
@@ -286,9 +306,61 @@ components:
               table:
                 status: BETTING
                 gameType: STUD_HI
+                stakes:
+                  smallBet: 20
+                  bigBet: 40
+                  ante: 5
+                  bringIn: 10
+                seats:
+                  - seatNo: 1
+                    status: ACTIVE
+                    stack: 860
+                    disconnectStreak: 0
+                    user:
+                      userId: 818ac8d1-efbe-44ee-90ed-e435f6d0e57d
+                      displayName: Alice
+                  - seatNo: 2
+                    status: ACTIVE
+                    stack: 920
+                    disconnectStreak: 0
+                    user:
+                      userId: 1a500a3b-b6ad-4fd8-b4f5-3f3a3b5f0103
+                      displayName: Bob
+                  - seatNo: 3
+                    status: EMPTY
+                    stack: 0
+                    disconnectStreak: 0
+                    user: null
+                  - seatNo: 4
+                    status: EMPTY
+                    stack: 0
+                    disconnectStreak: 0
+                    user: null
+                  - seatNo: 5
+                    status: EMPTY
+                    stack: 0
+                    disconnectStreak: 0
+                    user: null
+                  - seatNo: 6
+                    status: EMPTY
+                    stack: 0
+                    disconnectStreak: 0
+                    user: null
+                currentHand:
+                  handId: 9056fdb5-1259-4186-9bc7-ce59131457f5
+                  handNo: 44
+                  status: IN_PROGRESS
+                  street: THIRD
+                  potTotal: 290
+                  toActSeatNo: 1
+                  actionDeadlineAt: "2026-02-09T10:06:31.000Z"
+                dealerSeatNo: 2
+                mixIndex: 0
+                handsSinceRotation: 2
 
     PongMessage:
       name: pongMessage
+      messageId: pong.message
       title: pong
       summary: 生存確認応答
       payload:

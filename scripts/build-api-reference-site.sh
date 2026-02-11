@@ -27,32 +27,58 @@ cat > "${OUTPUT_DIR}/asyncapi/index.html" <<'HTML'
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mix Stud Online AsyncAPI</title>
+    <script src="https://unpkg.com/@asyncapi/web-component@latest/lib/asyncapi-web-component.js"></script>
     <style>
       body {
         margin: 0;
-        padding: 32px 20px;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: #f7fbff;
         color: #1f2a37;
       }
 
       main {
-        max-width: 840px;
+        max-width: 1200px;
         margin: 0 auto;
+        padding: 24px 20px 40px;
       }
 
       a {
         color: #0f6cc8;
       }
+
+      .note {
+        margin: 0 0 16px;
+      }
+
+      .frame {
+        border: 1px solid #d6e2f0;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      asyncapi-component {
+        height: calc(100vh - 180px);
+      }
     </style>
   </head>
   <body>
     <main>
-      <h1>AsyncAPI Source</h1>
-      <p>
-        AsyncAPI の可視化は今後対応予定です。現時点ではソースyamlを参照してください。
+      <h1>AsyncAPI Reference</h1>
+      <p class="note">
+        うまく表示されない場合は
         <a href="./asyncapi.yaml">asyncapi.yaml</a>
+        を直接参照してください。
       </p>
+      <div class="frame">
+        <asyncapi-component
+          schema-url="./asyncapi.yaml"
+          config='{"show":{"errors":true}}'
+        ></asyncapi-component>
+      </div>
+      <noscript>
+        JavaScript が無効な環境では表示できません。<a href="./asyncapi.yaml">asyncapi.yaml</a> を参照してください。
+      </noscript>
     </main>
   </body>
 </html>
@@ -141,7 +167,7 @@ cat > "${OUTPUT_DIR}/index.html" <<'HTML'
         </a>
         <a class="card" href="./asyncapi/">
           <div class="title">AsyncAPI (WebSocket API)</div>
-          <div>docs/mvp/asyncapi.yaml へのブラウザ向け導線（暫定）</div>
+          <div>docs/mvp/asyncapi.yaml を HTML で可視化したリファレンス</div>
         </a>
       </div>
     </main>
