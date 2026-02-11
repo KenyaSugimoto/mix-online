@@ -126,7 +126,7 @@ describe("WebSocketゲートウェイ統合", () => {
     }
   });
 
-  it("未実装コマンドをtable.errorで返す", async () => {
+  it("table.join を受理して SeatStateChangedEvent を返す", async () => {
     const now = new Date("2026-02-11T12:00:00.000Z");
     const server = startRealtimeServer({ port: 0, now: () => now });
     const session = server.sessionStore.create(TEST_USER, now);
@@ -152,15 +152,23 @@ describe("WebSocketゲートウェイ統合", () => {
 
       const message = (await waitForMessage(socket)) as {
         type: string;
-        code: string;
-        requestId: string;
+        eventName: string;
+        tableSeq: number;
         tableId: string;
+        payload: {
+          reason: string;
+          currentStatus: string;
+          stack: number;
+        };
       };
 
-      expect(message.type).toBe("table.error");
-      expect(message.code).toBe("INVALID_ACTION");
-      expect(message.requestId).toBe("11111111-1111-4111-8111-111111111111");
+      expect(message.type).toBe("table.event");
+      expect(message.eventName).toBe("SeatStateChangedEvent");
+      expect(message.tableSeq).toBe(1);
       expect(message.tableId).toBe("22222222-2222-4222-8222-222222222222");
+      expect(message.payload.reason).toBe("JOIN");
+      expect(message.payload.currentStatus).toBe("ACTIVE");
+      expect(message.payload.stack).toBe(1000);
     } finally {
       socket.terminate();
       await server.close();
