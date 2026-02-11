@@ -7,6 +7,11 @@ import {
   type LobbyTableRepository,
   createMvpLobbyTableRepository,
 } from "./repository/lobby-table-repository";
+import {
+  type TableDetailRepository,
+  createMvpTableDetailRepository,
+} from "./repository/table-detail-repository";
+import { toTableDetailResponse } from "./table-detail";
 import { resolveRequestId, validateUuid } from "./validation";
 
 export type AppVariables = {
@@ -15,6 +20,7 @@ export type AppVariables = {
 
 type CreateAppOptions = {
   lobbyTableRepository?: LobbyTableRepository;
+  tableDetailRepository?: TableDetailRepository;
   now?: () => Date;
 };
 
@@ -22,6 +28,8 @@ export const createApp = (options: CreateAppOptions = {}) => {
   const app = new Hono<{ Variables: AppVariables }>();
   const lobbyTableRepository =
     options.lobbyTableRepository ?? createMvpLobbyTableRepository();
+  const tableDetailRepository =
+    options.tableDetailRepository ?? createMvpTableDetailRepository();
   const now = options.now ?? (() => new Date());
 
   app.use("/*", cors());
@@ -85,12 +93,18 @@ export const createApp = (options: CreateAppOptions = {}) => {
     return c.json(toLobbyTablesResponse(tables, now()));
   });
 
-  app.get("/api/tables/:tableId", (c) => {
+  app.get("/api/tables/:tableId", async (c) => {
     const tableId = validateUuid(c.req.param("tableId"), "tableId");
-    throw new HttpAppError(
-      "NOT_FOUND",
-      `tableId=${tableId} の卓は存在しません。`,
-    );
+    const table = await tableDetailRepository.getById(tableId);
+
+    if (table === null) {
+      throw new HttpAppError(
+        "NOT_FOUND",
+        `tableId=${tableId} の卓は存在しません。`,
+      );
+    }
+
+    return c.json(toTableDetailResponse(table));
   });
 
   return app;
