@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.2  
+Version: v1.3  
 Last Updated: 2026-02-11  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -30,7 +30,7 @@ Last Updated: 2026-02-11
 
 | Milestone | 内容 | Status | Progress | Owner | Target Date | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| M0 | 品質ゲート固定（lint/typecheck/test） | IN_PROGRESS | 25% | Codex | TBA | M0-01完了、M0-02以降を継続 |
+| M0 | 品質ゲート固定（lint/typecheck/test） | IN_PROGRESS | 50% | Codex | TBA | M0-01/M0-02完了、M0-03以降を継続 |
 | M1 | DB/マイグレーション運用確立 | NOT_STARTED | 0% | TBA | TBA | Phase 1 |
 | M2 | ロビー/履歴API実装 | NOT_STARTED | 0% | TBA | TBA | Phase 2 |
 | M3 | Realtime + Game Engine成立 | NOT_STARTED | 0% | TBA | TBA | Phase 3 |
@@ -51,7 +51,7 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M0-02 | `packages/shared` の共通型を契約準拠で再定義（OpenAPI/AsyncAPI/DDL enum整合） | P0 | NOT_STARTED | 契約仕様のenum一覧が確定している | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
+| M0-02 | `packages/shared` の共通型を契約準拠で再定義（OpenAPI/AsyncAPI/DDL enum整合） | P0 | DONE | 契約仕様のenum一覧が確定している | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
 | M0-03 | API/WSの入力バリデーション + 共通エラー応答基盤（`requestId`/`error.code`）を実装 | P0 | NOT_STARTED | エラーコード一覧とメッセージ方針が確定している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M0-04 | テスト基盤整備（unit/integration/e2e、固定デッキハーネス、テストデータ初期化） | P0 | NOT_STARTED | E2EシナリオIDが確定している | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M1-01 | Supabaseマイグレーション雛形作成（`docs/mvp/ddl` と `supabase/migrations` の一致） | P0 | NOT_STARTED | DDL参照箇所が確定している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
@@ -113,6 +113,7 @@ Last Updated: 2026-02-11
 | --- | --- | --- | --- | --- |
 | 2026-02-11 | 実装推進方式 | AIエージェント委譲 + DoD厳格運用 | 速度より品質を優先するため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | 2026-02-11 | 品質ゲート運用（M0-01） | `pnpm lint` → `pnpm typecheck` → `pnpm test` の固定順と一次切り分け手順を採用 | 失敗時の調査順序を固定し、復旧時間のばらつきを減らすため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| 2026-02-11 | 共通型契約同期（M0-02） | `packages/shared` で契約由来enumを定数化し、契約整合テストを導入 | OpenAPI/AsyncAPI/DDLとの差分を早期検知し、下流実装の型逸脱を防ぐため | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
 
 ---
 
@@ -144,4 +145,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01完了 | M0-02（共通型再定義） | 仕様未決事項（DEC-01）が残存 | M0-02 着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01/M0-02完了 | M0-03（入力バリデーション/共通エラー応答基盤） | 仕様未決事項（DEC-01）が残存 | M0-03 着手 |
