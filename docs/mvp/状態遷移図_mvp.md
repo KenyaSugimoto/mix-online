@@ -5,14 +5,14 @@ Last Updated: 2026-02-10
 参照要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 参照設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)  
 契約仕様: [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml)  
-DDL: [`001_create_tables.sql`](./ddl/001_create_tables.sql)  
+DDL: [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql)  
 
 ---
 
 ## 1. 本書の位置づけ
 
 - 本書は `docs/mvp` 配下の仕様から状態遷移を図式化した補助資料です。
-- enum定義は `openapi.yaml` / `asyncapi.yaml` / `ddl/001_create_tables.sql` を正とします。
+- enum定義は `openapi.yaml` / `asyncapi.yaml` / `supabase/migrations/20260211190000_create_tables.sql` を正とします。
 - 遷移条件は `詳細設計書_mvp.md` の `4.2`, `5.1`, `5.5`, `5.6`, `7.3.1`, `10.2`, `10.3` を基準に整理しています。
 
 ---

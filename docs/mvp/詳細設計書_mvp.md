@@ -88,7 +88,15 @@ Vercel配置を前提にしたデプロイ視点の全体図は [`全体アー�
 - マイグレーションファイルは生SQL形式で `supabase/migrations/` 配下に配置する
 - ローカル開発環境は `supabase start`（Docker）でSupabase互換のPostgreSQLを起動する
 - 本番適用は `supabase db push` でリモートプロジェクトへ反映する
-- DDLの設計成果物は `docs/mvp/ddl/` に保持する（参照用）
+- DDLの正本は `supabase/migrations/` とし、重複コピーを作らない
+
+M1-01時点の初期migration一覧:
+
+| 種別 | Supabase migration |
+| --- | --- |
+| テーブル作成 | `supabase/migrations/20260211190000_create_tables.sql` |
+| インデックス作成 | `supabase/migrations/20260211190100_create_indexes.sql` |
+| 初期データ投入 | `supabase/migrations/20260211190200_seed_initial_data.sql` |
 
 ---
 
