@@ -32,6 +32,8 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+supabase/.branches/
+supabase/.temp/
 
 # Serena
 .serena/
