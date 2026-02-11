@@ -1,4 +1,4 @@
-import { GameType } from "@mix-online/shared";
+import { BettingStructure, GameType } from "@mix-online/shared";
 
 export type LobbyTableRecord = {
   tableId: string;
@@ -20,7 +20,7 @@ type LobbyTableSummary = {
     bigBet: number;
     ante: number;
     bringIn: number;
-    bettingStructure: "FIXED_LIMIT";
+    bettingStructure: (typeof BettingStructure)[keyof typeof BettingStructure];
     display: string;
   };
   players: number;
@@ -61,7 +61,7 @@ const toTableSummary = (record: LobbyTableRecord): LobbyTableSummary => {
       bigBet: record.bigBet,
       ante: record.ante,
       bringIn: record.bringIn,
-      bettingStructure: "FIXED_LIMIT",
+      bettingStructure: BettingStructure.FIXED_LIMIT,
       display: `$${record.smallBet}/$${record.bigBet} Fixed Limit`,
     },
     players,

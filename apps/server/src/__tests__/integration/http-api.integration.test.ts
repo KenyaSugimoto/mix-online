@@ -1,3 +1,4 @@
+import { BettingStructure, GameType } from "@mix-online/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../../app";
 
@@ -50,12 +51,12 @@ describe("HTTP統合テスト", () => {
         bigBet: 40,
         ante: 5,
         bringIn: 10,
-        bettingStructure: "FIXED_LIMIT",
+        bettingStructure: BettingStructure.FIXED_LIMIT,
         display: "$20/$40 Fixed Limit",
       },
       players: expect.any(Number),
       maxPlayers: 6,
-      gameType: "STUD_HI",
+      gameType: GameType.STUD_HI,
       emptySeats: expect.any(Number),
     });
   });

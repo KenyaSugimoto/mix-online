@@ -25,6 +25,9 @@ jobs:
             - name: Lint
               run: pnpm lint
 
+            - name: Contract literals check
+              run: pnpm check:contract-literals
+
             - name: Typecheck
               run: pnpm typecheck
 

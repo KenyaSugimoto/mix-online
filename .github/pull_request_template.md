@@ -35,6 +35,7 @@
 
 ## Verification
 - [ ] `pnpm lint`
+- [ ] `pnpm check:contract-literals`
 - [ ] `pnpm typecheck`
 - [ ] `pnpm test`
 
@@ -47,6 +48,7 @@
 ## Acceptance Criteria
 - [ ] Issueの完了条件を満たしている
 - [ ] 仕様と実装差分がない（差分がある場合はdocs更新済み）
+- [ ] 契約由来enumを文字列で直書きしていない（`@mix-online/shared` 定数参照）
 - [ ] `docs/mvp/進捗管理シート_mvp.md` を更新した
 
 ## Docs Updated

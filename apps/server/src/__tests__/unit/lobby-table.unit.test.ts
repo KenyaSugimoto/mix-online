@@ -1,3 +1,4 @@
+import { BettingStructure, GameType } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import { toLobbyTablesResponse } from "../../lobby-table";
 
@@ -31,12 +32,12 @@ describe("lobby-table", () => {
           bigBet: 40,
           ante: 5,
           bringIn: 10,
-          bettingStructure: "FIXED_LIMIT",
+          bettingStructure: BettingStructure.FIXED_LIMIT,
           display: "$20/$40 Fixed Limit",
         },
         players: 2,
         maxPlayers: 6,
-        gameType: "RAZZ",
+        gameType: GameType.RAZZ,
         emptySeats: 4,
       },
     ]);
@@ -76,6 +77,6 @@ describe("lobby-table", () => {
     expect(response.tables[0]?.emptySeats).toBe(0);
     expect(response.tables[1]?.players).toBe(0);
     expect(response.tables[1]?.emptySeats).toBe(6);
-    expect(response.tables[1]?.gameType).toBe("STUD_8");
+    expect(response.tables[1]?.gameType).toBe(GameType.STUD_8);
   });
 });

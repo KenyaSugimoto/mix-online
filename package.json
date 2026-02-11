@@ -11,6 +11,7 @@
     "db:reset": "supabase db reset --local",
     "db:stop": "supabase stop",
     "lint": "biome check .",
+    "check:contract-literals": "bash ./scripts/check-contract-literals.sh",
     "lint:fix": "biome check --write .",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
