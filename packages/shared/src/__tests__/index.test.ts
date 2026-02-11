@@ -3,6 +3,7 @@ import {
   ACTION_TYPES,
   ERROR_CODES,
   GAME_TYPES,
+  GameType as GameTypeEnum,
   REALTIME_ERROR_CODES,
   SEAT_STATUSES,
   TABLE_COMMAND_ACTIONS,
@@ -11,12 +12,12 @@ import {
 import type { GameType } from "../index";
 
 describe("Shared Types", () => {
-  it("GameType should be valid", () => {
-    const gameType: GameType = "STUD_HI";
+  it("GameType が有効な値を受け入れる", () => {
+    const gameType: GameType = GameTypeEnum.STUD_HI;
     expect(gameType).toBe("STUD_HI");
   });
 
-  it("should expose base enums as constants", () => {
+  it("基礎 enum を定数として公開する", () => {
     expect(GAME_TYPES).toEqual(["STUD_HI", "RAZZ", "STUD_8"]);
     expect(TABLE_STATUSES).toEqual([
       "WAITING",
@@ -35,7 +36,7 @@ describe("Shared Types", () => {
     ]);
   });
 
-  it("should keep command/error enums consistent with broader enums", () => {
+  it("コマンド系とエラー系 enum の包含関係を維持する", () => {
     for (const action of TABLE_COMMAND_ACTIONS) {
       expect(ACTION_TYPES).toContain(action);
     }

@@ -21,8 +21,8 @@ import {
   WALLET_TRANSACTION_TYPES,
 } from "../index";
 
-describe("Contract Enum Alignment", () => {
-  it("should align with OpenAPI enums", () => {
+describe("契約 enum 整合性", () => {
+  it("OpenAPI の enum と整合する", () => {
     expect(GAME_TYPES).toEqual(["STUD_HI", "RAZZ", "STUD_8"]);
     expect(TABLE_STATUSES).toEqual([
       "WAITING",
@@ -71,7 +71,7 @@ describe("Contract Enum Alignment", () => {
     expect(BETTING_STRUCTURES).toEqual(["FIXED_LIMIT"]);
   });
 
-  it("should align with AsyncAPI enums", () => {
+  it("AsyncAPI の enum と整合する", () => {
     expect(TABLE_COMMAND_ACTIONS).toEqual([
       "FOLD",
       "CHECK",
@@ -126,7 +126,7 @@ describe("Contract Enum Alignment", () => {
     ]);
   });
 
-  it("should align with DDL CHECK enums", () => {
+  it("DDL の CHECK enum と整合する", () => {
     expect(WALLET_TRANSACTION_TYPES).toEqual([
       "INIT_GRANT",
       "BUY_IN",
