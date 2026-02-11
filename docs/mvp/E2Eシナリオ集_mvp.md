@@ -24,38 +24,42 @@
 
 ## 4. シナリオ一覧
 
-| ID    | 区分       | 主題 |
-| ----- | ---------- | ---- |
-| HP-01 | ハッピーパス | OAuthログイン〜ロビー〜卓詳細表示 |
-| HP-02 | ハッピーパス | 2人着席でハンド開始 |
-| HP-03 | ハッピーパス | 途中参加は次ハンド有効化 |
-| HP-04 | ハッピーパス | StudHi標準進行（Showdown/履歴整合） |
-| HP-05 | ハッピーパス | 6ハンドごとのミックスローテーション |
-| HP-06 | ハッピーパス | Stud8 Hi/Lo分割（両資格あり） |
-| HP-07 | ハッピーパス | Stud8 Lo資格なし（Hi総取り） |
-| HP-08 | ハッピーパス | 履歴API一覧/詳細（正常ページング） |
-| HP-09 | ハッピーパス | 再接続resumeで差分追従 |
-| HP-10 | ハッピーパス | スタック0で自動退席 |
-| NG-01 | 異常系     | buy-in範囲外（下限/上限） |
-| NG-02 | 異常系     | ウォレット不足で着席拒否 |
-| NG-03 | 異常系     | 卓満席で着席拒否 |
-| NG-04 | 異常系     | 非手番アクション拒否 |
-| NG-05 | 異常系     | toCallありでCHECK拒否 |
-| NG-06 | 異常系     | 4th以降のCOMPLETE拒否 |
-| NG-07 | 異常系     | マルチウェイ5bet cap超過raise拒否 |
-| NG-08 | 異常系     | 履歴cursor改ざん（INVALID_CURSOR） |
-| NG-09 | 異常系     | 認証期限切れWS（AUTH_EXPIRED） |
-| NG-10 | 異常系     | 切断放置で自動行動/3連続切断LEAVE |
+| ID    | 区分          | 主題                                     |
+| ----- | ------------- | ---------------------------------------- |
+| HP-01 | ハッピーパス  | OAuthログイン〜ロビー〜卓詳細表示        |
+| HP-02 | ハッピーパス  | 2人着席でハンド開始                      |
+| HP-03 | ハッピーパス  | 途中参加は次ハンド有効化                 |
+| HP-04 | ハッピーパス  | StudHi標準進行（Showdown/履歴整合）      |
+| HP-05 | ハッピーパス  | 6ハンドごとのミックスローテーション      |
+| HP-06 | ハッピーパス  | Stud8 Hi/Lo分割（両資格あり）            |
+| HP-07 | ハッピーパス  | Stud8 Lo資格なし（Hi総取り）             |
+| HP-08 | ハッピーパス  | 履歴API一覧/詳細（正常ページング）       |
+| HP-09 | ハッピーパス  | 再接続resumeで差分追従                   |
+| HP-10 | ハッピーパス  | スタック0で自動退席                      |
+| HP-11 | ハッピーパス  | 再接続resumeでtable.snapshotフォールバック |
+| HP-12 | ハッピーパス  | サーバー再起動後の進行中ハンド復元       |
+| NG-01 | 異常系        | buy-in範囲外（下限/上限）                |
+| NG-02 | 異常系        | ウォレット不足で着席拒否                 |
+| NG-03 | 異常系        | 卓満席で着席拒否                         |
+| NG-04 | 異常系        | 非手番アクション拒否                     |
+| NG-05 | 異常系        | toCallありでCHECK拒否                    |
+| NG-06 | 異常系        | 4th以降のCOMPLETE拒否                    |
+| NG-07 | 異常系        | マルチウェイ5bet cap超過raise拒否        |
+| NG-08 | 異常系        | 履歴cursor改ざん（INVALID_CURSOR）       |
+| NG-09 | 異常系        | 認証期限切れWS（AUTH_EXPIRED）           |
+| NG-10 | 異常系        | 切断放置で自動行動/3連続切断LEAVE        |
+| NG-11 | 異常系        | table.snapshot必須キー欠落は検証失敗     |
 | ED-01 | 境界値/エッジ | StudHi/Stud8のBring-inスートタイブレーク |
-| ED-02 | 境界値/エッジ | RazzのBring-inスートタイブレーク |
-| ED-03 | 境界値/エッジ | Bring-in不足時のAll-in |
-| ED-04 | 境界値/エッジ | 3人1サイドポット分配 |
-| ED-05 | 境界値/エッジ | 4人多段サイドポット分配 |
-| ED-06 | 境界値/エッジ | Stud8でポット単位独立Hi/Lo評価 |
-| ED-07 | 境界値/エッジ | Stud8のオッドチップ（Hi優先） |
-| ED-08 | 境界値/エッジ | 同側複数勝者オッドチップ（dealer起点） |
-| ED-09 | 境界値/エッジ | 全員All-inランアウト遷移 |
-| ED-10 | 境界値/エッジ | UNCONTESTED終局（ShowdownEventなし） |
+| ED-02 | 境界値/エッジ | RazzのBring-inスートタイブレーク         |
+| ED-03 | 境界値/エッジ | Bring-in不足時のAll-in                   |
+| ED-04 | 境界値/エッジ | 3人1サイドポット分配                     |
+| ED-05 | 境界値/エッジ | 4人多段サイドポット分配                  |
+| ED-06 | 境界値/エッジ | Stud8でポット単位独立Hi/Lo評価           |
+| ED-07 | 境界値/エッジ | Stud8のオッドチップ（Hi優先）            |
+| ED-08 | 境界値/エッジ | 同側複数勝者オッドチップ（dealer起点）   |
+| ED-09 | 境界値/エッジ | 全員All-inランアウト遷移                 |
+| ED-10 | 境界値/エッジ | UNCONTESTED終局（ShowdownEventなし）     |
+| ED-11 | 境界値/エッジ | ヘッズアップ時5bet cap解除               |
 
 ## 5. シナリオ詳細
 
@@ -195,11 +199,37 @@
 2. `SeatStateChangedEvent(reason=AUTO_LEAVE_ZERO_STACK)` で `S3` の席が解放される。
 3. ロビーの `players` が 1 減少して反映される。
 
+### HP-11 再接続resumeでtable.snapshotフォールバック
+
+- 前提条件:
+1. `U1` は `tableSeq=120` まで受信済み。
+2. サーバー側は差分保持範囲を超えており、`121..` の差分再送ができない。
+- 入力（操作）:
+1. `U1` 再接続後に `table.resume(lastTableSeq=120)` を送信。
+2. `table.snapshot` を受信。
+- 期待値:
+1. サーバーは `table.snapshot`（`payload.reason=OUT_OF_RANGE` または `RESYNC_REQUIRED`）を返す。
+2. `payload.table` は AsyncAPI `SnapshotTable` の必須キーを満たす。
+3. クライアントは `table.snapshot.tableSeq` を基準にローカル状態を再構築し、その後の `table.event` を連番で継続受信できる。
+
+### HP-12 サーバー再起動後の進行中ハンド復元
+
+- 前提条件:
+1. 進行中ハンドが存在し、`hands.status=IN_PROGRESS`。
+2. 直近イベントが `hand_events` に永続化済み（例: 5th Street の途中）。
+- 入力（操作）:
+1. ゲームサーバーを再起動する。
+2. 再起動後、同卓のクライアントを再接続し `table.resume` を送信。
+- 期待値:
+1. サーバー起動時に `IN_PROGRESS` ハンドがリプレイされ、手番・ポット・ストリートが再現される。
+2. 再起動前後で `tableSeq` の順序整合が保たれ、重複・逆転配信がない。
+3. 復元後もハンドを通常終局まで進行でき、`DealEndEvent` と履歴APIの結果が整合する。
+
 ### NG-01 buy-in範囲外（下限/上限）
 
 - 前提条件: `U1` は未着席。
 - 入力（操作）:
-1. `table.join(buyIn=199)` を送信。
+1. `table.join(buyIn=399)` を送信。
 2. `table.join(buyIn=2001)` を送信。
 - 期待値:
 1. 両ケースで `table.error(code=BUYIN_OUT_OF_RANGE)`。
@@ -291,9 +321,24 @@
 1. `S2` を再接続させず手番タイムアウトさせる。
 2. ハンド終了まで進行。
 - 期待値:
-1. タイムアウト時、`toCall=0` なら `CheckEvent`、`toCall>0` なら `FoldEvent`、Bring-in局面なら `BringInEvent` が発行される（自動/手動の区別はイベント種別上は持たないため、E2Eではイベント種別と局面整合で判定する）。
-2. ハンド終了時に `disconnectStreak=3` となり、席が自動解放される。
-3. 次ハンド開始時、`S2` は参加しない。
+1. タイムアウト時、`toCall=0` なら `CheckEvent`、`toCall>0` なら `FoldEvent`、Bring-in局面なら `BringInEvent` が自動発行される。
+2. タイムアウト起因で発行された `CheckEvent` / `FoldEvent` は `payload.isAuto=true` である。
+3. ハンド終了時に `disconnectStreak=3` となり、席が自動解放される。
+4. 次ハンド開始時、`S2` は参加しない。
+
+### NG-11 table.snapshot必須キー欠落は検証失敗
+
+- 前提条件:
+1. `U1` は `tableSeq=150` まで受信済み。
+2. 差分保持外のため、`table.resume(lastTableSeq=150)` への応答は `table.snapshot` になる。
+3. テストハーネスで不正スナップショット（例: `payload.table.currentHand` 欠落）を注入できる。
+- 入力（操作）:
+1. `U1` が再接続して `table.resume(lastTableSeq=150)` を送信。
+2. 必須キー欠落の `table.snapshot` を受信させる。
+- 期待値:
+1. 受信スキーマ検証で失敗し、クライアントは当該 `table.snapshot` を状態へ適用しない。
+2. クライアントは再同期失敗として内部エラーを記録する（例: `SNAPSHOT_SCHEMA_INVALID`）。
+3. 破損スナップショット受信後も、既存ローカル状態は不正値で上書きされない。
 
 ### ED-01 StudHi/Stud8のBring-inスートタイブレーク
 
@@ -421,6 +466,19 @@
 2. `ShowdownEvent` は配信されない。
 3. `DealEndEvent.endReason=UNCONTESTED`。
 4. 例として最終ポット `$25`（ante15+bring-in10）を `S1` が獲得する。
+
+### ED-11 ヘッズアップ時5bet cap解除
+
+- 前提条件:
+1. `gameType=STUD_HI`、2人卓（ヘッズアップ）。
+2. 対象ストリートで `1bet + 4raise`（5bet）到達後も両者が継続可能なスタックを保持。
+- 入力（操作）:
+1. 同一ストリートで6回目以降の `RAISE` を送信する。
+2. その後 `CALL` まで進行する。
+- 期待値:
+1. `table.error(code=INVALID_ACTION)` は返らず、6回目以降の `RaiseEvent` が受理される。
+2. `streetBetTo` は追加raise分だけ更新される。
+3. 同条件を3人以上卓で実施した場合は `INVALID_ACTION` となり、ヘッズアップ時のみ cap解除が有効であることを確認できる。
 
 ## 6. 補足（運用上の推奨）
 

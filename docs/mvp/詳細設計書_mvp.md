@@ -1,8 +1,9 @@
 # Mix Stud Online 詳細設計書（MVP）
 
 Version: v1.0  
-Last Updated: 2026-02-08  
+Last Updated: 2026-02-11  
 参照要件: `docs/mvp/要件定義書_mvp.md`  
+全体構成図: [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md)
 
 ---
 
@@ -43,6 +44,8 @@ flowchart LR
   API --> DB
 ```
 
+Vercel配置を前提にしたデプロイ視点の全体図は [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) を参照。
+
 ## 3.2 コンポーネント責務
 
 | コンポーネント   | 主責務                                                     |
@@ -66,9 +69,16 @@ flowchart LR
 ## 3.4 デプロイ前提（MVP）
 
 - アプリケーション: API/Gateway/Game Engineを同一サービスとして1インスタンスで稼働
+- FrontendはVercel、Backend実行基盤はCloud Runを採用する
 - DB: Supabase（マネージドPostgreSQL）を利用
 - 固定卓: 運営作成済み2卓を初期データとして投入
 - ローリング更新時は「新規手開始を一時停止 -> 進行中ハンド終了待ち -> デプロイ」を標準運用とする
+- Cloud RunのWebSocket接続上限（最大60分）を前提に、切断時は再接続後 `table.resume` で差分同期して継続する
+- コールドスタート抑制のため `min-instances=1` を基本設定とする
+
+補足（選定理由・注意点）:
+
+- 実行基盤選定の根拠と運用ルールは [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) の「7. 実行基盤選定記録（MVP）」を参照。
 
 ## 3.5 DBマイグレーション方針
 
@@ -145,7 +155,7 @@ flowchart LR
 バイイン制約:
 
 - `buyIn <= 2000`（要件）
-- `buyIn >= 200`（本設計の暫定値）
+- `buyIn >= 400`（本設計の暫定値）
 - `buyIn <= wallet.balance`
 - ハンド進行中のリバイ/追加入金は不可（MVP）
 
@@ -379,6 +389,7 @@ interface GameRule {
 - `BringInEvent` は `isAllIn` を含め、ショートスタックのbring-in all-inを明示する。
 - `CompleteEvent` は `street=THIRD` 固定の独立payloadを使い、`seatNo`, `amount`, `stackAfter`, `potAfter`, `streetBetTo`, `nextToActSeatNo`, `isAllIn` を含む。
 - `DealCardEvent`（4th〜7th）は `toActSeatNo` を含む。`DealCards3rdEvent` と合わせて「誰の番か」をイベントで一貫表示できる。
+- `CheckEvent` / `FoldEvent` は `isAuto` を含め、手動操作とタイムアウト自動行動を識別可能にする。
 - `StreetAdvanceEvent.reason` は以下:
   - `BETTING_ROUND_COMPLETE`: 正規遷移
   - `ALL_IN_RUNOUT`: 全員all-in等でランアウト
@@ -398,7 +409,8 @@ interface GameRule {
 3. サーバーは差分イベント返却、差分保持外なら `table.snapshot` を返却
 4. スナップショット受領後に通常イベント購読へ遷移
 
-`table.snapshot.payload.table` には、最低限 `status`, `gameType`, `stakes`, `seats`, `currentHand`, `dealerSeatNo`, `mixIndex`, `handsSinceRotation` を含める想定とする。
+`table.snapshot.payload.table` は `docs/mvp/asyncapi.yaml` の `SnapshotTable` スキーマに必ず準拠させる。  
+必須項目は `status`, `gameType`, `stakes`, `seats`, `currentHand`, `dealerSeatNo`, `mixIndex`, `handsSinceRotation` とし、`additionalProperties: false` でドリフトを検知可能にする。
 
 ## 7.6 エラーコード
 
@@ -435,7 +447,7 @@ interface GameRule {
 
 ログイン時仕様:
 
-- ログイン時に `wallet.balance = 4000` を付与 (1日1回まで)
+- 1日1回、最初のログイン時に `wallet.balance = 4000` を付与 (JST 0:00基準)
 
 認証方式（確定）:
 
@@ -443,6 +455,7 @@ interface GameRule {
 - `GET /api/auth/google/callback` 成功時は `Set-Cookie` を付与し、`302` でフロントエンド（例: `/lobby`）へリダイレクトする。
 - フロントエンドは初期表示時に `GET /api/auth/me` を呼び、ログイン済みユーザー情報を取得して画面状態を初期化する。
 - `POST /api/auth/logout` ではセッションを無効化し、Cookieを破棄する。
+- 本番ドメイン分離時のCORS固定値、Cookie設定コード例、OAuth redirect URI一覧は [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) の「8. 本番ドメイン方針」を正とする。
 
 ## 8.2 ロビー
 
@@ -564,6 +577,7 @@ erDiagram
 
 - `id uuid pk`
 - `table_id uuid fk tables(id)`
+- `unique (id, table_id)`（`hand_events` の複合FK参照整合用）
 - `hand_no bigint not null`
 - `game_type text not null`
 - `status text not null`
@@ -588,8 +602,9 @@ erDiagram
 ### `hand_events`
 
 - `id uuid pk`
-- `hand_id uuid fk hands(id)`
-- `table_id uuid not null`
+- `hand_id uuid not null`
+- `table_id uuid fk tables(id)`
+- `fk (hand_id, table_id) -> hands(id, table_id)`（ハンドと卓の組み合わせ整合を強制）
 - `table_seq bigint not null`
 - `hand_seq bigint not null`
 - `event_name text not null`
@@ -633,6 +648,12 @@ erDiagram
 
 コミット成功後のみイベント配信する（配信先行を禁止）。
 
+整合性方針:
+
+- `hand_events.table_id -> tables.id` のFKで、存在しない卓へのイベント書き込みを禁止する。
+- `hand_events(hand_id, table_id) -> hands(id, table_id)` の複合FKで、`hand_id` と `table_id` の不一致イベントを禁止する。
+- 上記FK制約と同一トランザクション更新により、復元・差分配信の前提となるイベント整合性をDB層で担保する。
+
 ## 9.5 スナップショット更新
 
 スナップショットは再接続時の高速な状態復元を目的とする。
@@ -662,6 +683,7 @@ erDiagram
 - `check` 可能なら `CheckEvent`
 - 不可なら `FoldEvent`
 - Bring-in対象者なら `BringInEvent`
+- `CheckEvent` / `FoldEvent` の payload には `isAuto=true` を設定し、履歴APIではそれぞれ `AUTO_CHECK` / `AUTO_FOLD` として記録する
 
 ## 10.2 切断時
 
@@ -754,12 +776,19 @@ erDiagram
 
 - 構造化ログ（JSON）
 - ログ種別: 認証、接続、アクション、エラー、復元
+- 監視基盤（MVP初期）はGCP標準を採用: Cloud Logging / Cloud Monitoring / Error Reporting / Uptime Check
 - メトリクス:
   - `ws_connected_clients`
   - `table_command_latency_ms`
   - `table_event_broadcast_latency_ms`
   - `auto_action_total`
   - `reconnect_resume_total`
+- 初期アラート閾値（推奨）:
+  - Uptime Check: 5分内に2回以上失敗でCritical
+  - HTTP 5xx率: 5分平均 > 1%（Warning）、2分平均 > 5%（Critical）
+  - p95レイテンシ: 10分平均 > 800ms（Warning）、5分平均 > 1200ms（Critical）
+  - 再接続品質: `table.snapshot` フォールバック率15分平均 > 5%（Warning）、`table.resume` 失敗率15分平均 > 2%（Critical）
+- 詳細な監視方針は [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) の「9. 監視基盤方針（MVP）」を正とする。
 
 ---
 
@@ -811,9 +840,9 @@ erDiagram
 
 ## 17.2 本設計での暫定値
 
-- 最低バイイン: `$200`（5 Big Bet）
+- 最低バイイン: `$400`（10 Big Bet）
 - オッドチップ: Hi側優先、同側複数勝者時は `dealer_seat` から時計回り優先
-- 初回ログインのみ `$4,000` 付与
+- 1日1回、ログイン時に `$4,000` 付与
 
 ---
 

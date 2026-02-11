@@ -126,3 +126,5 @@ stateDiagram-v2
 - 切断復帰の整合:
   - `disconnect_streak` は再接続時に0へリセット
   - 3ハンド連続切断時に `EMPTY`（自動LEAVE）へ到達すること
+- イベント永続化の参照整合:
+  - `hand_events.table_id -> tables.id` と `hand_events(hand_id, table_id) -> hands(id, table_id)` のFK制約により、復元/差分配信の前提となるイベント整合がDB層で担保されること

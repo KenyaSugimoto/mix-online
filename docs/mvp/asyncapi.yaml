@@ -481,6 +481,121 @@ components:
           minimum: 0
       additionalProperties: false
 
+    SnapshotTableStatus:
+      type: string
+      enum:
+        - WAITING
+        - DEALING
+        - BETTING
+        - SHOWDOWN
+        - HAND_END
+
+    SnapshotHandStatus:
+      type: string
+      enum:
+        - IN_PROGRESS
+        - SHOWDOWN
+        - HAND_END
+
+    SnapshotSeat:
+      type: object
+      required:
+        - seatNo
+        - status
+        - stack
+        - disconnectStreak
+        - user
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        status:
+          $ref: "#/components/schemas/SeatStatus"
+        stack:
+          type: integer
+          minimum: 0
+        disconnectStreak:
+          type: integer
+          minimum: 0
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/SeatUserSummary"
+            - type: "null"
+      additionalProperties: false
+
+    SnapshotCurrentHand:
+      oneOf:
+        - type: object
+          required:
+            - handId
+            - handNo
+            - status
+            - street
+            - potTotal
+            - toActSeatNo
+            - actionDeadlineAt
+          properties:
+            handId:
+              $ref: "#/components/schemas/UUID"
+            handNo:
+              type: integer
+              format: int64
+              minimum: 1
+            status:
+              $ref: "#/components/schemas/SnapshotHandStatus"
+            street:
+              $ref: "#/components/schemas/Street"
+            potTotal:
+              type: integer
+              minimum: 0
+            toActSeatNo:
+              oneOf:
+                - $ref: "#/components/schemas/SeatNo"
+                - type: "null"
+            actionDeadlineAt:
+              oneOf:
+                - $ref: "#/components/schemas/DateTime"
+                - type: "null"
+          additionalProperties: false
+        - type: "null"
+
+    SnapshotTable:
+      type: object
+      required:
+        - status
+        - gameType
+        - stakes
+        - seats
+        - currentHand
+        - dealerSeatNo
+        - mixIndex
+        - handsSinceRotation
+      properties:
+        status:
+          $ref: "#/components/schemas/SnapshotTableStatus"
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        stakes:
+          $ref: "#/components/schemas/StakeSnapshot"
+        seats:
+          type: array
+          minItems: 6
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/SnapshotSeat"
+        currentHand:
+          $ref: "#/components/schemas/SnapshotCurrentHand"
+        dealerSeatNo:
+          $ref: "#/components/schemas/SeatNo"
+        mixIndex:
+          type: integer
+          minimum: 0
+          maximum: 2
+        handsSinceRotation:
+          type: integer
+          minimum: 0
+          maximum: 5
+      additionalProperties: false
+
     HandParticipantSnapshot:
       type: object
       required:
@@ -904,6 +1019,7 @@ components:
         - seatNo
         - potAfter
         - nextToActSeatNo
+        - isAuto
       properties:
         street:
           $ref: "#/components/schemas/Street"
@@ -916,6 +1032,11 @@ components:
           oneOf:
             - $ref: "#/components/schemas/SeatNo"
             - type: "null"
+        isAuto:
+          type: boolean
+          description: |
+            `true` の場合はタイムアウト等による自動行動。
+            `false` の場合はプレイヤー手動操作。
       additionalProperties: false
 
     FoldEventPayload:
@@ -926,6 +1047,7 @@ components:
         - potAfter
         - nextToActSeatNo
         - remainingPlayers
+        - isAuto
       properties:
         street:
           $ref: "#/components/schemas/Street"
@@ -942,6 +1064,11 @@ components:
           type: integer
           minimum: 1
           maximum: 6
+        isAuto:
+          type: boolean
+          description: |
+            `true` の場合はタイムアウト等による自動行動。
+            `false` の場合はプレイヤー手動操作。
       additionalProperties: false
 
     StreetAdvanceEventPayload:
@@ -1236,7 +1363,7 @@ components:
                   $ref: "#/components/schemas/UUID"
                 buyIn:
                   type: integer
-                  minimum: 200
+                  minimum: 400
                   maximum: 2000
               additionalProperties: false
 
@@ -1975,6 +2102,9 @@ components:
         payload:
           type: object
           description: フル状態再同期に利用するスナップショット本体。
+          required:
+            - reason
+            - table
           properties:
             reason:
               type: string
@@ -1982,13 +2112,8 @@ components:
                 - OUT_OF_RANGE
                 - RESYNC_REQUIRED
             table:
-              type: object
-              description: |
-                再同期用の卓スナップショット。実装では少なくとも以下を含むことを推奨:
-                `status`, `gameType`, `stakes`, `seats`, `currentHand`,
-                `dealerSeatNo`, `mixIndex`, `handsSinceRotation`。
-              additionalProperties: true
-          additionalProperties: true
+              $ref: "#/components/schemas/SnapshotTable"
+          additionalProperties: false
       additionalProperties: false
 
     PongMessagePayload:
