@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.18  
+Version: v1.19  
 Last Updated: 2026-02-11  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -32,7 +32,7 @@ Last Updated: 2026-02-11
 | --- | --- | --- | --- | --- | --- | --- |
 | M0 | 品質ゲート固定（lint/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
-| M2 | ロビー/履歴API実装 | IN_PROGRESS | 83% | Codex | 2026-02-18 | M2-01〜M2-05完了、M2-06着手準備 |
+| M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | NOT_STARTED | 0% | TBA | TBA | Phase 3 |
 | M4 | Web統合（ロビー〜プレイ） | NOT_STARTED | 0% | TBA | TBA | Phase 4 |
 | M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
@@ -45,7 +45,7 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M2-06 | HTTP契約テスト（OpenAPI準拠チェック、自動化） | P0 | IN_PROGRESS | MVP対象エンドポイントの正常/異常系を固定 | [`openapi.yaml`](./openapi.yaml), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| - | - | - | - | - | - |
 
 ## Next
 
@@ -70,12 +70,12 @@ Last Updated: 2026-02-11
 | M2-03 | 認証API基盤（Google callback後のCookie session、`/api/auth/me`、`/api/auth/logout`）を実装 | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`auth-session.ts`](../../apps/server/src/auth-session.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts) |
 | M2-04 | `/api/history/hands` 実装（cursor署名、`endedAt DESC, handId DESC`） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`history-cursor.ts`](../../apps/server/src/history-cursor.ts), [`history-repository.ts`](../../apps/server/src/repository/history-repository.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts) |
 | M2-05 | `/api/history/hands/:handId` 実装（streetActions/showdown/profitLoss） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`history-hand.ts`](../../apps/server/src/history-hand.ts), [`history-repository.ts`](../../apps/server/src/repository/history-repository.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts) |
+| M2-06 | HTTP契約テスト（OpenAPI準拠チェック、自動化） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`http-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/http-contract.integration.test.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ## Backlog
 
 | ID | Task | Priority | Status | 受け入れ観点（要約） | Link |
 | --- | --- | --- | --- | --- | --- |
-| M2-06 | HTTP契約テスト（OpenAPI準拠チェック、自動化） | P0 | NOT_STARTED | MVP対象エンドポイントの正常/異常系を固定 | [`openapi.yaml`](./openapi.yaml), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-01 | WebSocketゲートウェイ実装（`/ws`、コマンド検証、`table.error`） | P0 | NOT_STARTED | AsyncAPIのcommand/error schema準拠 | [`asyncapi.yaml`](./asyncapi.yaml) |
 | M3-02 | Table Actor基盤（卓単位直列処理、`tableSeq/handSeq` 採番） | P0 | NOT_STARTED | 順序逆転・競合なしを担保 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M3-03 | 席管理コマンド（join/sitOut/return/leave）と状態遷移実装 | P0 | NOT_STARTED | `SEATED_WAIT_NEXT_HAND`/`LEAVE_PENDING` を含む遷移整合 | [`状態遷移図_mvp.md`](./状態遷移図_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
@@ -137,6 +137,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | M2-03 認証API基盤実装 | Google callback後にHttpOnly session cookieを発行し、`/api/auth/me`・`/api/auth/logout` でセッション参照/無効化を行う基盤を実装 | M2-04以降の履歴APIで認証済みユーザー軸のレスポンスを返すための共通土台が必要なため | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`auth-session.ts`](../../apps/server/src/auth-session.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts) |
 | 2026-02-11 | M2-04 履歴一覧API実装 | `GET /api/history/hands` に認証前提のキーセットページング（`endedAt DESC, handId DESC`）と署名付きcursor検証を実装し、改ざん時 `INVALID_CURSOR` を返す | 履歴詳細API（M2-05）と契約テスト（M2-06）に先立ち、履歴一覧の順序保証とページング境界を先に固定するため | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`history-cursor.ts`](../../apps/server/src/history-cursor.ts), [`history-repository.ts`](../../apps/server/src/repository/history-repository.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts) |
 | 2026-02-11 | M2-05 履歴詳細API実装 | `GET /api/history/hands/:handId` を実装し、streetActions/showdown/profitLoss を返却。履歴一覧との `handId/tableId/profitLoss` 整合を統合テストで固定 | 履歴画面で必要な詳細表示データを確定し、M2-06契約テストで正常/異常系を一括固定する前提を整えるため | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`history-hand.ts`](../../apps/server/src/history-hand.ts), [`history-repository.ts`](../../apps/server/src/repository/history-repository.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts) |
+| 2026-02-11 | M2-06 HTTP契約テスト固定 | OpenAPIで定義したMVP対象HTTP API（Auth/Lobby/Tables/History）の正常系・異常系を統合契約テストとして追加し、継続検証を自動化 | M2完了条件である「契約逸脱をCIで即検知できる状態」を満たすため | [`openapi.yaml`](./openapi.yaml), [`http-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/http-contract.integration.test.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-11 | AsyncAPI表示方式の更新（LOCAL-DOCS-RENDER-04） | AsyncAPI表示を Web Component 直描画から AsyncAPI CLI + html-template による静的HTML生成へ切替 | ブラウザ実行時パーサー依存の表示エラーを回避し、Pages表示の再現性を高めるため | [`build-api-reference-site.sh`](../../scripts/build-api-reference-site.sh), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
 | 2026-02-11 | 契約リテラル再発防止ルール導入（LOCAL-CONTRACT-LITERAL-01） | `apps/` 配下で `FIXED_LIMIT` / `STUD_*` の文字列直書きを検出する `pnpm check:contract-literals` を導入し、CI/PRテンプレート/運用ルールへ組み込む | 契約値変更時の追従漏れとテスト期待値のハードコード再発を防ぐため | [`check-contract-literals.sh`](../../scripts/check-contract-literals.sh), [`ci.yml`](../../.github/workflows/ci.yml), [`github-operations.md`](../../.agent/rules/github-operations.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 
@@ -170,4 +171,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01完了、M2-02完了、M2-03完了、M2-04完了、M2-05完了 | M2-06（HTTP契約テスト） | 仕様未決事項（DEC-01）が残存 | M2-06 完了でM2クローズ |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了 | なし（M2完了） | 仕様未決事項（DEC-01）が残存 | M3-01（WebSocketゲートウェイ）着手 |
