@@ -52,7 +52,7 @@ Last Updated: 2026-02-11
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
 | M0-02 | `packages/shared` の共通型を契約準拠で再定義（OpenAPI/AsyncAPI/DDL enum整合） | P0 | DONE | 契約仕様のenum一覧が確定している | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
-| M0-03 | API/WSの入力バリデーション + 共通エラー応答基盤（`requestId`/`error.code`）を実装 | P0 | NOT_STARTED | エラーコード一覧とメッセージ方針が確定している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
+| M0-03 | API/WSの入力バリデーション + 共通エラー応答基盤（`requestId`/`error.code`）を実装 | P0 | IN_PROGRESS | エラーコード一覧とメッセージ方針が確定している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M0-04 | テスト基盤整備（unit/integration/e2e、固定デッキハーネス、テストデータ初期化） | P0 | NOT_STARTED | E2EシナリオIDが確定している | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M1-01 | Supabaseマイグレーション雛形作成（`docs/mvp/ddl` と `supabase/migrations` の一致） | P0 | NOT_STARTED | DDL参照箇所が確定している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`001_create_tables.sql`](./ddl/001_create_tables.sql) |
 | M1-02 | seed投入/ローカル起動/DBリセット手順を確立（`supabase start` 前提） | P0 | NOT_STARTED | マイグレーション適用手順が成立している | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`003_seed_initial_data.sql`](./ddl/003_seed_initial_data.sql) |
