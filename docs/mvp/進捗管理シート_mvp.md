@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.1  
+Version: v1.2  
 Last Updated: 2026-02-11  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -30,7 +30,7 @@ Last Updated: 2026-02-11
 
 | Milestone | 内容 | Status | Progress | Owner | Target Date | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| M0 | 品質ゲート固定（lint/typecheck/test） | NOT_STARTED | 0% | TBA | TBA | Phase 0 |
+| M0 | 品質ゲート固定（lint/typecheck/test） | IN_PROGRESS | 25% | Codex | TBA | M0-01完了、M0-02以降を継続 |
 | M1 | DB/マイグレーション運用確立 | NOT_STARTED | 0% | TBA | TBA | Phase 1 |
 | M2 | ロビー/履歴API実装 | NOT_STARTED | 0% | TBA | TBA | Phase 2 |
 | M3 | Realtime + Game Engine成立 | NOT_STARTED | 0% | TBA | TBA | Phase 3 |
@@ -45,7 +45,7 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M0-01 | `pnpm lint/typecheck/test` を全てグリーン化し、失敗時の修正方針を確立 | P0 | NOT_STARTED | 3コマンド成功、実行手順を共有 | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| M0-01 | `pnpm lint/typecheck/test` を全てグリーン化し、失敗時の修正方針を確立 | P0 | DONE | 3コマンド成功、実行手順を共有 | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 
 ## Next
 
@@ -112,6 +112,7 @@ Last Updated: 2026-02-11
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
 | 2026-02-11 | 実装推進方式 | AIエージェント委譲 + DoD厳格運用 | 速度より品質を優先するため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| 2026-02-11 | 品質ゲート運用（M0-01） | `pnpm lint` → `pnpm typecheck` → `pnpm test` の固定順と一次切り分け手順を採用 | 失敗時の調査順序を固定し、復旧時間のばらつきを減らすため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 
 ---
 
@@ -143,4 +144,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張） | なし | 仕様未決事項（DEC-01）が残存 | M0-01 → M0-02 着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01完了 | M0-02（共通型再定義） | 仕様未決事項（DEC-01）が残存 | M0-02 着手 |
