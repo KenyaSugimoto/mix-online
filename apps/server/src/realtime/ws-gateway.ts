@@ -16,10 +16,15 @@ import {
   createRealtimeTableService,
 } from "./table-service";
 
+type TimerHandle = ReturnType<typeof globalThis.setTimeout>;
+
 type WsGatewayOptions = {
   sessionStore: SessionStore;
   now?: () => Date;
   tableService?: RealtimeTableService;
+  actionTimeoutMs?: number;
+  setTimeoutFn?: (callback: () => void, timeoutMs: number) => TimerHandle;
+  clearTimeoutFn?: (timeoutId: TimerHandle) => void;
 };
 
 type GatewayConnection = {
@@ -29,6 +34,7 @@ type GatewayConnection = {
 
 type TrackedConnection = GatewayConnection & {
   currentTableId: string | null;
+  currentUser: SessionUser | null;
 };
 
 type ClientCommandContext = {
@@ -65,23 +71,38 @@ export class WsGateway {
   private readonly sessionStore: SessionStore;
   private readonly now: () => Date;
   private readonly tableService: RealtimeTableService;
+  private readonly actionTimeoutMs: number;
+  private readonly setTimeoutFn: (
+    callback: () => void,
+    timeoutMs: number,
+  ) => TimerHandle;
+  private readonly clearTimeoutFn: (timeoutId: TimerHandle) => void;
   private readonly connections = new Set<TrackedConnection>();
+  private readonly actionTimersByTableId = new Map<string, TimerHandle>();
 
   constructor(options: WsGatewayOptions) {
     this.sessionStore = options.sessionStore;
     this.now = options.now ?? (() => new Date());
     this.tableService = options.tableService ?? createRealtimeTableService();
+    this.actionTimeoutMs = options.actionTimeoutMs ?? 30_000;
+    this.setTimeoutFn =
+      options.setTimeoutFn ??
+      ((callback, timeoutMs) => globalThis.setTimeout(callback, timeoutMs));
+    this.clearTimeoutFn =
+      options.clearTimeoutFn ??
+      ((timeoutId) => globalThis.clearTimeout(timeoutId));
   }
 
   handleConnection(connection: GatewayConnection): void {
     const trackedConnection: TrackedConnection = {
       ...connection,
       currentTableId: null,
+      currentUser: null,
     };
     this.connections.add(trackedConnection);
 
     trackedConnection.socket.on("close", () => {
-      this.connections.delete(trackedConnection);
+      void this.handleDisconnect(trackedConnection);
     });
 
     trackedConnection.socket.on("message", async (raw) => {
@@ -112,6 +133,8 @@ export class WsGateway {
         return;
       }
 
+      trackedConnection.currentUser = session.user;
+
       const parsed = this.parseJsonCommand(
         text,
         trackedConnection,
@@ -130,6 +153,21 @@ export class WsGateway {
       );
       if (baseCommand === null) {
         return;
+      }
+
+      if (commandContext.tableId !== null) {
+        trackedConnection.currentTableId = commandContext.tableId;
+        const reconnectResult = await this.tableService.handleReconnect({
+          tableId: commandContext.tableId,
+          user: session.user,
+          occurredAt,
+        });
+        if (reconnectResult.ok) {
+          for (const event of reconnectResult.events) {
+            this.broadcastToTable(reconnectResult.tableId, event, session.user);
+          }
+          this.scheduleAutoAction(reconnectResult.tableId);
+        }
       }
 
       if (baseCommand.type === "ping") {
@@ -172,7 +210,70 @@ export class WsGateway {
       for (const event of result.events) {
         this.broadcastToTable(result.tableId, event, session.user);
       }
+      this.scheduleAutoAction(result.tableId);
     });
+  }
+
+  private async handleDisconnect(connection: TrackedConnection): Promise<void> {
+    this.connections.delete(connection);
+
+    if (!connection.currentTableId || !connection.currentUser) {
+      return;
+    }
+
+    const result = await this.tableService.handleDisconnect({
+      tableId: connection.currentTableId,
+      user: connection.currentUser,
+      occurredAt: this.now(),
+    });
+
+    if (result.ok) {
+      for (const event of result.events) {
+        this.broadcastToTable(result.tableId, event, connection.currentUser);
+      }
+      this.scheduleAutoAction(result.tableId);
+    }
+  }
+
+  private scheduleAutoAction(tableId: string): void {
+    this.clearAutoActionTimer(tableId);
+
+    const seatNo = this.tableService.getNextToActSeatNo(tableId);
+    if (seatNo === null) {
+      return;
+    }
+
+    const timeoutId = this.setTimeoutFn(() => {
+      void this.runAutoAction(tableId, seatNo);
+    }, this.actionTimeoutMs);
+    this.actionTimersByTableId.set(tableId, timeoutId);
+  }
+
+  private clearAutoActionTimer(tableId: string): void {
+    const existing = this.actionTimersByTableId.get(tableId);
+    if (!existing) {
+      return;
+    }
+
+    this.clearTimeoutFn(existing);
+    this.actionTimersByTableId.delete(tableId);
+  }
+
+  private async runAutoAction(tableId: string, seatNo: number): Promise<void> {
+    this.actionTimersByTableId.delete(tableId);
+
+    const result = await this.tableService.executeAutoAction({
+      tableId,
+      seatNo,
+      occurredAt: this.now(),
+    });
+
+    if (result.ok) {
+      for (const event of result.events) {
+        this.broadcastToTable(result.tableId, event);
+      }
+      this.scheduleAutoAction(result.tableId);
+    }
   }
 
   private parseJsonCommand(
@@ -244,7 +345,7 @@ export class WsGateway {
   private broadcastToTable(
     tableId: string,
     event: unknown,
-    commandUser: SessionUser,
+    commandUser?: SessionUser,
   ): void {
     const body = JSON.stringify(event);
 
@@ -252,6 +353,10 @@ export class WsGateway {
       if (connection.currentTableId === tableId) {
         connection.socket.send(body);
       }
+    }
+
+    if (!commandUser) {
+      return;
     }
 
     const connectedInTable = [...this.connections].some(

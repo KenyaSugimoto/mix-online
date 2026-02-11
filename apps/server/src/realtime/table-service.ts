@@ -43,6 +43,7 @@ type BaseCommand = {
 type TableSeat = {
   seatNo: number;
   status: SeatStatusType;
+  statusBeforeDisconnect: SeatStatusType | null;
   userId: string | null;
   displayName: string | null;
   stack: number;
@@ -156,6 +157,7 @@ const createDefaultTableState = (tableId: string): TableState => ({
   seats: Array.from({ length: 6 }, (_, index) => ({
     seatNo: index + 1,
     status: SeatStatus.EMPTY,
+    statusBeforeDisconnect: null,
     userId: null,
     displayName: null,
     stack: 0,
@@ -217,18 +219,291 @@ export class RealtimeTableService {
       return {
         ok: true,
         tableId,
-        events: outcome.events.map((event) => ({
-          type: "table.event",
+        events: this.mapEvents({
           tableId,
-          tableSeq: allocateTableSeq(),
-          handId: event.handId,
-          handSeq: event.handId ? allocateHandSeq(event.handId) : null,
-          occurredAt: params.occurredAt.toISOString(),
-          eventName: event.eventName,
-          payload: event.payload,
-        })),
+          events: outcome.events,
+          occurredAt: params.occurredAt,
+          allocateTableSeq,
+          allocateHandSeq,
+        }),
       };
     });
+  }
+
+  async handleDisconnect(params: {
+    tableId: string;
+    user: SessionUser;
+    occurredAt: Date;
+  }): Promise<TableServiceResult> {
+    const actor = this.actorRegistry.getOrCreate(params.tableId);
+    return actor.enqueue(({ allocateTableSeq, allocateHandSeq }) => {
+      const table = this.tables.get(params.tableId);
+      if (!table) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      const seat = table.seats.find(
+        (entry) => entry.userId === params.user.userId,
+      );
+      if (
+        !seat ||
+        seat.status === SeatStatus.EMPTY ||
+        seat.status === SeatStatus.DISCONNECTED
+      ) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      seat.statusBeforeDisconnect = seat.status;
+      seat.status = SeatStatus.DISCONNECTED;
+      seat.disconnectStreak += 1;
+
+      const events: PendingEvent[] = [
+        {
+          handId: null,
+          eventName: TableEventName.PlayerDisconnectedEvent,
+          payload: {
+            seatNo: seat.seatNo,
+            userId: params.user.userId,
+            displayName: seat.displayName ?? params.user.displayName,
+            seatStatus: SeatStatus.DISCONNECTED,
+            disconnectStreak: seat.disconnectStreak,
+            willAutoLeave: seat.disconnectStreak >= 3,
+          },
+        },
+      ];
+
+      return {
+        ok: true,
+        tableId: params.tableId,
+        events: this.mapEvents({
+          tableId: params.tableId,
+          events,
+          occurredAt: params.occurredAt,
+          allocateTableSeq,
+          allocateHandSeq,
+        }),
+      };
+    });
+  }
+
+  async handleReconnect(params: {
+    tableId: string;
+    user: SessionUser;
+    occurredAt: Date;
+  }): Promise<TableServiceResult> {
+    const actor = this.actorRegistry.getOrCreate(params.tableId);
+    return actor.enqueue(({ allocateTableSeq, allocateHandSeq }) => {
+      const table = this.tables.get(params.tableId);
+      if (!table) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      const seat = table.seats.find(
+        (entry) => entry.userId === params.user.userId,
+      );
+      if (!seat || seat.status !== SeatStatus.DISCONNECTED) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      const restoredSeatStatus =
+        seat.statusBeforeDisconnect &&
+        seat.statusBeforeDisconnect !== SeatStatus.EMPTY &&
+        seat.statusBeforeDisconnect !== SeatStatus.DISCONNECTED
+          ? seat.statusBeforeDisconnect
+          : SeatStatus.ACTIVE;
+
+      seat.status = restoredSeatStatus;
+      seat.statusBeforeDisconnect = null;
+      seat.disconnectStreak = 0;
+
+      const events: PendingEvent[] = [
+        {
+          handId: null,
+          eventName: TableEventName.PlayerReconnectedEvent,
+          payload: {
+            seatNo: seat.seatNo,
+            userId: params.user.userId,
+            displayName: seat.displayName ?? params.user.displayName,
+            restoredSeatStatus,
+            disconnectStreakResetTo: 0,
+          },
+        },
+      ];
+
+      return {
+        ok: true,
+        tableId: params.tableId,
+        events: this.mapEvents({
+          tableId: params.tableId,
+          events,
+          occurredAt: params.occurredAt,
+          allocateTableSeq,
+          allocateHandSeq,
+        }),
+      };
+    });
+  }
+
+  async executeAutoAction(params: {
+    tableId: string;
+    seatNo: number;
+    occurredAt: Date;
+  }): Promise<TableServiceResult> {
+    const actor = this.actorRegistry.getOrCreate(params.tableId);
+    return actor.enqueue(({ allocateTableSeq, allocateHandSeq }) => {
+      const table = this.tables.get(params.tableId);
+      if (
+        !table ||
+        !table.currentHand ||
+        table.status !== TableStatus.BETTING
+      ) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      const hand = table.currentHand;
+      if (hand.toActSeatNo !== params.seatNo) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      const seat = table.seats.find((entry) => entry.seatNo === params.seatNo);
+      const player = hand.players.find(
+        (entry) => entry.seatNo === params.seatNo,
+      );
+      if (!seat || !seat.userId || !player) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      const autoUserId = seat.userId;
+      const toCall = Math.max(0, hand.streetBetTo - player.streetContribution);
+      const action = toCall > 0 ? "FOLD" : "CHECK";
+      const autoCommand: BaseCommand = {
+        type: "table.act",
+        requestId: randomUUID(),
+        sentAt: params.occurredAt.toISOString(),
+        payload: {
+          tableId: params.tableId,
+          action,
+        },
+      };
+
+      const walletBalance = this.walletByUserId.get(seat.userId) ?? 0;
+      const applied = this.applyActCommand({
+        table,
+        user: {
+          userId: seat.userId,
+          displayName: seat.displayName ?? "Disconnected",
+          walletBalance,
+        },
+        command: autoCommand,
+        currentBalance: walletBalance,
+        isAuto: true,
+      });
+      if (applied.ok === false) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      const events = [...applied.events];
+      let nextWalletBalance = walletBalance;
+      if (
+        seat.status === SeatStatus.DISCONNECTED &&
+        seat.disconnectStreak >= 3
+      ) {
+        const previousStatus = seat.status;
+        const cashOut = seat.stack;
+        nextWalletBalance += cashOut;
+        seat.status = SeatStatus.EMPTY;
+        seat.statusBeforeDisconnect = null;
+        seat.userId = null;
+        seat.displayName = null;
+        seat.stack = 0;
+        seat.disconnectStreak = 0;
+        seat.joinedAt = null;
+
+        events.push({
+          handId: null,
+          eventName: TableEventName.SeatStateChangedEvent,
+          payload: {
+            seatNo: seat.seatNo,
+            previousStatus,
+            currentStatus: SeatStatus.EMPTY,
+            reason: SeatStateChangeReason.LEAVE,
+            user: null,
+            stack: 0,
+            appliesFrom: SeatStateChangeAppliesFrom.IMMEDIATE,
+          },
+        });
+      }
+
+      this.walletByUserId.set(autoUserId, nextWalletBalance);
+
+      return {
+        ok: true,
+        tableId: params.tableId,
+        events: this.mapEvents({
+          tableId: params.tableId,
+          events,
+          occurredAt: params.occurredAt,
+          allocateTableSeq,
+          allocateHandSeq,
+        }),
+      };
+    });
+  }
+
+  getNextToActSeatNo(tableId: string): number | null {
+    const table = this.tables.get(tableId);
+    return table?.currentHand?.toActSeatNo ?? null;
+  }
+
+  private mapEvents(params: {
+    tableId: string;
+    events: PendingEvent[];
+    occurredAt: Date;
+    allocateTableSeq: () => number;
+    allocateHandSeq: (handId: string) => number;
+  }): TableEventMessage[] {
+    return params.events.map((event) => ({
+      type: "table.event",
+      tableId: params.tableId,
+      tableSeq: params.allocateTableSeq(),
+      handId: event.handId,
+      handSeq: event.handId ? params.allocateHandSeq(event.handId) : null,
+      occurredAt: params.occurredAt.toISOString(),
+      eventName: event.eventName,
+      payload: event.payload,
+    }));
   }
 
   private resolveTableId(payload: Record<string, unknown>): string | null {
@@ -327,6 +602,7 @@ export class RealtimeTableService {
           ? SeatStatus.ACTIVE
           : SeatStatus.SEATED_WAIT_NEXT_HAND;
       emptySeat.status = nextStatus;
+      emptySeat.statusBeforeDisconnect = null;
       emptySeat.userId = params.user.userId;
       emptySeat.displayName = params.user.displayName;
       emptySeat.stack = buyIn;
@@ -460,6 +736,7 @@ export class RealtimeTableService {
       const previousStatus = seat.status;
       const cashOut = seat.stack;
       seat.status = SeatStatus.EMPTY;
+      seat.statusBeforeDisconnect = null;
       seat.userId = null;
       seat.displayName = null;
       seat.stack = 0;
@@ -489,7 +766,10 @@ export class RealtimeTableService {
     }
 
     if (params.command.type === "table.act") {
-      return this.applyActCommand(params);
+      return this.applyActCommand({
+        ...params,
+        isAuto: false,
+      });
     }
 
     return this.fail(
@@ -505,6 +785,7 @@ export class RealtimeTableService {
     user: SessionUser;
     command: BaseCommand;
     currentBalance: number;
+    isAuto: boolean;
   }):
     | {
         ok: true;
@@ -711,7 +992,7 @@ export class RealtimeTableService {
             eventName,
             payload: {
               ...payloadBase,
-              isAuto: false,
+              isAuto: params.isAuto,
             },
           },
         ],
@@ -731,7 +1012,7 @@ export class RealtimeTableService {
               ...payloadBase,
               remainingPlayers: hand.players.filter((entry) => entry.inHand)
                 .length,
-              isAuto: false,
+              isAuto: params.isAuto,
             },
           },
         ],

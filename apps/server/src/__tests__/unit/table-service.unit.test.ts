@@ -491,4 +491,215 @@ describe("RealtimeTableService 席管理", () => {
       expect(rejected.error.code).toBe(RealtimeErrorCode.INVALID_ACTION);
     }
   });
+
+  it("切断と再接続で PlayerDisconnected/PlayerReconnected を発行する", async () => {
+    const service = createRealtimeTableService();
+    const user = createUser(1);
+
+    const joined = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user,
+      occurredAt: NOW,
+    });
+    expect(joined.ok).toBe(true);
+
+    const disconnected = await service.handleDisconnect({
+      tableId: TABLE_ID,
+      user,
+      occurredAt: NOW,
+    });
+    expect(disconnected.ok).toBe(true);
+    if (!disconnected.ok) {
+      return;
+    }
+    expect(disconnected.events).toHaveLength(1);
+    expect(disconnected.events[0]?.eventName).toBe(
+      TableEventName.PlayerDisconnectedEvent,
+    );
+    expect(disconnected.events[0]?.payload.seatStatus).toBe("DISCONNECTED");
+    expect(disconnected.events[0]?.payload.disconnectStreak).toBe(1);
+
+    const reconnected = await service.handleReconnect({
+      tableId: TABLE_ID,
+      user,
+      occurredAt: NOW,
+    });
+    expect(reconnected.ok).toBe(true);
+    if (!reconnected.ok) {
+      return;
+    }
+    expect(reconnected.events).toHaveLength(1);
+    expect(reconnected.events[0]?.eventName).toBe(
+      TableEventName.PlayerReconnectedEvent,
+    );
+    expect(reconnected.events[0]?.payload.disconnectStreakResetTo).toBe(0);
+  });
+
+  it("タイムアウト自動アクションで isAuto=true の CheckEvent を発行する", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      executeAutoAction: ReturnType<
+        typeof createRealtimeTableService
+      >["executeAutoAction"];
+      tables: Map<
+        string,
+        {
+          currentHand: {
+            toActSeatNo: number | null;
+            streetBetTo: number;
+            players: Array<{
+              seatNo: number;
+              streetContribution: number;
+              inHand: boolean;
+              allIn: boolean;
+            }>;
+          } | null;
+        }
+      >;
+    };
+
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+
+    const table = service.tables.get(TABLE_ID);
+    if (!table?.currentHand) {
+      throw new Error("進行中ハンドが見つかりません。");
+    }
+
+    const targetPlayer = table.currentHand.players[0];
+    if (!targetPlayer) {
+      throw new Error("対象プレイヤーが見つかりません。");
+    }
+    table.currentHand.toActSeatNo = targetPlayer.seatNo;
+    targetPlayer.streetContribution = table.currentHand.streetBetTo;
+
+    const autoAction = await service.executeAutoAction({
+      tableId: TABLE_ID,
+      seatNo: targetPlayer.seatNo,
+      occurredAt: NOW,
+    });
+
+    expect(autoAction.ok).toBe(true);
+    if (!autoAction.ok) {
+      return;
+    }
+    expect(autoAction.events[0]?.eventName).toBe(TableEventName.CheckEvent);
+    expect(autoAction.events[0]?.payload.isAuto).toBe(true);
+  });
+
+  it("disconnectStreak>=3 の切断席は自動FOLD後に自動LEAVEする", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      executeAutoAction: ReturnType<
+        typeof createRealtimeTableService
+      >["executeAutoAction"];
+      tables: Map<
+        string,
+        {
+          seats: Array<{
+            seatNo: number;
+            status: string;
+            statusBeforeDisconnect: string | null;
+            userId: string | null;
+            displayName: string | null;
+            stack: number;
+            disconnectStreak: number;
+            joinedAt: string | null;
+          }>;
+          currentHand: {
+            toActSeatNo: number | null;
+            streetBetTo: number;
+            players: Array<{
+              seatNo: number;
+              streetContribution: number;
+            }>;
+          } | null;
+        }
+      >;
+    };
+
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+
+    const table = service.tables.get(TABLE_ID);
+    if (!table?.currentHand) {
+      throw new Error("進行中ハンドが見つかりません。");
+    }
+
+    const targetSeat = table.seats.find((seat) => seat.userId === user1.userId);
+    const targetPlayer = table.currentHand.players.find(
+      (player) => player.seatNo === targetSeat?.seatNo,
+    );
+    if (!targetSeat || !targetPlayer) {
+      throw new Error("対象プレイヤーが見つかりません。");
+    }
+
+    targetSeat.status = SeatStatus.DISCONNECTED;
+    targetSeat.statusBeforeDisconnect = SeatStatus.ACTIVE;
+    targetSeat.disconnectStreak = 3;
+    table.currentHand.toActSeatNo = targetSeat.seatNo;
+    table.currentHand.streetBetTo = 20;
+    targetPlayer.streetContribution = 0;
+
+    const autoAction = await service.executeAutoAction({
+      tableId: TABLE_ID,
+      seatNo: targetSeat.seatNo,
+      occurredAt: NOW,
+    });
+
+    expect(autoAction.ok).toBe(true);
+    if (!autoAction.ok) {
+      return;
+    }
+    expect(autoAction.events[0]?.eventName).toBe(TableEventName.FoldEvent);
+    expect(autoAction.events[0]?.payload.isAuto).toBe(true);
+    expect(autoAction.events[1]?.eventName).toBe(
+      TableEventName.SeatStateChangedEvent,
+    );
+    expect(autoAction.events[1]?.payload.currentStatus).toBe(SeatStatus.EMPTY);
+    expect(autoAction.events[1]?.payload.reason).toBe("LEAVE");
+  });
 });
