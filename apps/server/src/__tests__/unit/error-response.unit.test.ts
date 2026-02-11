@@ -1,3 +1,4 @@
+import { ERROR_CODES } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import {
   HttpAppError,
@@ -20,6 +21,14 @@ describe("エラー応答基盤", () => {
         requestId: "req-1",
       },
     });
+  });
+
+  it("定義済みErrorCodeをすべて HttpAppError で扱える", () => {
+    for (const code of ERROR_CODES) {
+      const error = new HttpAppError(code);
+      expect(error.code).toBe(code);
+      expect(error.message.length).toBeGreaterThan(0);
+    }
   });
 
   it("table.error メッセージ形式を生成する", () => {
