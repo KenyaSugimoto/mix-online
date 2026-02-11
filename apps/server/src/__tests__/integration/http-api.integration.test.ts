@@ -10,16 +10,54 @@ describe("HTTP統合テスト", () => {
     vi.restoreAllMocks();
   });
 
-  it("不正な state クエリで BAD_REQUEST を返す", async () => {
+  it("ロビー一覧レスポンスが OpenAPI スキーマに準拠する", async () => {
     const app = createApp();
-    const response = await app.request("/api/lobby/tables?state=INVALID");
+    const response = await app.request("/api/lobby/tables");
     const body = (await response.json()) as {
-      error: { code: string; requestId: string };
+      tables: Array<{
+        tableId: string;
+        tableName: string;
+        stakes: {
+          smallBet: number;
+          bigBet: number;
+          ante: number;
+          bringIn: number;
+          bettingStructure: string;
+          display: string;
+        };
+        players: number;
+        maxPlayers: number;
+        gameType: string;
+        emptySeats: number;
+      }>;
+      serverTime: string;
     };
 
-    expect(response.status).toBe(400);
-    expect(body.error.code).toBe("BAD_REQUEST");
-    expect(body.error.requestId).toBeTypeOf("string");
+    expect(response.status).toBe(200);
+    expect(body.tables).toHaveLength(2);
+    expect(body.serverTime).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/,
+    );
+
+    const [table] = body.tables;
+    expect(table).toMatchObject({
+      tableId: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      ),
+      tableName: expect.any(String),
+      stakes: {
+        smallBet: 20,
+        bigBet: 40,
+        ante: 5,
+        bringIn: 10,
+        bettingStructure: "FIXED_LIMIT",
+        display: "$20/$40 Fixed Limit",
+      },
+      players: expect.any(Number),
+      maxPlayers: 6,
+      gameType: "STUD_HI",
+      emptySeats: expect.any(Number),
+    });
   });
 
   it("x-request-id を受け取った場合はレスポンスに同値を返す", async () => {
