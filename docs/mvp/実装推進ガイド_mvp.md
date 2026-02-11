@@ -1,6 +1,6 @@
 # Mix Stud Online 実装推進ガイド（MVP）
 
-Version: v1.1  
+Version: v1.2  
 Last Updated: 2026-02-11  
 参照要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 参照設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)  
@@ -23,6 +23,7 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 - **小さく統合**: 1タスク = 1責務（レビューしやすいサイズ）
 - **テスト同時実装**: ロジック変更とテスト追加を同一PRで完結
 - **契約維持**: OpenAPI/AsyncAPIと実装差分を残さない
+- **契約値参照**: 契約由来のenum値は文字列直書きせず `@mix-online/shared` の定数を参照する
 - **履歴明確化**: 進捗と意思決定を必ず記録する
 
 ---
@@ -158,12 +159,14 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 品質ゲートは必ず次の順で実行する。
 
 1. `pnpm lint`
-2. `pnpm typecheck`
-3. `pnpm test`
+2. `pnpm check:contract-literals`
+3. `pnpm typecheck`
+4. `pnpm test`
 
 この順序にする理由:
 
 - `lint` で静的な記述問題を最速で検知し、後続の調査コストを下げる
+- `check:contract-literals` で契約由来enumのハードコードを早期に検知し、仕様変更時の追従漏れを防ぐ
 - `typecheck` で契約/型差分を確定してから、`test` の実行結果を読む
 - `test` は最終確認として実行し、仕様挙動の回帰を評価する
 
@@ -172,19 +175,23 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 1. `lint` 失敗時:
    - 自動修正可能なものは `pnpm lint:fix` を実行
    - 残件は対象ファイルに限定して手動修正し、`pnpm lint` を再実行
-2. `typecheck` 失敗時:
+2. `check:contract-literals` 失敗時:
+   - 指摘された文字列リテラルを `@mix-online/shared` の定数参照へ置換
+   - 契約定義ファイル/契約整合テストが理由なら、対象を `apps/` から除外しないまま実装側のみ修正
+   - 修正後に `pnpm check:contract-literals` を再実行
+3. `typecheck` 失敗時:
    - エラー先頭から順に、型定義の不整合か実装の不整合かを分類
    - `packages/shared` の型変更が起点の場合、依存ワークスペースへの影響を同時修正
    - 修正後に `pnpm typecheck` を再実行
-3. `test` 失敗時:
+4. `test` 失敗時:
    - 再現性確認のため同コマンドを再実行
    - 失敗テストが仕様変更によるものか回帰バグかを判定
    - 仕様変更ならテスト期待値と関連ドキュメントを同時更新、回帰なら実装修正を優先
 
 ### 再実行ルール
 
-- いずれかの修正後は、必ず `pnpm lint` → `pnpm typecheck` → `pnpm test` を通しで再実行する
-- PR前の最終報告には3コマンドの実行結果を明記する
+- いずれかの修正後は、必ず `pnpm lint` → `pnpm check:contract-literals` → `pnpm typecheck` → `pnpm test` を通しで再実行する
+- PR前の最終報告には4コマンドの実行結果を明記する
 
 ## 10. APIリファレンス閲覧運用（MVP）
 

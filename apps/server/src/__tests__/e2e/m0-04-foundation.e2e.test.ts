@@ -17,11 +17,13 @@ describe("E2E基盤テスト", () => {
     const response = await app.request("/api/lobby/tables");
     const body = (await response.json()) as {
       tables: unknown[];
-      requestId: string;
+      serverTime: string;
     };
 
     expect(response.status).toBe(200);
     expect(body.tables).toHaveLength(2);
-    expect(body.requestId).toBeTypeOf("string");
+    expect(body.serverTime).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/,
+    );
   });
 });

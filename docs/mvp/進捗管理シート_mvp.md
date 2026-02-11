@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.13  
+Version: v1.14  
 Last Updated: 2026-02-11  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -32,7 +32,7 @@ Last Updated: 2026-02-11
 | --- | --- | --- | --- | --- | --- | --- |
 | M0 | 品質ゲート固定（lint/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
-| M2 | ロビー/履歴API実装 | NOT_STARTED | 0% | TBA | TBA | Phase 2 |
+| M2 | ロビー/履歴API実装 | IN_PROGRESS | 15% | Codex | 2026-02-18 | M2-01で契約固定・実装着手・テスト追加まで完了 |
 | M3 | Realtime + Game Engine成立 | NOT_STARTED | 0% | TBA | TBA | Phase 3 |
 | M4 | Web統合（ロビー〜プレイ） | NOT_STARTED | 0% | TBA | TBA | Phase 4 |
 | M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
@@ -45,7 +45,7 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M2-01 | `/api/lobby/tables` を OpenAPI準拠で本実装化（仮実装除去） | P0 | NOT_STARTED | OpenAPI該当schemaが確定している | [`openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M2-01 | `/api/lobby/tables` を OpenAPI準拠で本実装化（仮実装除去） | P0 | IN_PROGRESS | OpenAPI該当schemaが確定している | [`openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Next
 
@@ -129,7 +129,10 @@ Last Updated: 2026-02-11
 | 2026-02-11 | APIリファレンス閲覧改善（LOCAL-DOCS-RENDER-01） | OpenAPIはHTML自動生成、AsyncAPIはPages上の参照導線を提供する運用を採用 | GitHubブラウザで契約仕様を確認しやすくし、手動PDF更新を不要にするため | [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md), [`docs-pages.yml`](../../.github/workflows/docs-pages.yml) |
 | 2026-02-11 | Pages自動有効化 + AsyncAPI HTML化（LOCAL-DOCS-RENDER-02） | `configure-pages` に `enablement: true` を追加し、AsyncAPIを Web Component でHTML表示する運用へ更新 | Pages未初期化時の404失敗を防ぎ、OpenAPI/AsyncAPIの閲覧導線を同一UXで提供するため | [`docs-pages.yml`](../../.github/workflows/docs-pages.yml), [`build-api-reference-site.sh`](../../scripts/build-api-reference-site.sh), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
 | 2026-02-11 | AsyncAPIガバナンスエラー解消（LOCAL-DOCS-RENDER-03） | `asyncapi.yaml` の snapshot 例不足・messageId不足・metadata不足（tags/contact/license）を補完し、validateで error/warning を解消 | AsyncAPIの生成/可視化で失敗しない契約ドキュメント基盤を維持するため | [`asyncapi.yaml`](./asyncapi.yaml), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
+| 2026-02-11 | M1完了確認とM2移行判定（M2-01） | M1-01〜M1-04の完了状態を再確認し、M2-01を `IN_PROGRESS` へ更新 | M2実装着手前に進捗整合を固定し、優先タスクの着手状態を明確化するため | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md) |
+| 2026-02-11 | M2-01 API契約固定（ロビー一覧） | `/api/lobby/tables` を OpenAPI `LobbyTablesResponse` 形式（`stakes` オブジェクト + `serverTime`）へ統一し、変換ロジックとAPI/E2Eテストを追加 | 仮レスポンス形式との差分を先に解消し、以降の履歴API/契約テスト実装での仕様ドリフトを防ぐため | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`m0-04-foundation.e2e.test.ts`](../../apps/server/src/__tests__/e2e/m0-04-foundation.e2e.test.ts) |
 | 2026-02-11 | AsyncAPI表示方式の更新（LOCAL-DOCS-RENDER-04） | AsyncAPI表示を Web Component 直描画から AsyncAPI CLI + html-template による静的HTML生成へ切替 | ブラウザ実行時パーサー依存の表示エラーを回避し、Pages表示の再現性を高めるため | [`build-api-reference-site.sh`](../../scripts/build-api-reference-site.sh), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
+| 2026-02-11 | 契約リテラル再発防止ルール導入（LOCAL-CONTRACT-LITERAL-01） | `apps/` 配下で `FIXED_LIMIT` / `STUD_*` の文字列直書きを検出する `pnpm check:contract-literals` を導入し、CI/PRテンプレート/運用ルールへ組み込む | 契約値変更時の追従漏れとテスト期待値のハードコード再発を防ぐため | [`check-contract-literals.sh`](../../scripts/check-contract-literals.sh), [`ci.yml`](../../.github/workflows/ci.yml), [`github-operations.md`](../../.agent/rules/github-operations.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 
 ---
 
@@ -161,4 +164,4 @@ Last Updated: 2026-02-11
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了 | - | 仕様未決事項（DEC-01）が残存 | M2-01 着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了 | M2-01（`/api/lobby/tables` 本実装化: 契約固定・実装着手・テスト追加） | 仕様未決事項（DEC-01）が残存 | M2-01 実装後半（データ取得境界の強化） |

@@ -1,20 +1,28 @@
 import { randomUUID } from "node:crypto";
-import { GameType, TableStatus } from "@mix-online/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { HttpAppError, toHttpErrorResponse } from "./error-response";
+import { toLobbyTablesResponse } from "./lobby-table";
 import {
-  resolveRequestId,
-  validateOptionalTableStatus,
-  validateUuid,
-} from "./validation";
+  type LobbyTableRepository,
+  createMvpLobbyTableRepository,
+} from "./repository/lobby-table-repository";
+import { resolveRequestId, validateUuid } from "./validation";
 
 export type AppVariables = {
   requestId: string;
 };
 
-export const createApp = () => {
+type CreateAppOptions = {
+  lobbyTableRepository?: LobbyTableRepository;
+  now?: () => Date;
+};
+
+export const createApp = (options: CreateAppOptions = {}) => {
   const app = new Hono<{ Variables: AppVariables }>();
+  const lobbyTableRepository =
+    options.lobbyTableRepository ?? createMvpLobbyTableRepository();
+  const now = options.now ?? (() => new Date());
 
   app.use("/*", cors());
 
@@ -71,41 +79,10 @@ export const createApp = () => {
     return c.json({ status: "ok", requestId: c.get("requestId") });
   });
 
-  // ロビー API (仮実装)
-  app.get("/api/lobby/tables", (c) => {
-    const state = validateOptionalTableStatus(c.req.query("state"));
+  app.get("/api/lobby/tables", async (c) => {
+    const tables = await lobbyTableRepository.listTables();
 
-    const tables = [
-      {
-        tableId: "11111111-1111-4111-8111-111111111111",
-        tableName: "Table 1",
-        stakes: "$20/$40 Fixed Limit",
-        players: 0,
-        maxPlayers: 6,
-        gameType: GameType.STUD_HI,
-        emptySeats: 6,
-        status: TableStatus.WAITING,
-      },
-      {
-        tableId: "22222222-2222-4222-8222-222222222222",
-        tableName: "Table 2",
-        stakes: "$20/$40 Fixed Limit",
-        players: 0,
-        maxPlayers: 6,
-        gameType: GameType.STUD_HI,
-        emptySeats: 6,
-        status: TableStatus.WAITING,
-      },
-    ];
-
-    const filteredTables = state
-      ? tables.filter((table) => table.status === state)
-      : tables;
-
-    return c.json({
-      tables: filteredTables.map(({ status: _status, ...table }) => table),
-      requestId: c.get("requestId"),
-    });
+    return c.json(toLobbyTablesResponse(tables, now()));
   });
 
   app.get("/api/tables/:tableId", (c) => {
