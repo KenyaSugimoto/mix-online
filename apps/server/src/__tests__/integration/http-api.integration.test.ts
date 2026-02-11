@@ -11,6 +11,28 @@ import { createApp } from "../../app";
 import { createInMemorySessionStore } from "../../auth-session";
 
 describe("HTTP統合テスト", () => {
+  const createAuthenticatedApp = () => {
+    const sessionStore = createInMemorySessionStore();
+    const session = sessionStore.create(
+      {
+        userId: "f1b2c3d4-9999-4999-8999-999999999999",
+        displayName: "MVP User",
+        walletBalance: 4000,
+      },
+      new Date("2026-02-11T12:00:00.000Z"),
+    );
+    const app = createApp({
+      sessionStore,
+      now: () => new Date("2026-02-11T12:30:00.000Z"),
+      historyCursorSecret: "test-history-cursor-secret",
+    });
+
+    return {
+      app,
+      cookie: `session=${session.sessionId}`,
+    };
+  };
+
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -197,6 +219,98 @@ describe("HTTP統合テスト", () => {
 
     expect(meResponse.status).toBe(401);
     expect(meBody.error.code).toBe("AUTH_EXPIRED");
+  });
+
+  it("認証なしで /api/history/hands を呼ぶと AUTH_EXPIRED を返す", async () => {
+    const app = createApp();
+    const response = await app.request("/api/history/hands");
+    const body = (await response.json()) as {
+      error: { code: string };
+    };
+
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe("AUTH_EXPIRED");
+  });
+
+  it("/api/history/hands が `endedAt DESC, handId DESC` で履歴一覧を返す", async () => {
+    const { app, cookie } = createAuthenticatedApp();
+    const response = await app.request("/api/history/hands", {
+      headers: {
+        cookie,
+      },
+    });
+    const body = (await response.json()) as {
+      items: Array<{
+        handId: string;
+        endedAt: string;
+      }>;
+      nextCursor: string | null;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.items).toHaveLength(3);
+    expect(body.items.map((item) => item.handId)).toEqual([
+      "d1b2c3d4-0003-4000-8000-000000000003",
+      "d1b2c3d4-0002-4000-8000-000000000002",
+      "d1b2c3d4-0001-4000-8000-000000000001",
+    ]);
+    expect(body.nextCursor).toBeNull();
+  });
+
+  it("/api/history/hands が cursor と limit でページングできる", async () => {
+    const { app, cookie } = createAuthenticatedApp();
+    const firstResponse = await app.request("/api/history/hands?limit=2", {
+      headers: {
+        cookie,
+      },
+    });
+    const firstBody = (await firstResponse.json()) as {
+      items: Array<{
+        handId: string;
+      }>;
+      nextCursor: string | null;
+    };
+
+    expect(firstResponse.status).toBe(200);
+    expect(firstBody.items).toHaveLength(2);
+    expect(firstBody.nextCursor).toBeTypeOf("string");
+
+    const secondResponse = await app.request(
+      `/api/history/hands?limit=2&cursor=${encodeURIComponent(firstBody.nextCursor ?? "")}`,
+      {
+        headers: {
+          cookie,
+        },
+      },
+    );
+    const secondBody = (await secondResponse.json()) as {
+      items: Array<{
+        handId: string;
+      }>;
+      nextCursor: string | null;
+    };
+
+    expect(secondResponse.status).toBe(200);
+    expect(secondBody.items).toHaveLength(1);
+    expect(secondBody.items[0]?.handId).toBe(
+      "d1b2c3d4-0001-4000-8000-000000000001",
+    );
+    expect(secondBody.nextCursor).toBeNull();
+  });
+
+  it("/api/history/hands で改ざんcursorは INVALID_CURSOR を返す", async () => {
+    const { app, cookie } = createAuthenticatedApp();
+    const response = await app.request("/api/history/hands?cursor=tampered", {
+      headers: {
+        cookie,
+      },
+    });
+    const body = (await response.json()) as {
+      error: { code: string };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("INVALID_CURSOR");
   });
 
   it("x-request-id を受け取った場合はレスポンスに同値を返す", async () => {

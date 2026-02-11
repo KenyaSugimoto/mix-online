@@ -13,7 +13,16 @@ import {
   getSessionIdFromCookie,
 } from "./auth-session";
 import { HttpAppError, toHttpErrorResponse } from "./error-response";
+import { decodeHistoryCursor, encodeHistoryCursor } from "./history-cursor";
+import {
+  type HandHistoryListItemRecord,
+  compareHistoryOrder,
+} from "./history-hand";
 import { toLobbyTablesResponse } from "./lobby-table";
+import {
+  type HistoryRepository,
+  createMvpHistoryRepository,
+} from "./repository/history-repository";
 import {
   type LobbyTableRepository,
   createMvpLobbyTableRepository,
@@ -32,6 +41,8 @@ export type AppVariables = {
 type CreateAppOptions = {
   lobbyTableRepository?: LobbyTableRepository;
   tableDetailRepository?: TableDetailRepository;
+  historyRepository?: HistoryRepository;
+  historyCursorSecret?: string;
   sessionStore?: SessionStore;
   now?: () => Date;
 };
@@ -67,6 +78,10 @@ export const createApp = (options: CreateAppOptions = {}) => {
     options.lobbyTableRepository ?? createMvpLobbyTableRepository();
   const tableDetailRepository =
     options.tableDetailRepository ?? createMvpTableDetailRepository();
+  const historyRepository =
+    options.historyRepository ?? createMvpHistoryRepository();
+  const historyCursorSecret =
+    options.historyCursorSecret ?? "mvp-history-cursor-secret";
   const sessionStore = options.sessionStore ?? createInMemorySessionStore();
   const now = options.now ?? (() => new Date());
 
@@ -204,6 +219,60 @@ export const createApp = (options: CreateAppOptions = {}) => {
     }
 
     return c.json(toTableDetailResponse(table));
+  });
+
+  app.get("/api/history/hands", async (c) => {
+    const session = requireSession({
+      cookieHeader: c.req.header("cookie"),
+      sessionStore,
+      now: now(),
+    });
+
+    const limitQuery = c.req.query("limit");
+    const limit = limitQuery ? Number.parseInt(limitQuery, 10) : 20;
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new HttpAppError(
+        "BAD_REQUEST",
+        "limit は 1 以上 100 以下の整数で指定してください。",
+      );
+    }
+
+    const allHands = await historyRepository.listHands(session.user.userId);
+    const orderedHands = [...allHands].sort(compareHistoryOrder);
+
+    const cursor = c.req.query("cursor");
+    const cursorKey = cursor
+      ? decodeHistoryCursor({
+          cursor,
+          now: now(),
+          secret: historyCursorSecret,
+        })
+      : null;
+
+    const filteredHands = cursorKey
+      ? orderedHands.filter((hand) => compareHistoryOrder(hand, cursorKey) > 0)
+      : orderedHands;
+
+    const pageItems = filteredHands.slice(0, limit);
+    const hasNextPage = filteredHands.length > limit;
+    const lastItem = pageItems.at(-1);
+    const nextCursor =
+      hasNextPage && lastItem
+        ? encodeHistoryCursor({
+            cursorKey: {
+              endedAt: lastItem.endedAt,
+              handId: lastItem.handId,
+            },
+            now: now(),
+            secret: historyCursorSecret,
+          })
+        : null;
+
+    return c.json({
+      items: pageItems,
+      nextCursor,
+    });
   });
 
   return app;
