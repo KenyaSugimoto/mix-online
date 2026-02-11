@@ -76,6 +76,7 @@ type HandPlayerState = {
   cardsDown: CardValue[];
   inHand: boolean;
   allIn: boolean;
+  actedThisRound: boolean;
 };
 
 type CardValue = {
@@ -93,6 +94,7 @@ type HandState = {
   bringInSeatNo: number | null;
   players: HandPlayerState[];
   streetBetTo: number;
+  raiseCount: number;
 };
 
 type TableEventMessage = {
@@ -485,12 +487,274 @@ export class RealtimeTableService {
       };
     }
 
+    if (params.command.type === "table.act") {
+      return this.applyActCommand(params);
+    }
+
     return this.fail(
       RealtimeErrorCode.INVALID_ACTION,
       `${params.command.type} は未対応です。`,
       params.command.requestId,
       params.table.tableId,
     );
+  }
+
+  private applyActCommand(params: {
+    table: TableState;
+    user: SessionUser;
+    command: BaseCommand;
+    currentBalance: number;
+  }):
+    | {
+        ok: true;
+        events: PendingEvent[];
+        nextWalletBalance: number;
+        startHand: boolean;
+      }
+    | {
+        ok: false;
+        error: TableServiceError;
+      } {
+    const hand = params.table.currentHand;
+    if (!hand || params.table.status !== TableStatus.BETTING) {
+      return this.fail(
+        RealtimeErrorCode.INVALID_ACTION,
+        "現在アクション可能なハンドはありません。",
+        params.command.requestId,
+        params.table.tableId,
+      );
+    }
+
+    const seat = params.table.seats.find(
+      (entry) => entry.userId === params.user.userId,
+    );
+    if (!seat) {
+      return this.fail(
+        RealtimeErrorCode.INVALID_ACTION,
+        "卓に着席していないためアクションできません。",
+        params.command.requestId,
+        params.table.tableId,
+      );
+    }
+
+    const player = hand.players.find((entry) => entry.seatNo === seat.seatNo);
+    if (!player || !player.inHand || player.allIn) {
+      return this.fail(
+        RealtimeErrorCode.INVALID_ACTION,
+        "現在の状態ではアクションできません。",
+        params.command.requestId,
+        params.table.tableId,
+      );
+    }
+
+    if (hand.toActSeatNo !== seat.seatNo) {
+      return this.fail(
+        RealtimeErrorCode.NOT_YOUR_TURN,
+        "現在あなたの手番ではありません。",
+        params.command.requestId,
+        params.table.tableId,
+      );
+    }
+
+    const action = params.command.payload.action;
+    if (typeof action !== "string") {
+      return this.fail(
+        RealtimeErrorCode.INVALID_ACTION,
+        "action は必須です。",
+        params.command.requestId,
+        params.table.tableId,
+      );
+    }
+
+    const toCall = Math.max(0, hand.streetBetTo - player.streetContribution);
+    let amount = 0;
+    let eventName:
+      | typeof TableEventName.CallEvent
+      | typeof TableEventName.CheckEvent
+      | typeof TableEventName.FoldEvent
+      | typeof TableEventName.CompleteEvent
+      | typeof TableEventName.RaiseEvent;
+
+    if (action === "CHECK") {
+      if (toCall > 0) {
+        return this.fail(
+          RealtimeErrorCode.INVALID_ACTION,
+          "toCall がある状態では CHECK できません。",
+          params.command.requestId,
+          params.table.tableId,
+        );
+      }
+
+      player.actedThisRound = true;
+      eventName = TableEventName.CheckEvent;
+    } else if (action === "FOLD") {
+      player.inHand = false;
+      player.actedThisRound = true;
+      eventName = TableEventName.FoldEvent;
+    } else if (action === "CALL") {
+      amount = Math.min(toCall, seat.stack);
+      seat.stack -= amount;
+      player.totalContribution += amount;
+      player.streetContribution += amount;
+      if (seat.stack === 0) {
+        player.allIn = true;
+      }
+      hand.potTotal += amount;
+      player.actedThisRound = true;
+      eventName = TableEventName.CallEvent;
+    } else if (action === "COMPLETE") {
+      if (
+        hand.streetBetTo >= params.table.smallBet ||
+        hand.street !== Street.THIRD
+      ) {
+        return this.fail(
+          RealtimeErrorCode.INVALID_ACTION,
+          "現在の局面では COMPLETE できません。",
+          params.command.requestId,
+          params.table.tableId,
+        );
+      }
+
+      const targetBet = params.table.smallBet;
+      amount = Math.min(
+        Math.max(0, targetBet - player.streetContribution),
+        seat.stack,
+      );
+      seat.stack -= amount;
+      player.totalContribution += amount;
+      player.streetContribution += amount;
+      if (seat.stack === 0) {
+        player.allIn = true;
+      }
+      hand.potTotal += amount;
+      hand.streetBetTo = Math.max(hand.streetBetTo, player.streetContribution);
+      hand.raiseCount = 0;
+      for (const candidate of hand.players) {
+        candidate.actedThisRound = candidate.seatNo === player.seatNo;
+      }
+      eventName = TableEventName.CompleteEvent;
+    } else if (action === "RAISE") {
+      if (hand.street !== Street.THIRD && hand.street !== Street.FOURTH) {
+        // M3-05 時点では third/fourth 基本ベットのみサポートし、詳細街進行はM3-06以降で拡張する。
+      }
+      if (hand.streetBetTo < params.table.smallBet) {
+        return this.fail(
+          RealtimeErrorCode.INVALID_ACTION,
+          "COMPLETE 前に RAISE はできません。",
+          params.command.requestId,
+          params.table.tableId,
+        );
+      }
+
+      const activePlayers = hand.players.filter(
+        (entry) => entry.inHand && !entry.allIn,
+      );
+      const isHeadsUp = activePlayers.length <= 2;
+      if (!isHeadsUp && hand.raiseCount >= 4) {
+        return this.fail(
+          RealtimeErrorCode.INVALID_ACTION,
+          "このストリートのRAISE上限に達しています。",
+          params.command.requestId,
+          params.table.tableId,
+        );
+      }
+
+      const raiseSize = params.table.smallBet;
+      const targetBet = hand.streetBetTo + raiseSize;
+      amount = Math.min(
+        Math.max(0, targetBet - player.streetContribution),
+        seat.stack,
+      );
+      seat.stack -= amount;
+      player.totalContribution += amount;
+      player.streetContribution += amount;
+      if (seat.stack === 0) {
+        player.allIn = true;
+      }
+      hand.potTotal += amount;
+      if (player.streetContribution > hand.streetBetTo) {
+        hand.streetBetTo = player.streetContribution;
+      }
+      hand.raiseCount += 1;
+      for (const candidate of hand.players) {
+        candidate.actedThisRound = candidate.seatNo === player.seatNo;
+      }
+      eventName = TableEventName.RaiseEvent;
+    } else {
+      return this.fail(
+        RealtimeErrorCode.INVALID_ACTION,
+        `${action} は未対応のアクションです。`,
+        params.command.requestId,
+        params.table.tableId,
+      );
+    }
+
+    const nextToActSeatNo = this.resolveNextToAct(hand, seat.seatNo);
+    hand.toActSeatNo = nextToActSeatNo;
+
+    const payloadBase = {
+      street: hand.street,
+      seatNo: seat.seatNo,
+      potAfter: hand.potTotal,
+      nextToActSeatNo,
+    };
+
+    if (eventName === TableEventName.CheckEvent) {
+      return {
+        ok: true,
+        startHand: false,
+        nextWalletBalance: params.currentBalance,
+        events: [
+          {
+            handId: hand.handId,
+            eventName,
+            payload: {
+              ...payloadBase,
+              isAuto: false,
+            },
+          },
+        ],
+      };
+    }
+
+    if (eventName === TableEventName.FoldEvent) {
+      return {
+        ok: true,
+        startHand: false,
+        nextWalletBalance: params.currentBalance,
+        events: [
+          {
+            handId: hand.handId,
+            eventName,
+            payload: {
+              ...payloadBase,
+              remainingPlayers: hand.players.filter((entry) => entry.inHand)
+                .length,
+              isAuto: false,
+            },
+          },
+        ],
+      };
+    }
+
+    return {
+      ok: true,
+      startHand: false,
+      nextWalletBalance: params.currentBalance,
+      events: [
+        {
+          handId: hand.handId,
+          eventName,
+          payload: {
+            ...payloadBase,
+            amount,
+            stackAfter: seat.stack,
+            streetBetTo: hand.streetBetTo,
+            isAllIn: seat.stack === 0,
+          },
+        },
+      ],
+    };
   }
 
   private canStartHand(table: TableState): boolean {
@@ -520,6 +784,7 @@ export class RealtimeTableService {
         cardsDown: [],
         inHand: true,
         allIn: false,
+        actedThisRound: false,
       }));
 
     if (participants.length < 2) {
@@ -541,6 +806,7 @@ export class RealtimeTableService {
       bringInSeatNo: null,
       players: participants,
       streetBetTo: 0,
+      raiseCount: 0,
     };
 
     const dealInitEvent: PendingEvent = {
@@ -583,7 +849,6 @@ export class RealtimeTableService {
       const ante = Math.min(table.ante, seat.stack);
       seat.stack -= ante;
       player.totalContribution += ante;
-      player.streetContribution += ante;
       if (seat.stack === 0) {
         player.allIn = true;
       }
@@ -683,6 +948,7 @@ export class RealtimeTableService {
     bringInSeat.stack -= bringInAmount;
     bringInPlayer.totalContribution += bringInAmount;
     bringInPlayer.streetContribution += bringInAmount;
+    bringInPlayer.actedThisRound = true;
     if (bringInSeat.stack === 0) {
       bringInPlayer.allIn = true;
     }
@@ -690,7 +956,7 @@ export class RealtimeTableService {
     hand.potTotal += bringInAmount;
     hand.streetBetTo = bringInAmount;
 
-    const nextToActSeatNo = this.findNextSeatToAct(hand.players, bringInSeatNo);
+    const nextToActSeatNo = this.resolveNextToAct(hand, bringInSeatNo);
     hand.toActSeatNo = nextToActSeatNo;
     table.currentHand = hand;
     table.status = TableStatus.BETTING;
@@ -747,11 +1013,8 @@ export class RealtimeTableService {
     return ordered[0]?.seatNo ?? players[0]?.seatNo ?? 1;
   }
 
-  private findNextSeatToAct(
-    players: HandPlayerState[],
-    fromSeatNo: number,
-  ): number | null {
-    const sorted = [...players].sort(
+  private resolveNextToAct(hand: HandState, fromSeatNo: number): number | null {
+    const sorted = [...hand.players].sort(
       (left, right) => left.seatNo - right.seatNo,
     );
     const currentIndex = sorted.findIndex(
@@ -767,7 +1030,12 @@ export class RealtimeTableService {
         continue;
       }
 
-      if (candidate.inHand && !candidate.allIn) {
+      if (
+        candidate.inHand &&
+        !candidate.allIn &&
+        (!candidate.actedThisRound ||
+          candidate.streetContribution < hand.streetBetTo)
+      ) {
         return candidate.seatNo;
       }
     }

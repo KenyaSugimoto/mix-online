@@ -17,7 +17,12 @@ const createUser = (index: number, walletBalance = 4000): SessionUser => ({
 });
 
 const createCommand = (params: {
-  type: "table.join" | "table.sitOut" | "table.return" | "table.leave";
+  type:
+    | "table.join"
+    | "table.sitOut"
+    | "table.return"
+    | "table.leave"
+    | "table.act";
   requestId?: string;
   payload?: Record<string, unknown>;
 }) => ({
@@ -244,5 +249,246 @@ describe("RealtimeTableService 席管理", () => {
     expect(bringIn?.payload.street).toBe("THIRD");
     expect(bringIn?.payload.amount).toBe(10);
     expect(bringIn?.payload.potAfter).toBe(20);
+  });
+
+  it("非手番アクションと toCall あり CHECK を拒否する", async () => {
+    const service = createRealtimeTableService();
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const seatByUserId = new Map<string, number>();
+    seatByUserId.set(user1.userId, joined1.events[0]?.payload.seatNo as number);
+    seatByUserId.set(user2.userId, joined2.events[0]?.payload.seatNo as number);
+
+    const bringIn = joined2.events.find(
+      (event) => event.eventName === "BringInEvent",
+    );
+    const nextToActSeatNo = bringIn?.payload.nextToActSeatNo as number;
+    const nonTurnUser =
+      seatByUserId.get(user1.userId) === nextToActSeatNo ? user2 : user1;
+
+    const notYourTurn = await service.executeCommand({
+      command: createCommand({
+        type: "table.act",
+        payload: { action: "CALL" },
+      }),
+      user: nonTurnUser,
+      occurredAt: NOW,
+    });
+    expect(notYourTurn.ok).toBe(false);
+    if (!notYourTurn.ok) {
+      expect(notYourTurn.error.code).toBe(RealtimeErrorCode.NOT_YOUR_TURN);
+    }
+
+    const turnUser = nonTurnUser.userId === user1.userId ? user2 : user1;
+    const checkRejected = await service.executeCommand({
+      command: createCommand({
+        type: "table.act",
+        payload: { action: "CHECK" },
+      }),
+      user: turnUser,
+      occurredAt: NOW,
+    });
+    expect(checkRejected.ok).toBe(false);
+    if (!checkRejected.ok) {
+      expect(checkRejected.error.code).toBe(RealtimeErrorCode.INVALID_ACTION);
+    }
+  });
+
+  it("ヘッズアップでは5bet capを超えるRAISEを許可する", async () => {
+    const service = createRealtimeTableService();
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const seatByUserId = new Map<string, number>();
+    seatByUserId.set(user1.userId, joined1.events[0]?.payload.seatNo as number);
+    seatByUserId.set(user2.userId, joined2.events[0]?.payload.seatNo as number);
+
+    const bringIn = joined2.events.find(
+      (event) => event.eventName === "BringInEvent",
+    );
+    let toActSeatNo = bringIn?.payload.nextToActSeatNo as number;
+
+    const userBySeat = (seatNo: number): SessionUser =>
+      seatByUserId.get(user1.userId) === seatNo ? user1 : user2;
+
+    const complete = await service.executeCommand({
+      command: createCommand({
+        type: "table.act",
+        payload: { action: "COMPLETE" },
+      }),
+      user: userBySeat(toActSeatNo),
+      occurredAt: NOW,
+    });
+    expect(complete.ok).toBe(true);
+    if (!complete.ok) {
+      return;
+    }
+    toActSeatNo = complete.events[0]?.payload.nextToActSeatNo as number;
+
+    for (let count = 0; count < 5; count += 1) {
+      const raised = await service.executeCommand({
+        command: createCommand({
+          type: "table.act",
+          payload: { action: "RAISE" },
+        }),
+        user: userBySeat(toActSeatNo),
+        occurredAt: NOW,
+      });
+      expect(raised.ok).toBe(true);
+      if (!raised.ok) {
+        return;
+      }
+      toActSeatNo = raised.events[0]?.payload.nextToActSeatNo as number;
+    }
+  });
+
+  it("マルチウェイでは5bet cap超過のRAISEを拒否する", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      tables: Map<
+        string,
+        {
+          tableId: string;
+          status: string;
+          seats: Array<{
+            seatNo: number;
+            status: string;
+            userId: string | null;
+            displayName: string | null;
+            stack: number;
+            disconnectStreak: number;
+            joinedAt: string | null;
+          }>;
+          currentHand: {
+            handId: string;
+            street: string;
+            toActSeatNo: number | null;
+            streetBetTo: number;
+            raiseCount: number;
+            potTotal: number;
+            players: Array<{
+              seatNo: number;
+              userId: string;
+              displayName: string;
+              startStack: number;
+              totalContribution: number;
+              streetContribution: number;
+              cardsUp: unknown[];
+              cardsDown: unknown[];
+              inHand: boolean;
+              allIn: boolean;
+              actedThisRound: boolean;
+            }>;
+          } | null;
+        }
+      >;
+    };
+
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+    const user3 = createUser(3);
+
+    await service.executeCommand({
+      command: createCommand({ type: "table.join", payload: { buyIn: 1000 } }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    await service.executeCommand({
+      command: createCommand({ type: "table.join", payload: { buyIn: 1000 } }),
+      user: user2,
+      occurredAt: NOW,
+    });
+
+    const table = service.tables.get(TABLE_ID);
+    if (!table?.currentHand) {
+      throw new Error("テスト用の進行中ハンドが見つかりません。");
+    }
+
+    table.seats[2] = {
+      seatNo: 3,
+      status: SeatStatus.ACTIVE,
+      userId: user3.userId,
+      displayName: user3.displayName,
+      stack: 1000,
+      disconnectStreak: 0,
+      joinedAt: NOW.toISOString(),
+    };
+    table.currentHand.players.push({
+      seatNo: 3,
+      userId: user3.userId,
+      displayName: user3.displayName,
+      startStack: 1000,
+      totalContribution: 20,
+      streetContribution: 20,
+      cardsUp: [],
+      cardsDown: [],
+      inHand: true,
+      allIn: false,
+      actedThisRound: false,
+    });
+    table.currentHand.toActSeatNo = 3;
+    table.currentHand.streetBetTo = 20;
+    table.currentHand.raiseCount = 4;
+
+    const rejected = await service.executeCommand({
+      command: createCommand({
+        type: "table.act",
+        payload: { action: "RAISE" },
+      }),
+      user: user3,
+      occurredAt: NOW,
+    });
+
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) {
+      expect(rejected.error.code).toBe(RealtimeErrorCode.INVALID_ACTION);
+    }
   });
 });
