@@ -83,8 +83,15 @@ type HandState = {
   raiseCount: number;
 };
 
+export const TABLE_SNAPSHOT_MESSAGE_TYPE = "table.snapshot" as const;
+
+export const TABLE_RESUME_RESULT_KIND = {
+  EVENTS: "events",
+  SNAPSHOT: "snapshot",
+} as const;
+
 export type TableSnapshotMessage = {
-  type: "table.snapshot";
+  type: typeof TABLE_SNAPSHOT_MESSAGE_TYPE;
   tableId: string;
   tableSeq: number;
   occurredAt: string;
@@ -129,11 +136,11 @@ export type TableSnapshotMessage = {
 
 export type TableResumeResult =
   | {
-      kind: "events";
+      kind: typeof TABLE_RESUME_RESULT_KIND.EVENTS;
       events: RealtimeTableEventMessage[];
     }
   | {
-      kind: "snapshot";
+      kind: typeof TABLE_RESUME_RESULT_KIND.SNAPSHOT;
       snapshot: TableSnapshotMessage;
     };
 type RealtimeTableServiceOptions = {
@@ -522,6 +529,9 @@ export class RealtimeTableService {
     return table?.currentHand?.toActSeatNo ?? null;
   }
 
+  /**
+   * クライアントの再接続時に呼び出され、指定された lastTableSeq 以降のイベントを返す
+   */
   async resumeFrom(params: {
     tableId: string;
     lastTableSeq: number;
@@ -535,14 +545,14 @@ export class RealtimeTableService {
 
       if (params.lastTableSeq >= latestSeq) {
         return {
-          kind: "events",
+          kind: TABLE_RESUME_RESULT_KIND.EVENTS,
           events: [],
         };
       }
 
       if (history.length === 0 || params.lastTableSeq < earliestSeq - 1) {
         return {
-          kind: "snapshot",
+          kind: TABLE_RESUME_RESULT_KIND.SNAPSHOT,
           snapshot: this.createSnapshotMessage({
             tableId: params.tableId,
             tableSeq: latestSeq,
@@ -553,7 +563,7 @@ export class RealtimeTableService {
       }
 
       return {
-        kind: "events",
+        kind: TABLE_RESUME_RESULT_KIND.EVENTS,
         events: history.filter((event) => event.tableSeq > params.lastTableSeq),
       };
     });
@@ -612,7 +622,7 @@ export class RealtimeTableService {
       this.tables.get(params.tableId) ??
       createDefaultTableState(params.tableId);
     return {
-      type: "table.snapshot",
+      type: TABLE_SNAPSHOT_MESSAGE_TYPE,
       tableId: params.tableId,
       tableSeq: params.tableSeq,
       occurredAt: params.occurredAt.toISOString(),

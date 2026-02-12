@@ -38,16 +38,19 @@ export const startRealtimeServer = (
     actionTimeoutMs: options.actionTimeoutMs,
   });
 
+  // Start HTTP server
   const server = serve({
     fetch: app.fetch,
     port: options.port ?? 3000,
   });
 
+  // Start WebSocket server
   const wsServer = new WebSocketServer({
     server: server as HttpServer,
     path: "/ws",
   });
 
+  // Handle WebSocket connections
   wsServer.on("connection", (socket, request) => {
     wsGateway.handleConnection({ socket, request });
   });

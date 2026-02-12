@@ -13,7 +13,11 @@ import {
 } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import type { SessionUser } from "../../auth-session";
-import { createRealtimeTableService } from "../../realtime/table-service";
+import {
+  TABLE_RESUME_RESULT_KIND,
+  TABLE_SNAPSHOT_MESSAGE_TYPE,
+  createRealtimeTableService,
+} from "../../realtime/table-service";
 
 const NOW = new Date("2026-02-11T12:00:00.000Z");
 const TABLE_ID = "a1b2c3d4-0001-4000-8000-000000000001";
@@ -836,8 +840,8 @@ describe("RealtimeTableService 席管理", () => {
       occurredAt: NOW,
     });
 
-    expect(resumed.kind).toBe("events");
-    if (resumed.kind !== "events") {
+    expect(resumed.kind).toBe(TABLE_RESUME_RESULT_KIND.EVENTS);
+    if (resumed.kind !== TABLE_RESUME_RESULT_KIND.EVENTS) {
       return;
     }
     expect(resumed.events.length).toBeGreaterThan(0);
@@ -875,11 +879,11 @@ describe("RealtimeTableService 席管理", () => {
       occurredAt: NOW,
     });
 
-    expect(resumed.kind).toBe("snapshot");
-    if (resumed.kind !== "snapshot") {
+    expect(resumed.kind).toBe(TABLE_RESUME_RESULT_KIND.SNAPSHOT);
+    if (resumed.kind !== TABLE_RESUME_RESULT_KIND.SNAPSHOT) {
       return;
     }
-    expect(resumed.snapshot.type).toBe("table.snapshot");
+    expect(resumed.snapshot.type).toBe(TABLE_SNAPSHOT_MESSAGE_TYPE);
     expect(resumed.snapshot.payload.reason).toBe(SnapshotReason.OUT_OF_RANGE);
     expect(resumed.snapshot.payload.table).toMatchObject({
       status: expect.any(String),

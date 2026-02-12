@@ -10,7 +10,10 @@ import { describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createSessionCookie } from "../../auth-session";
 import { startRealtimeServer } from "../../realtime/server";
-import { createRealtimeTableService } from "../../realtime/table-service";
+import {
+  TABLE_SNAPSHOT_MESSAGE_TYPE,
+  createRealtimeTableService,
+} from "../../realtime/table-service";
 
 const TEST_USER = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -403,7 +406,7 @@ describe("WebSocketゲートウェイ統合", () => {
         };
       };
 
-      expect(snapshot.type).toBe("table.snapshot");
+      expect(snapshot.type).toBe(TABLE_SNAPSHOT_MESSAGE_TYPE);
       expect(snapshot.tableId).toBe(tableId);
       expect(snapshot.payload.reason).toBe(SnapshotReason.OUT_OF_RANGE);
       expect(snapshot.payload.table).toMatchObject({

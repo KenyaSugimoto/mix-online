@@ -15,6 +15,7 @@ import { toTableErrorMessage } from "../error-response";
 import { isUuid, validateWsBaseCommand } from "../validation";
 import {
   type RealtimeTableService,
+  TABLE_RESUME_RESULT_KIND,
   createRealtimeTableService,
 } from "./table-service";
 
@@ -202,9 +203,11 @@ export class WsGateway {
         return;
       }
 
+      // resume コマンドの場合はテーブルサービスの resumeFrom を呼び出す
       if (baseCommand.type === RealtimeTableCommandType.RESUME) {
         const resumeTableId = commandContext.tableId;
         const lastTableSeq = baseCommand.payload.lastTableSeq;
+        // payload の妥当性チェック
         if (
           resumeTableId === null ||
           typeof lastTableSeq !== "number" ||
@@ -227,11 +230,14 @@ export class WsGateway {
           occurredAt,
         });
         trackedConnection.currentTableId = resumeTableId;
-        if (resumeResult.kind === "events") {
+        // イベントまたはスナップショットを送信
+        if (resumeResult.kind === TABLE_RESUME_RESULT_KIND.EVENTS) {
+          // イベント群を順次送信
           for (const event of resumeResult.events) {
             trackedConnection.socket.send(JSON.stringify(event));
           }
         } else {
+          // スナップショットを送信
           trackedConnection.socket.send(JSON.stringify(resumeResult.snapshot));
         }
         this.scheduleAutoAction(resumeTableId);
@@ -295,17 +301,24 @@ export class WsGateway {
     }
   }
 
+  /**
+   * 指定されたテーブルの次のアクションを自動実行するタイマーをスケジュールする
+   */
   private scheduleAutoAction(tableId: string): void {
+    // 既存のタイマーをクリア
     this.clearAutoActionTimer(tableId);
 
+    // 次のアクションを実行する席番号を取得
     const seatNo = this.tableService.getNextToActSeatNo(tableId);
     if (seatNo === null) {
       return;
     }
 
+    // タイマーをセット
     const timeoutId = this.setTimeoutFn(() => {
       void this.runAutoAction(tableId, seatNo);
     }, this.actionTimeoutMs);
+    // タイマーIDを保存
     this.actionTimersByTableId.set(tableId, timeoutId);
   }
 
