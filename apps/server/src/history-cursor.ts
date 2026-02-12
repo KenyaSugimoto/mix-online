@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { ErrorCode } from "@mix-online/shared";
 import { HttpAppError } from "./error-response";
 import type { HandHistoryCursorKey } from "./history-hand";
 
@@ -20,7 +21,7 @@ const sign = (payloadBase64: string, secret: string): string => {
 
 const invalidCursor = () =>
   new HttpAppError(
-    "INVALID_CURSOR",
+    ErrorCode.INVALID_CURSOR,
     "cursor が不正です。最新一覧から取得し直してください。",
   );
 

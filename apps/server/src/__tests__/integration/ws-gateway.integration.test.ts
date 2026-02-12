@@ -1,5 +1,6 @@
 import {
   RealtimeErrorCode,
+  RealtimeTableCommandType,
   SeatStateChangeReason,
   SeatStatus,
   TableEventName,
@@ -146,7 +147,7 @@ describe("WebSocketゲートウェイ統合", () => {
       await waitForOpen(socket);
       socket.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111111",
           sentAt: "2026-02-11T12:00:00.000Z",
           payload: {
