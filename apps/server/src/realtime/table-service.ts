@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
-  type CardRank,
-  type CardSuit,
+  type CardRank as CardRankType,
+  type CardSuit as CardSuitType,
   CardVisibility,
   GameType,
   type GameType as GameTypeType,
@@ -19,12 +19,14 @@ import {
   SeatStatus,
   Street,
   TableBuyIn,
+  TableCommandAction,
   TableEventName,
   TableStatus,
   ThirdStreetCardPosition,
 } from "@mix-online/shared";
 import type { SessionUser } from "../auth-session";
 import { createStandardDeck } from "../testing/fixed-deck-harness";
+import { resolveGameRule } from "./game-rule";
 import {
   type TableActorRegistry,
   createTableActorRegistry,
@@ -58,8 +60,8 @@ type HandPlayerState = {
 };
 
 type CardValue = {
-  rank: CardRank;
-  suit: CardSuit;
+  rank: CardRankType;
+  suit: CardSuitType;
 };
 
 type HandState = {
@@ -442,7 +444,7 @@ export class RealtimeTableService {
       };
     }
 
-    if (params.command.type === "table.act") {
+    if (params.command.type === RealtimeTableCommandType.ACT) {
       return this.applyActCommand({
         table: params.table,
         user: params.user,
@@ -528,7 +530,7 @@ export class RealtimeTableService {
       | typeof TableEventName.CompleteEvent
       | typeof TableEventName.RaiseEvent;
 
-    if (action === "CHECK") {
+    if (action === TableCommandAction.CHECK) {
       if (toCall > 0) {
         return this.fail(
           RealtimeErrorCode.INVALID_ACTION,
@@ -540,11 +542,11 @@ export class RealtimeTableService {
 
       player.actedThisRound = true;
       eventName = TableEventName.CheckEvent;
-    } else if (action === "FOLD") {
+    } else if (action === TableCommandAction.FOLD) {
       player.inHand = false;
       player.actedThisRound = true;
       eventName = TableEventName.FoldEvent;
-    } else if (action === "CALL") {
+    } else if (action === TableCommandAction.CALL) {
       amount = Math.min(toCall, seat.stack);
       seat.stack -= amount;
       player.totalContribution += amount;
@@ -555,7 +557,7 @@ export class RealtimeTableService {
       hand.potTotal += amount;
       player.actedThisRound = true;
       eventName = TableEventName.CallEvent;
-    } else if (action === "COMPLETE") {
+    } else if (action === TableCommandAction.COMPLETE) {
       if (
         hand.streetBetTo >= params.table.smallBet ||
         hand.street !== Street.THIRD
@@ -586,7 +588,7 @@ export class RealtimeTableService {
         candidate.actedThisRound = candidate.seatNo === player.seatNo;
       }
       eventName = TableEventName.CompleteEvent;
-    } else if (action === "RAISE") {
+    } else if (action === TableCommandAction.RAISE) {
       if (hand.street !== Street.THIRD && hand.street !== Street.FOURTH) {
         // M3-05 時点では third/fourth 基本ベットのみサポートし、詳細街進行はM3-06以降で拡張する。
       }
@@ -869,7 +871,10 @@ export class RealtimeTableService {
       });
     }
 
-    const bringInSeatNo = this.determineBringInSeat(hand.players);
+    const bringInSeatNo = this.determineBringInSeat(
+      table.gameType,
+      hand.players,
+    );
     hand.bringInSeatNo = bringInSeatNo;
 
     const dealCards3rdEvent: PendingEvent = {
@@ -927,39 +932,18 @@ export class RealtimeTableService {
     return [dealInitEvent, postAnteEvent, dealCards3rdEvent, bringInEvent];
   }
 
-  private determineBringInSeat(players: HandPlayerState[]): number {
-    const rankValue = (rank: CardValue["rank"]): number => {
-      if (rank === "A") return 14;
-      if (rank === "K") return 13;
-      if (rank === "Q") return 12;
-      if (rank === "J") return 11;
-      if (rank === "T") return 10;
-      return Number.parseInt(rank, 10);
-    };
-
-    const suitWeakScore = (suit: CardValue["suit"]): number => {
-      if (suit === "C") return 4;
-      if (suit === "D") return 3;
-      if (suit === "H") return 2;
-      return 1;
-    };
-
-    const ordered = [...players].sort((left, right) => {
-      const leftUp = left.cardsUp.at(0);
-      const rightUp = right.cardsUp.at(0);
-      if (!leftUp || !rightUp) {
-        return left.seatNo - right.seatNo;
-      }
-
-      const byRank = rankValue(leftUp.rank) - rankValue(rightUp.rank);
-      if (byRank !== 0) {
-        return byRank;
-      }
-
-      return suitWeakScore(rightUp.suit) - suitWeakScore(leftUp.suit);
-    });
-
-    return ordered[0]?.seatNo ?? players[0]?.seatNo ?? 1;
+  private determineBringInSeat(
+    gameType: GameTypeType,
+    players: HandPlayerState[],
+  ): number {
+    const gameRule = resolveGameRule(gameType);
+    return gameRule.determineBringIn(
+      players.map((player) => ({
+        seatNo: player.seatNo,
+        upCards: player.cardsUp,
+        hasPairOnBoard: false,
+      })),
+    );
   }
 
   private resolveNextToAct(hand: HandState, fromSeatNo: number): number | null {
