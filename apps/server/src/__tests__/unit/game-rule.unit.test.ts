@@ -1,4 +1,4 @@
-import { GameType, Street } from "@mix-online/shared";
+import { CardRank, CardSuit, GameType, Street } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import { resolveGameRule } from "../../realtime/game-rule";
 
@@ -9,12 +9,12 @@ describe("GameRule", () => {
     const bringInSeatNo = studRule.determineBringIn([
       {
         seatNo: 1,
-        upCards: [{ rank: "A", suit: "H" }],
+        upCards: [{ rank: CardRank.A, suit: CardSuit.H }],
         hasPairOnBoard: false,
       },
       {
         seatNo: 2,
-        upCards: [{ rank: "A", suit: "S" }],
+        upCards: [{ rank: CardRank.A, suit: CardSuit.S }],
         hasPairOnBoard: false,
       },
     ]);
@@ -28,12 +28,12 @@ describe("GameRule", () => {
     const bringInSeatNo = razzRule.determineBringIn([
       {
         seatNo: 1,
-        upCards: [{ rank: "A", suit: "S" }],
+        upCards: [{ rank: CardRank.A, suit: CardSuit.S }],
         hasPairOnBoard: false,
       },
       {
         seatNo: 2,
-        upCards: [{ rank: "A", suit: "H" }],
+        upCards: [{ rank: CardRank.A, suit: CardSuit.H }],
         hasPairOnBoard: false,
       },
     ]);
@@ -46,13 +46,37 @@ describe("GameRule", () => {
     const razzRule = resolveGameRule(GameType.RAZZ);
 
     const studFirst = studRule.determineFirstToAct(Street.FOURTH, [
-      { seatNo: 1, upCards: [{ rank: "9", suit: "C" }] },
-      { seatNo: 2, upCards: [{ rank: "T", suit: "D" }] },
+      {
+        seatNo: 1,
+        upCards: [
+          { rank: CardRank.N2, suit: CardSuit.S },
+          { rank: CardRank.N9, suit: CardSuit.C },
+        ],
+      },
+      {
+        seatNo: 2,
+        upCards: [
+          { rank: CardRank.N3, suit: CardSuit.H },
+          { rank: CardRank.T, suit: CardSuit.D },
+        ],
+      },
     ]);
 
     const razzFirst = razzRule.determineFirstToAct(Street.FOURTH, [
-      { seatNo: 1, upCards: [{ rank: "9", suit: "C" }] },
-      { seatNo: 2, upCards: [{ rank: "T", suit: "D" }] },
+      {
+        seatNo: 1,
+        upCards: [
+          { rank: CardRank.N2, suit: CardSuit.S },
+          { rank: CardRank.N9, suit: CardSuit.C },
+        ],
+      },
+      {
+        seatNo: 2,
+        upCards: [
+          { rank: CardRank.N3, suit: CardSuit.H },
+          { rank: CardRank.T, suit: CardSuit.D },
+        ],
+      },
     ]);
 
     expect(studFirst).toBe(2);

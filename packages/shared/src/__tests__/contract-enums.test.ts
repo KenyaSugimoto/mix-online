@@ -101,7 +101,7 @@ describe("契約 enum 整合性", () => {
       "PlayerReconnectedEvent",
     ]);
     expect(SHOWDOWN_ACTIONS).toEqual(["SHOW", "MUCK"]);
-    expect(POT_SIDES).toEqual(["SINGLE", "HI", "LO"]);
+    expect(POT_SIDES).toEqual(["SCOOP", "HI", "LO"]);
     expect(DEAL_END_REASONS).toEqual(["SHOWDOWN", "UNCONTESTED", "AUTO_END"]);
     expect(SEAT_STATE_CHANGE_REASONS).toEqual([
       "JOIN",

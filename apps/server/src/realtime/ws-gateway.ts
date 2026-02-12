@@ -2,6 +2,8 @@ import type { IncomingMessage } from "node:http";
 import {
   type RealtimeErrorCode,
   RealtimeErrorCode as RealtimeErrorCodeMap,
+  type RealtimeTableCommand,
+  RealtimeTableCommandType,
 } from "@mix-online/shared";
 import type { WebSocket } from "ws";
 import {
@@ -13,6 +15,7 @@ import { toTableErrorMessage } from "../error-response";
 import { isUuid, validateWsBaseCommand } from "../validation";
 import {
   type RealtimeTableService,
+  TABLE_RESUME_RESULT_KIND,
   createRealtimeTableService,
 } from "./table-service";
 
@@ -41,6 +44,19 @@ type ClientCommandContext = {
   requestId: string | null;
   tableId: string | null;
 };
+
+type JsonCommandParseSuccess = {
+  ok: true;
+  value: unknown;
+};
+
+type JsonCommandParseFailure = {
+  ok: false;
+};
+
+type JsonCommandParseResult = JsonCommandParseSuccess | JsonCommandParseFailure;
+
+const DEFAULT_ACTION_TIMEOUT_MS = 30_000;
 
 const resolveTableIdFromPayload = (
   payload: Record<string, unknown>,
@@ -84,7 +100,7 @@ export class WsGateway {
     this.sessionStore = options.sessionStore;
     this.now = options.now ?? (() => new Date());
     this.tableService = options.tableService ?? createRealtimeTableService();
-    this.actionTimeoutMs = options.actionTimeoutMs ?? 30_000;
+    this.actionTimeoutMs = options.actionTimeoutMs ?? DEFAULT_ACTION_TIMEOUT_MS;
     this.setTimeoutFn =
       options.setTimeoutFn ??
       ((callback, timeoutMs) => globalThis.setTimeout(callback, timeoutMs));
@@ -99,12 +115,15 @@ export class WsGateway {
       currentTableId: null,
       currentUser: null,
     };
+    // 接続を追跡対象に追加
     this.connections.add(trackedConnection);
 
+    // 切断を検知したら handleDisconnect を呼び出す
     trackedConnection.socket.on("close", () => {
       void this.handleDisconnect(trackedConnection);
     });
 
+    // メッセージ受信を処理するリスナーを登録
     trackedConnection.socket.on("message", async (raw) => {
       const text = typeof raw === "string" ? raw : raw.toString("utf-8");
       const occurredAt = this.now();
@@ -135,6 +154,7 @@ export class WsGateway {
 
       trackedConnection.currentUser = session.user;
 
+      // コマンドのパースとバリデーション
       const parsed = this.parseJsonCommand(
         text,
         trackedConnection,
@@ -155,6 +175,7 @@ export class WsGateway {
         return;
       }
 
+      // 再接続コマンドの場合は特別処理 (再接続コマンドはテーブルIDを必ず含む)
       if (commandContext.tableId !== null) {
         trackedConnection.currentTableId = commandContext.tableId;
         const reconnectResult = await this.tableService.handleReconnect({
@@ -170,6 +191,7 @@ export class WsGateway {
         }
       }
 
+      // ping コマンドの場合は pong を返すだけ
       if (baseCommand.type === "ping") {
         trackedConnection.socket.send(
           JSON.stringify({
@@ -181,9 +203,11 @@ export class WsGateway {
         return;
       }
 
-      if (baseCommand.type === "table.resume") {
+      // resume コマンドの場合はテーブルサービスの resumeFrom を呼び出す
+      if (baseCommand.type === RealtimeTableCommandType.RESUME) {
         const resumeTableId = commandContext.tableId;
         const lastTableSeq = baseCommand.payload.lastTableSeq;
+        // payload の妥当性チェック
         if (
           resumeTableId === null ||
           typeof lastTableSeq !== "number" ||
@@ -206,24 +230,30 @@ export class WsGateway {
           occurredAt,
         });
         trackedConnection.currentTableId = resumeTableId;
-        if (resumeResult.kind === "events") {
+        // イベントまたはスナップショットを送信
+        if (resumeResult.kind === TABLE_RESUME_RESULT_KIND.EVENTS) {
+          // イベント群を順次送信
           for (const event of resumeResult.events) {
             trackedConnection.socket.send(JSON.stringify(event));
           }
         } else {
+          // スナップショットを送信
           trackedConnection.socket.send(JSON.stringify(resumeResult.snapshot));
         }
         this.scheduleAutoAction(resumeTableId);
         return;
       }
 
+      // それ以外のコマンドはテーブルサービスに処理を委譲
+      const command: RealtimeTableCommand = {
+        type: baseCommand.type as RealtimeTableCommand["type"],
+        requestId: baseCommand.requestId,
+        sentAt: baseCommand.sentAt,
+        payload: baseCommand.payload as RealtimeTableCommand["payload"],
+      } as RealtimeTableCommand;
+
       const result = await this.tableService.executeCommand({
-        command: {
-          type: baseCommand.type,
-          requestId: baseCommand.requestId,
-          sentAt: baseCommand.sentAt,
-          payload: baseCommand.payload,
-        },
+        command,
         user: session.user,
         occurredAt,
       });
@@ -277,17 +307,24 @@ export class WsGateway {
     }
   }
 
+  /**
+   * 指定されたテーブルの次のアクションを自動実行するタイマーをスケジュールする
+   */
   private scheduleAutoAction(tableId: string): void {
+    // 既存のタイマーをクリア
     this.clearAutoActionTimer(tableId);
 
+    // 次のアクションを実行する席番号を取得
     const seatNo = this.tableService.getNextToActSeatNo(tableId);
     if (seatNo === null) {
       return;
     }
 
+    // タイマーをセット
     const timeoutId = this.setTimeoutFn(() => {
       void this.runAutoAction(tableId, seatNo);
     }, this.actionTimeoutMs);
+    // タイマーIDを保存
     this.actionTimersByTableId.set(tableId, timeoutId);
   }
 
@@ -323,7 +360,7 @@ export class WsGateway {
     connection: TrackedConnection,
     commandContext: ClientCommandContext,
     occurredAt: Date,
-  ): { ok: true; value: unknown } | { ok: false } {
+  ): JsonCommandParseResult {
     try {
       return {
         ok: true,
@@ -384,6 +421,9 @@ export class WsGateway {
     );
   }
 
+  /**
+   * 指定されたテーブルに接続している全クライアントにイベントをブロードキャストする
+   */
   private broadcastToTable(
     tableId: string,
     event: unknown,
@@ -391,6 +431,7 @@ export class WsGateway {
   ): void {
     const body = JSON.stringify(event);
 
+    // テーブルに接続している全クライアントに送信
     for (const connection of this.connections) {
       if (connection.currentTableId === tableId) {
         connection.socket.send(body);
@@ -401,12 +442,14 @@ export class WsGateway {
       return;
     }
 
+    // コマンド発行者がテーブルに接続しているか確認
     const connectedInTable = [...this.connections].some(
       (connection) =>
         connection.currentTableId === tableId &&
         getSessionIdFromCookie(connection.request.headers.cookie) !== null,
     );
 
+    // 発行者がテーブルに接続していない場合、発行者にのみ送信
     if (!connectedInTable) {
       // 発行者だけでも受信できるよう、未購読時は no-op を避ける。
       for (const connection of this.connections) {
