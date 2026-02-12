@@ -597,6 +597,7 @@ describe("RealtimeTableService 席管理", () => {
     });
     expect(joined.ok).toBe(true);
 
+    // 切断・再接続をシミュレート
     const disconnected = await service.handleDisconnect({
       tableId: TABLE_ID,
       user,
@@ -686,9 +687,12 @@ describe("RealtimeTableService 席管理", () => {
     if (!targetPlayer) {
       throw new Error("対象プレイヤーが見つかりません。");
     }
+    // 対象プレイヤーに手番を回す
     table.currentHand.toActSeatNo = targetPlayer.seatNo;
+    // 対象プレイヤーの toCall を0にする
     targetPlayer.streetContribution = table.currentHand.streetBetTo;
 
+    // 対象プレイヤーの inHand を true にする
     const autoAction = await service.executeAutoAction({
       tableId: TABLE_ID,
       seatNo: targetPlayer.seatNo,
