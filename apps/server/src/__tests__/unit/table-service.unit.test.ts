@@ -1,10 +1,6 @@
 import {
   RealtimeErrorCode,
-  type RealtimeTableCommand,
-  RealtimeTableCommandType,
-  SeatStateChangeReason,
   SeatStatus,
-  TableBuyIn,
   TableEventName,
 } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
@@ -13,10 +9,6 @@ import { createRealtimeTableService } from "../../realtime/table-service";
 
 const NOW = new Date("2026-02-11T12:00:00.000Z");
 const TABLE_ID = "a1b2c3d4-0001-4000-8000-000000000001";
-const DEFAULT_REQUEST_ID = "11111111-1111-4111-8111-111111111111";
-const REQUEST_ID_PREFIX = "11111111-1111-4111-8111-";
-const BUY_IN_STANDARD = TableBuyIn.MIN + 100;
-const BUY_IN_HIGH = TableBuyIn.MIN + 600;
 
 const createUser = (index: number, walletBalance = 4000): SessionUser => ({
   userId: `00000000-0000-4000-8000-${index.toString().padStart(12, "0")}`,
@@ -24,16 +16,13 @@ const createUser = (index: number, walletBalance = 4000): SessionUser => ({
   walletBalance,
 });
 
-const createRequestId = (index: number): string =>
-  `${REQUEST_ID_PREFIX}${index.toString().padStart(12, "0")}`;
-
 const createCommand = (params: {
-  type: RealtimeTableCommandType;
+  type: "table.join" | "table.sitOut" | "table.return" | "table.leave";
   requestId?: string;
   payload?: Record<string, unknown>;
-}): RealtimeTableCommand => ({
+}) => ({
   type: params.type,
-  requestId: params.requestId ?? DEFAULT_REQUEST_ID,
+  requestId: params.requestId ?? "11111111-1111-4111-8111-111111111111",
   sentAt: NOW.toISOString(),
   payload: {
     tableId: TABLE_ID,
@@ -48,8 +37,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const join = await service.executeCommand({
       command: createCommand({
-        type: RealtimeTableCommandType.JOIN,
-        payload: { buyIn: BUY_IN_HIGH },
+        type: "table.join",
+        payload: { buyIn: 1000 },
       }),
       user,
       occurredAt: NOW,
@@ -59,14 +48,15 @@ describe("RealtimeTableService 席管理", () => {
       return;
     }
 
-    expect(join.event.tableSeq).toBe(1);
-    expect(join.event.eventName).toBe(TableEventName.SeatStateChangedEvent);
-    expect(join.event.payload.previousStatus).toBe(SeatStatus.EMPTY);
-    expect(join.event.payload.currentStatus).toBe(SeatStatus.ACTIVE);
-    expect(join.event.payload.reason).toBe(SeatStateChangeReason.JOIN);
+    const joinEvent = join.events[0];
+    expect(joinEvent?.tableSeq).toBe(1);
+    expect(joinEvent?.eventName).toBe(TableEventName.SeatStateChangedEvent);
+    expect(joinEvent?.payload.previousStatus).toBe(SeatStatus.EMPTY);
+    expect(joinEvent?.payload.currentStatus).toBe(SeatStatus.ACTIVE);
+    expect(joinEvent?.payload.reason).toBe("JOIN");
 
     const sitOut = await service.executeCommand({
-      command: createCommand({ type: RealtimeTableCommandType.SIT_OUT }),
+      command: createCommand({ type: "table.sitOut" }),
       user,
       occurredAt: NOW,
     });
@@ -74,12 +64,13 @@ describe("RealtimeTableService 席管理", () => {
     if (!sitOut.ok) {
       return;
     }
-    expect(sitOut.event.tableSeq).toBe(2);
-    expect(sitOut.event.payload.currentStatus).toBe(SeatStatus.SIT_OUT);
-    expect(sitOut.event.payload.reason).toBe(SeatStateChangeReason.SIT_OUT);
+    const sitOutEvent = sitOut.events[0];
+    expect(sitOutEvent?.tableSeq).toBe(2);
+    expect(sitOutEvent?.payload.currentStatus).toBe(SeatStatus.SIT_OUT);
+    expect(sitOutEvent?.payload.reason).toBe("SIT_OUT");
 
     const back = await service.executeCommand({
-      command: createCommand({ type: RealtimeTableCommandType.RETURN }),
+      command: createCommand({ type: "table.return" }),
       user,
       occurredAt: NOW,
     });
@@ -87,12 +78,13 @@ describe("RealtimeTableService 席管理", () => {
     if (!back.ok) {
       return;
     }
-    expect(back.event.tableSeq).toBe(3);
-    expect(back.event.payload.currentStatus).toBe(SeatStatus.ACTIVE);
-    expect(back.event.payload.reason).toBe(SeatStateChangeReason.RETURN);
+    const backEvent = back.events[0];
+    expect(backEvent?.tableSeq).toBe(3);
+    expect(backEvent?.payload.currentStatus).toBe(SeatStatus.ACTIVE);
+    expect(backEvent?.payload.reason).toBe("RETURN");
 
     const leave = await service.executeCommand({
-      command: createCommand({ type: RealtimeTableCommandType.LEAVE }),
+      command: createCommand({ type: "table.leave" }),
       user,
       occurredAt: NOW,
     });
@@ -100,9 +92,10 @@ describe("RealtimeTableService 席管理", () => {
     if (!leave.ok) {
       return;
     }
-    expect(leave.event.tableSeq).toBe(4);
-    expect(leave.event.payload.currentStatus).toBe(SeatStatus.EMPTY);
-    expect(leave.event.payload.reason).toBe(SeatStateChangeReason.LEAVE);
+    const leaveEvent = leave.events[0];
+    expect(leaveEvent?.tableSeq).toBe(4);
+    expect(leaveEvent?.payload.currentStatus).toBe(SeatStatus.EMPTY);
+    expect(leaveEvent?.payload.reason).toBe("LEAVE");
   });
 
   it("buyIn 範囲外を拒否する", async () => {
@@ -111,8 +104,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const result = await service.executeCommand({
       command: createCommand({
-        type: RealtimeTableCommandType.JOIN,
-        payload: { buyIn: TableBuyIn.MIN - 1 },
+        type: "table.join",
+        payload: { buyIn: 399 },
       }),
       user,
       occurredAt: NOW,
@@ -131,9 +124,9 @@ describe("RealtimeTableService 席管理", () => {
     for (let index = 1; index <= 6; index += 1) {
       const joined = await service.executeCommand({
         command: createCommand({
-          type: RealtimeTableCommandType.JOIN,
-          payload: { buyIn: BUY_IN_STANDARD },
-          requestId: createRequestId(index),
+          type: "table.join",
+          payload: { buyIn: 500 },
+          requestId: `11111111-1111-4111-8111-${index.toString().padStart(12, "0")}`,
         }),
         user: createUser(index),
         occurredAt: NOW,
@@ -143,8 +136,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const overflow = await service.executeCommand({
       command: createCommand({
-        type: RealtimeTableCommandType.JOIN,
-        payload: { buyIn: BUY_IN_STANDARD },
+        type: "table.join",
+        payload: { buyIn: 500 },
       }),
       user: createUser(7),
       occurredAt: NOW,
@@ -163,8 +156,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const insufficient = await service.executeCommand({
       command: createCommand({
-        type: RealtimeTableCommandType.JOIN,
-        payload: { buyIn: TableBuyIn.MIN },
+        type: "table.join",
+        payload: { buyIn: 400 },
       }),
       user,
       occurredAt: NOW,
@@ -180,8 +173,8 @@ describe("RealtimeTableService 席管理", () => {
     const richUser = createUser(2, 4000);
     const joined = await service2.executeCommand({
       command: createCommand({
-        type: RealtimeTableCommandType.JOIN,
-        payload: { buyIn: BUY_IN_STANDARD },
+        type: "table.join",
+        payload: { buyIn: 500 },
       }),
       user: richUser,
       occurredAt: NOW,
@@ -190,8 +183,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const duplicate = await service2.executeCommand({
       command: createCommand({
-        type: RealtimeTableCommandType.JOIN,
-        payload: { buyIn: BUY_IN_STANDARD },
+        type: "table.join",
+        payload: { buyIn: 500 },
       }),
       user: richUser,
       occurredAt: NOW,
@@ -201,5 +194,55 @@ describe("RealtimeTableService 席管理", () => {
     if (!duplicate.ok) {
       expect(duplicate.error.code).toBe(RealtimeErrorCode.ALREADY_SEATED);
     }
+  });
+
+  it("2人目着席で DealInit/PostAnte/DealCards3rd/BringIn を自動発行する", async () => {
+    const service = createRealtimeTableService();
+
+    const firstJoin = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(1),
+      occurredAt: NOW,
+    });
+    expect(firstJoin.ok).toBe(true);
+
+    const secondJoin = await service.executeCommand({
+      command: createCommand({
+        type: "table.join",
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(2),
+      occurredAt: NOW,
+    });
+    expect(secondJoin.ok).toBe(true);
+    if (!secondJoin.ok) {
+      return;
+    }
+
+    const eventNames = secondJoin.events.map((event) => event.eventName);
+    expect(eventNames).toEqual([
+      "SeatStateChangedEvent",
+      "DealInitEvent",
+      "PostAnteEvent",
+      "DealCards3rdEvent",
+      "BringInEvent",
+    ]);
+
+    expect(secondJoin.events.map((event) => event.tableSeq)).toEqual([
+      2, 3, 4, 5, 6,
+    ]);
+    expect(secondJoin.events[1]?.handSeq).toBe(1);
+    expect(secondJoin.events[4]?.handSeq).toBe(4);
+
+    const postAnte = secondJoin.events[2];
+    expect(postAnte?.payload.potAfter).toBe(10);
+
+    const bringIn = secondJoin.events[4];
+    expect(bringIn?.payload.street).toBe("THIRD");
+    expect(bringIn?.payload.amount).toBe(10);
+    expect(bringIn?.payload.potAfter).toBe(20);
   });
 });
