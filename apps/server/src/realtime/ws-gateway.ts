@@ -36,6 +36,17 @@ type ClientCommandContext = {
   tableId: string | null;
 };
 
+type JsonCommandParseSuccess = {
+  ok: true;
+  value: unknown;
+};
+
+type JsonCommandParseFailure = {
+  ok: false;
+};
+
+type JsonCommandParseResult = JsonCommandParseSuccess | JsonCommandParseFailure;
+
 const resolveTableIdFromPayload = (
   payload: Record<string, unknown>,
 ): string | null => {
@@ -178,7 +189,7 @@ export class WsGateway {
     connection: TrackedConnection,
     commandContext: ClientCommandContext,
     occurredAt: Date,
-  ): { ok: true; value: unknown } | { ok: false } {
+  ): JsonCommandParseResult {
     try {
       return {
         ok: true,

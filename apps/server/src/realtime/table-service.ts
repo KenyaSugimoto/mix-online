@@ -4,7 +4,9 @@ import {
   RealtimeTableCommandType,
   type RealtimeTableEventMessage,
   type RealtimeTableServiceError,
+  type RealtimeTableServiceFailure,
   type RealtimeTableServiceResult,
+  type RealtimeTableServiceSuccess,
   type RealtimeTableState,
   SeatStateChangeAppliesFrom,
   SeatStateChangeReason,
@@ -22,6 +24,19 @@ import {
 type RealtimeTableServiceOptions = {
   actorRegistry?: TableActorRegistry;
 };
+
+type ApplyCommandSuccess = {
+  ok: true;
+  eventPayload: RealtimeTableEventMessage["payload"];
+  nextWalletBalance: number;
+};
+
+type ApplyCommandFailure = {
+  ok: false;
+  error: RealtimeTableServiceError;
+};
+
+type ApplyCommandResult = ApplyCommandSuccess | ApplyCommandFailure;
 
 const createDefaultTableState = (tableId: string): RealtimeTableState => ({
   tableId,
@@ -54,7 +69,7 @@ export class RealtimeTableService {
     const tableId = this.resolveTableId(params.command.payload);
 
     if (tableId === null) {
-      return {
+      const failure: RealtimeTableServiceFailure = {
         ok: false,
         error: {
           code: RealtimeErrorCode.INVALID_ACTION,
@@ -63,6 +78,7 @@ export class RealtimeTableService {
           requestId: params.command.requestId,
         },
       };
+      return failure;
     }
 
     const actor = this.actorRegistry.getOrCreate(tableId);
@@ -83,7 +99,7 @@ export class RealtimeTableService {
       }
 
       this.walletByUserId.set(params.user.userId, outcome.nextWalletBalance);
-      return {
+      const success: RealtimeTableServiceSuccess = {
         ok: true,
         tableId,
         event: {
@@ -97,6 +113,7 @@ export class RealtimeTableService {
           payload: outcome.eventPayload,
         },
       };
+      return success;
     });
   }
 
@@ -129,16 +146,7 @@ export class RealtimeTableService {
     command: RealtimeTableCommand;
     currentBalance: number;
     occurredAt: Date;
-  }):
-    | {
-        ok: true;
-        eventPayload: RealtimeTableEventMessage["payload"];
-        nextWalletBalance: number;
-      }
-    | {
-        ok: false;
-        error: RealtimeTableServiceError;
-      } {
+  }): ApplyCommandResult {
     const seat = params.table.seats.find(
       (entry) => entry.userId === params.user.userId,
     );
@@ -342,8 +350,8 @@ export class RealtimeTableService {
     message: string,
     requestId: string,
     tableId: string | null,
-  ): { ok: false; error: RealtimeTableServiceError } {
-    return {
+  ): ApplyCommandFailure {
+    const failure: ApplyCommandFailure = {
       ok: false,
       error: {
         code,
@@ -352,6 +360,7 @@ export class RealtimeTableService {
         tableId,
       },
     };
+    return failure;
   }
 }
 

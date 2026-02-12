@@ -316,16 +316,20 @@ export type RealtimeTableServiceError = {
   requestId: string;
 };
 
+export type RealtimeTableServiceSuccess = {
+  ok: true;
+  tableId: string;
+  event: RealtimeTableEventMessage;
+};
+
+export type RealtimeTableServiceFailure = {
+  ok: false;
+  error: RealtimeTableServiceError;
+};
+
 export type RealtimeTableServiceResult =
-  | {
-      ok: true;
-      tableId: string;
-      event: RealtimeTableEventMessage;
-    }
-  | {
-      ok: false;
-      error: RealtimeTableServiceError;
-    };
+  | RealtimeTableServiceSuccess
+  | RealtimeTableServiceFailure;
 
 export const SnapshotReason = {
   OUT_OF_RANGE: "OUT_OF_RANGE",
