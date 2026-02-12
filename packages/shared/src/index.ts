@@ -89,6 +89,20 @@ export const TABLE_COMMAND_ACTIONS = Object.values(
   TableCommandAction,
 ) as TableCommandAction[];
 
+export const RealtimeTableCommandType = {
+  JOIN: "table.join",
+  SIT_OUT: "table.sitOut",
+  RETURN: "table.return",
+  LEAVE: "table.leave",
+  ACT: "table.act",
+  RESUME: "table.resume",
+} as const;
+export type RealtimeTableCommandType =
+  (typeof RealtimeTableCommandType)[keyof typeof RealtimeTableCommandType];
+export const REALTIME_TABLE_COMMAND_TYPES = Object.values(
+  RealtimeTableCommandType,
+) as RealtimeTableCommandType[];
+
 export const TableEventName = {
   DealInitEvent: "DealInitEvent",
   DealCards3rdEvent: "DealCards3rdEvent",
@@ -245,6 +259,77 @@ export type SeatStateChangeAppliesFrom =
 export const SEAT_STATE_CHANGE_APPLIES_FROM = Object.values(
   SeatStateChangeAppliesFrom,
 ) as SeatStateChangeAppliesFrom[];
+
+export const TableBuyIn = {
+  MIN: 400,
+  MAX: 2000,
+} as const;
+
+export type RealtimeTableCommand = {
+  type: RealtimeTableCommandType;
+  requestId: string;
+  sentAt: string;
+  payload: Record<string, unknown>;
+};
+
+export type RealtimeTableSeat = {
+  seatNo: number;
+  status: SeatStatus;
+  userId: string | null;
+  displayName: string | null;
+  stack: number;
+  disconnectStreak: number;
+  joinedAt: string | null;
+};
+
+export type RealtimeTableState = {
+  tableId: string;
+  status: TableStatus;
+  seats: RealtimeTableSeat[];
+};
+
+export type SeatStateChangedEventPayload = {
+  seatNo: number;
+  previousStatus: SeatStatus;
+  currentStatus: SeatStatus;
+  reason: SeatStateChangeReason;
+  user: { userId: string; displayName: string } | null;
+  stack: number;
+  appliesFrom: SeatStateChangeAppliesFrom;
+};
+
+export type RealtimeTableEventMessage = {
+  type: "table.event";
+  tableId: string;
+  tableSeq: number;
+  handId: null;
+  handSeq: null;
+  occurredAt: string;
+  eventName: typeof TableEventName.SeatStateChangedEvent;
+  payload: SeatStateChangedEventPayload;
+};
+
+export type RealtimeTableServiceError = {
+  code: RealtimeErrorCode;
+  message: string;
+  tableId: string | null;
+  requestId: string;
+};
+
+export type RealtimeTableServiceSuccess = {
+  ok: true;
+  tableId: string;
+  event: RealtimeTableEventMessage;
+};
+
+export type RealtimeTableServiceFailure = {
+  ok: false;
+  error: RealtimeTableServiceError;
+};
+
+export type RealtimeTableServiceResult =
+  | RealtimeTableServiceSuccess
+  | RealtimeTableServiceFailure;
 
 export const SnapshotReason = {
   OUT_OF_RANGE: "OUT_OF_RANGE",
