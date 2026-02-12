@@ -9,6 +9,7 @@ import {
   RealtimeErrorCode,
   type RealtimeTableCommand,
   RealtimeTableCommandType,
+  type RealtimeTableEventMessage,
   type RealtimeTableServiceFailure,
   type RealtimeTableServiceResult,
   type RealtimeTableServiceSuccess,
@@ -76,11 +77,14 @@ type RealtimeTableServiceOptions = {
   actorRegistry?: TableActorRegistry;
 };
 
-type PendingEvent = {
-  handId: string | null;
-  eventName: TableEventName;
-  payload: Record<string, unknown>;
-};
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+  ? Omit<T, K>
+  : never;
+
+type PendingEvent = DistributiveOmit<
+  RealtimeTableEventMessage,
+  "type" | "tableId" | "tableSeq" | "handSeq" | "occurredAt"
+>;
 
 type ApplyCommandSuccess = {
   ok: true;
@@ -171,16 +175,19 @@ export class RealtimeTableService {
       const success: RealtimeTableServiceSuccess = {
         ok: true,
         tableId,
-        events: outcome.events.map((event) => ({
-          type: "table.event",
-          tableId,
-          tableSeq: allocateTableSeq(),
-          handId: event.handId,
-          handSeq: event.handId ? allocateHandSeq(event.handId) : null,
-          occurredAt: params.occurredAt.toISOString(),
-          eventName: event.eventName,
-          payload: event.payload,
-        })),
+        events: outcome.events.map(
+          (event) =>
+            ({
+              type: "table.event",
+              tableId,
+              tableSeq: allocateTableSeq(),
+              handId: event.handId,
+              handSeq: event.handId ? allocateHandSeq(event.handId) : null,
+              occurredAt: params.occurredAt.toISOString(),
+              eventName: event.eventName,
+              payload: event.payload,
+            }) as RealtimeTableEventMessage,
+        ),
       };
       return success;
     });
