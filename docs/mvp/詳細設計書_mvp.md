@@ -269,7 +269,7 @@ interface GameRule {
 - 非手番プレイヤーのアクションは拒否。
 - `FOLDED`/`ALL_IN` プレイヤーのアクションは拒否。
 - 1Streetあたり上限 `5bet`（1bet + 4raise）。
-- ヘッズアップ時のみキャップ解除。
+- ヘッズアップを含め全卓で同一キャップを適用。
 
 ### 3rd Street（Bring-in局面）
 

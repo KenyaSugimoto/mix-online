@@ -599,11 +599,7 @@ export class RealtimeTableService {
         );
       }
 
-      const activePlayers = hand.players.filter(
-        (entry) => entry.inHand && !entry.allIn,
-      );
-      const isHeadsUp = activePlayers.length <= 2;
-      if (!isHeadsUp && hand.raiseCount >= 4) {
+      if (hand.raiseCount >= 4) {
         return this.fail(
           RealtimeErrorCode.INVALID_ACTION,
           "このストリートのRAISE上限に達しています。",

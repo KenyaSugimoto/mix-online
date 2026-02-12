@@ -297,6 +297,7 @@ describe("RealtimeTableService 席管理", () => {
     const user1 = createUser(1);
     const user2 = createUser(2);
 
+    // 両ユーザー着席してハンド開始まで進める
     const joined1 = await service.executeCommand({
       command: createCommand({
         type: "table.join",
@@ -319,6 +320,7 @@ describe("RealtimeTableService 席管理", () => {
       return;
     }
 
+    // 着席イベントから席番号を取得
     const joined1Seat = expectEvent(
       joined1.events[0],
       TableEventName.SeatStateChangedEvent,
@@ -331,6 +333,7 @@ describe("RealtimeTableService 席管理", () => {
     seatByUserId.set(user1.userId, joined1Seat);
     seatByUserId.set(user2.userId, joined2Seat);
 
+    // 2人目着席の BringIn で user1 が次の手番になる想定
     const bringIn = expectEvent(
       joined2.events.find(
         (event) => event.eventName === TableEventName.BringInEvent,
@@ -341,6 +344,7 @@ describe("RealtimeTableService 席管理", () => {
     const nonTurnUser =
       seatByUserId.get(user1.userId) === nextToActSeatNo ? user2 : user1;
 
+    // 非手番ユーザーが CALL するのを拒否する
     const notYourTurn = await service.executeCommand({
       command: createCommand({
         type: "table.act",
@@ -354,6 +358,7 @@ describe("RealtimeTableService 席管理", () => {
       expect(notYourTurn.error.code).toBe(RealtimeErrorCode.NOT_YOUR_TURN);
     }
 
+    // 非手番ユーザーが CHECK するのを拒否する（toCall ありのため）
     const turnUser = nonTurnUser.userId === user1.userId ? user2 : user1;
     const checkRejected = await service.executeCommand({
       command: createCommand({
@@ -369,7 +374,7 @@ describe("RealtimeTableService 席管理", () => {
     }
   });
 
-  it("ヘッズアップでは5bet capを超えるRAISEを許可する", async () => {
+  it("ヘッズアップでも5bet cap超過のRAISEを拒否する", async () => {
     const service = createRealtimeTableService();
     const user1 = createUser(1);
     const user2 = createUser(2);
@@ -434,7 +439,7 @@ describe("RealtimeTableService 席管理", () => {
     toActSeatNo = expectEvent(complete.events[0], TableEventName.CompleteEvent)
       .payload.nextToActSeatNo as number;
 
-    for (let count = 0; count < 5; count += 1) {
+    for (let count = 0; count < 4; count += 1) {
       const raised = await service.executeCommand({
         command: createCommand({
           type: "table.act",
@@ -449,6 +454,19 @@ describe("RealtimeTableService 席管理", () => {
       }
       toActSeatNo = expectEvent(raised.events[0], TableEventName.RaiseEvent)
         .payload.nextToActSeatNo as number;
+    }
+
+    const rejected = await service.executeCommand({
+      command: createCommand({
+        type: "table.act",
+        payload: { action: "RAISE" },
+      }),
+      user: userBySeat(toActSeatNo),
+      occurredAt: NOW,
+    });
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) {
+      expect(rejected.error.code).toBe(RealtimeErrorCode.INVALID_ACTION);
     }
   });
 
