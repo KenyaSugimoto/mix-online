@@ -3,6 +3,7 @@ import {
   type RealtimeErrorCode,
   RealtimeErrorCode as RealtimeErrorCodeMap,
   type RealtimeTableCommand,
+  RealtimeTableCommandType,
 } from "@mix-online/shared";
 import type { WebSocket } from "ws";
 import {
@@ -14,6 +15,7 @@ import { toTableErrorMessage } from "../error-response";
 import { isUuid, validateWsBaseCommand } from "../validation";
 import {
   type RealtimeTableService,
+  TABLE_RESUME_RESULT_KIND,
   createRealtimeTableService,
 } from "./table-service";
 
@@ -201,6 +203,47 @@ export class WsGateway {
         return;
       }
 
+      // resume コマンドの場合はテーブルサービスの resumeFrom を呼び出す
+      if (baseCommand.type === RealtimeTableCommandType.RESUME) {
+        const resumeTableId = commandContext.tableId;
+        const lastTableSeq = baseCommand.payload.lastTableSeq;
+        // payload の妥当性チェック
+        if (
+          resumeTableId === null ||
+          typeof lastTableSeq !== "number" ||
+          !Number.isInteger(lastTableSeq) ||
+          lastTableSeq < 0
+        ) {
+          this.sendTableError({
+            connection: trackedConnection,
+            code: RealtimeErrorCodeMap.INVALID_ACTION,
+            message: "table.resume の payload が不正です。",
+            occurredAt,
+            context: commandContext,
+          });
+          return;
+        }
+
+        const resumeResult = await this.tableService.resumeFrom({
+          tableId: resumeTableId,
+          lastTableSeq,
+          occurredAt,
+        });
+        trackedConnection.currentTableId = resumeTableId;
+        // イベントまたはスナップショットを送信
+        if (resumeResult.kind === TABLE_RESUME_RESULT_KIND.EVENTS) {
+          // イベント群を順次送信
+          for (const event of resumeResult.events) {
+            trackedConnection.socket.send(JSON.stringify(event));
+          }
+        } else {
+          // スナップショットを送信
+          trackedConnection.socket.send(JSON.stringify(resumeResult.snapshot));
+        }
+        this.scheduleAutoAction(resumeTableId);
+        return;
+      }
+
       // それ以外のコマンドはテーブルサービスに処理を委譲
       const command: RealtimeTableCommand = {
         type: baseCommand.type as RealtimeTableCommand["type"],
@@ -258,17 +301,24 @@ export class WsGateway {
     }
   }
 
+  /**
+   * 指定されたテーブルの次のアクションを自動実行するタイマーをスケジュールする
+   */
   private scheduleAutoAction(tableId: string): void {
+    // 既存のタイマーをクリア
     this.clearAutoActionTimer(tableId);
 
+    // 次のアクションを実行する席番号を取得
     const seatNo = this.tableService.getNextToActSeatNo(tableId);
     if (seatNo === null) {
       return;
     }
 
+    // タイマーをセット
     const timeoutId = this.setTimeoutFn(() => {
       void this.runAutoAction(tableId, seatNo);
     }, this.actionTimeoutMs);
+    // タイマーIDを保存
     this.actionTimersByTableId.set(tableId, timeoutId);
   }
 

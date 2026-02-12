@@ -5,6 +5,7 @@ import {
   type RealtimeTableEventMessage,
   SeatStateChangeReason,
   SeatStatus,
+  SnapshotReason,
   Street,
   TableBuyIn,
   TableCommandAction,
@@ -12,7 +13,11 @@ import {
 } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import type { SessionUser } from "../../auth-session";
-import { createRealtimeTableService } from "../../realtime/table-service";
+import {
+  TABLE_RESUME_RESULT_KIND,
+  TABLE_SNAPSHOT_MESSAGE_TYPE,
+  createRealtimeTableService,
+} from "../../realtime/table-service";
 
 const NOW = new Date("2026-02-11T12:00:00.000Z");
 const TABLE_ID = "a1b2c3d4-0001-4000-8000-000000000001";
@@ -807,5 +812,93 @@ describe("RealtimeTableService 席管理", () => {
     expect(seatStateChangedEvent.payload.reason).toBe(
       SeatStateChangeReason.LEAVE,
     );
+  });
+
+  it("HP-09 table.resume で差分イベントを連番再送できる", async () => {
+    const service = createRealtimeTableService();
+
+    await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(1),
+      occurredAt: NOW,
+    });
+    await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(2),
+      occurredAt: NOW,
+    });
+
+    const resumed = await service.resumeFrom({
+      tableId: TABLE_ID,
+      lastTableSeq: 2,
+      occurredAt: NOW,
+    });
+
+    expect(resumed.kind).toBe(TABLE_RESUME_RESULT_KIND.EVENTS);
+    if (resumed.kind !== TABLE_RESUME_RESULT_KIND.EVENTS) {
+      return;
+    }
+    expect(resumed.events.length).toBeGreaterThan(0);
+    expect(resumed.events[0]?.tableSeq).toBe(3);
+    for (let index = 1; index < resumed.events.length; index += 1) {
+      expect(resumed.events[index]?.tableSeq).toBe(
+        (resumed.events[index - 1]?.tableSeq ?? 0) + 1,
+      );
+    }
+  });
+
+  it("HP-11 差分保持外の table.resume は snapshot を返す", async () => {
+    const service = createRealtimeTableService({ retainedEventLimit: 2 });
+
+    await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(1),
+      occurredAt: NOW,
+    });
+    await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: createUser(2),
+      occurredAt: NOW,
+    });
+
+    const resumed = await service.resumeFrom({
+      tableId: TABLE_ID,
+      lastTableSeq: 1,
+      occurredAt: NOW,
+    });
+
+    expect(resumed.kind).toBe(TABLE_RESUME_RESULT_KIND.SNAPSHOT);
+    if (resumed.kind !== TABLE_RESUME_RESULT_KIND.SNAPSHOT) {
+      return;
+    }
+    expect(resumed.snapshot.type).toBe(TABLE_SNAPSHOT_MESSAGE_TYPE);
+    expect(resumed.snapshot.payload.reason).toBe(SnapshotReason.OUT_OF_RANGE);
+    expect(resumed.snapshot.payload.table).toMatchObject({
+      status: expect.any(String),
+      gameType: expect.any(String),
+      stakes: {
+        smallBet: expect.any(Number),
+        bigBet: expect.any(Number),
+        ante: expect.any(Number),
+        bringIn: expect.any(Number),
+      },
+      seats: expect.any(Array),
+      currentHand: expect.anything(),
+      dealerSeatNo: expect.any(Number),
+      mixIndex: expect.any(Number),
+      handsSinceRotation: expect.any(Number),
+    });
   });
 });
