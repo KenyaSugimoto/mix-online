@@ -368,6 +368,23 @@ export type SeatStateChangedEventPayload = {
   appliesFrom: SeatStateChangeAppliesFrom;
 };
 
+export type PlayerDisconnectedEventPayload = {
+  seatNo: number;
+  userId: string;
+  displayName: string;
+  seatStatus: SeatStatus;
+  disconnectStreak: number;
+  willAutoLeave: boolean;
+};
+
+export type PlayerReconnectedEventPayload = {
+  seatNo: number;
+  userId: string;
+  displayName: string;
+  restoredSeatStatus: SeatStatus;
+  disconnectStreakResetTo: number;
+};
+
 export type DealInitEventPayload = {
   handNo: number;
   gameType: GameType;
@@ -456,6 +473,8 @@ export type RaiseEventPayload = ChipActionEventPayloadBase;
 
 export type RealtimeTableEventPayload =
   | SeatStateChangedEventPayload
+  | PlayerDisconnectedEventPayload
+  | PlayerReconnectedEventPayload
   | DealInitEventPayload
   | PostAnteEventPayload
   | DealCards3rdEventPayload
@@ -479,6 +498,14 @@ export type RealtimeTableEventMessage =
   | (RealtimeTableEventBase & {
       eventName: typeof TableEventName.SeatStateChangedEvent;
       payload: SeatStateChangedEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.PlayerDisconnectedEvent;
+      payload: PlayerDisconnectedEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.PlayerReconnectedEvent;
+      payload: PlayerReconnectedEventPayload;
     })
   | (RealtimeTableEventBase & {
       eventName: typeof TableEventName.DealInitEvent;
