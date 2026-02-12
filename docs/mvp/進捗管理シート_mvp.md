@@ -1,7 +1,7 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.19  
-Last Updated: 2026-02-11  
+Version: v1.20  
+Last Updated: 2026-02-12  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 詳細設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)
@@ -30,7 +30,7 @@ Last Updated: 2026-02-11
 
 | Milestone | 内容 | Status | Progress | Owner | Target Date | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| M0 | 品質ゲート固定（lint/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
+| M0 | 品質ゲート固定（lint/check:contract-literals/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | IN_PROGRESS | 18% | Codex | 2026-02-11 | M3-01〜M3-02完了、M3-03着手 |
@@ -57,7 +57,7 @@ Last Updated: 2026-02-11
 
 | ID | Task | Priority | Status | Completed At | Link |
 | --- | --- | --- | --- | --- | --- |
-| M0-01 | `pnpm lint/typecheck/test` を全てグリーン化し、失敗時の修正方針を確立 | P0 | DONE | 2026-02-11 | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| M0-01 | `pnpm lint/check:contract-literals/typecheck/test` を全てグリーン化し、失敗時の修正方針を確立 | P0 | DONE | 2026-02-11 | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | M0-02 | `packages/shared` の共通型を契約準拠で再定義（OpenAPI/AsyncAPI/DDL enum整合） | P0 | DONE | 2026-02-11 | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql) |
 | M0-03 | API/WSの入力バリデーション + 共通エラー応答基盤（`requestId`/`error.code`）を実装 | P0 | DONE | 2026-02-11 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M0-04 | テスト基盤整備（unit/integration/e2e、固定デッキハーネス、テストデータ初期化） | P0 | DONE | 2026-02-11 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
@@ -121,7 +121,7 @@ Last Updated: 2026-02-11
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
 | 2026-02-11 | 実装推進方式 | AIエージェント委譲 + DoD厳格運用 | 速度より品質を優先するため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
-| 2026-02-11 | 品質ゲート運用（M0-01） | `pnpm lint` → `pnpm typecheck` → `pnpm test` の固定順と一次切り分け手順を採用 | 失敗時の調査順序を固定し、復旧時間のばらつきを減らすため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| 2026-02-11 | 品質ゲート運用（M0-01） | `pnpm lint` → `pnpm check:contract-literals` → `pnpm typecheck` → `pnpm test` の固定順と一次切り分け手順を採用 | 失敗時の調査順序を固定し、復旧時間のばらつきを減らすため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | 2026-02-11 | 共通型契約同期（M0-02） | `packages/shared` で契約由来enumを定数化し、契約整合テストを導入 | OpenAPI/AsyncAPI/DDLとの差分を早期検知し、下流実装の型逸脱を防ぐため | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql) |
 | 2026-02-11 | テスト基盤整備（M0-04） | server テストを unit/integration/e2e 層へ分割し、固定デッキ・テストデータ初期化・シナリオID固定を導入 | シナリオ実装前に土台を固定して、後続タスクの追加コストと回帰リスクを下げるため | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-11 | 入力検証/共通エラー基盤完了（M0-03） | HTTP requestId付与・共通error.code応答・WSコマンド基本検証・requestId重複検知基盤を確定 | M1以降でAPI/WS実装を進める際のエラー仕様ドリフトを防ぐため | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml) |
@@ -142,6 +142,7 @@ Last Updated: 2026-02-11
 | 2026-02-11 | M2-06 HTTP契約テスト固定 | OpenAPIで定義したMVP対象HTTP API（Auth/Lobby/Tables/History）の正常系・異常系を統合契約テストとして追加し、継続検証を自動化 | M2完了条件である「契約逸脱をCIで即検知できる状態」を満たすため | [`openapi.yaml`](./openapi.yaml), [`http-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/http-contract.integration.test.ts), [`http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-11 | AsyncAPI表示方式の更新（LOCAL-DOCS-RENDER-04） | AsyncAPI表示を Web Component 直描画から AsyncAPI CLI + html-template による静的HTML生成へ切替 | ブラウザ実行時パーサー依存の表示エラーを回避し、Pages表示の再現性を高めるため | [`build-api-reference-site.sh`](../../scripts/build-api-reference-site.sh), [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) |
 | 2026-02-11 | 契約リテラル再発防止ルール導入（LOCAL-CONTRACT-LITERAL-01） | `apps/` 配下で `FIXED_LIMIT` / `STUD_*` の文字列直書きを検出する `pnpm check:contract-literals` を導入し、CI/PRテンプレート/運用ルールへ組み込む | 契約値変更時の追従漏れとテスト期待値のハードコード再発を防ぐため | [`check-contract-literals.sh`](../../scripts/check-contract-literals.sh), [`ci.yml`](../../.github/workflows/ci.yml), [`github-operations.md`](../../.agent/rules/github-operations.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
+| 2026-02-12 | PR前品質ゲート更新（LOCAL-CONTRACT-LITERAL-02） | PR作成前の必須チェックを `pnpm lint` → `pnpm check:contract-literals` → `pnpm typecheck` → `pnpm test` へ統一 | PR作成時に `check:contract-literals` の実行漏れを防ぎ、契約リテラルの回帰混入を抑止するため | [`AGENTS.md`](../../AGENTS.md), [`github-operations.md`](../../.agent/rules/github-operations.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | 2026-02-11 | M3-01 WebSocketゲートウェイ初期実装 | `ws` サーバーを `/ws` に追加し、セッション必須化・コマンド基本検証・`ping/pong`・`table.error` 応答を先行実装 | M3の後続タスク（Table Actor、席管理、進行制御）を段階実装できる最小Realtime基盤を先に固定するため | [`asyncapi.yaml`](./asyncapi.yaml), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
 | 2026-02-11 | M3-02 Table Actor直列基盤の先行固定 | 卓ごとの処理キュー (`TableActor`) と `tableSeq/handSeq` 採番器を独立実装し、並行投入時の順序保証を単体テストで固定 | 席管理・ゲーム進行・再接続処理を後続タスクで実装する際に、順序逆転と競合を土台で防止するため | [`table-actor.ts`](../../apps/server/src/realtime/table-actor.ts), [`table-actor.unit.test.ts`](../../apps/server/src/__tests__/unit/table-actor.unit.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
@@ -162,7 +163,7 @@ Last Updated: 2026-02-11
 - [ ] 正常系レスポンスがOpenAPI通り
 - [ ] 異常系（認可/入力不正）が定義通り
 - [ ] 単体テスト追加
-- [ ] `pnpm lint` / `pnpm typecheck` / `pnpm test` が通る
+- [ ] `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` が通る
 - [ ] 進捗管理シート更新
 
 ### Out of Scope

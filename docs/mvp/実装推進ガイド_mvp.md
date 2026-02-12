@@ -46,11 +46,11 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 
 - 目的: 開発品質を担保する最小基盤を揃える
 - 主タスク:
-  - workspaceの `lint/typecheck/test` を常時グリーンに保つ
+  - workspaceの `lint/check:contract-literals/typecheck/test` を常時グリーンに保つ
   - `packages/shared` の共通型を仕様準拠で整理
   - エラーハンドリング・ログ方針を決める
 - 完了条件:
-  - `pnpm lint`, `pnpm typecheck`, `pnpm test` が通る
+  - `pnpm lint`, `pnpm check:contract-literals`, `pnpm typecheck`, `pnpm test` が通る
   - 共通型に対するテストが追加されている
 
 ## Phase 1: データ層確定
@@ -116,7 +116,7 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 2. 受け入れ条件を3〜7個で定義  
 3. 実装（必要ならリファクタ含む）  
 4. テスト追加（単体優先、必要に応じ統合）  
-5. `pnpm lint` / `pnpm typecheck` / `pnpm test` 実行  
+5. `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` 実行  
 6. 仕様差分のドキュメント更新  
 7. 進捗管理シート更新（ステータス・リスク・決定事項）
 
@@ -128,7 +128,7 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 
 - 対応範囲が要件/設計にトレース可能
 - 実装とテストが同一PRに含まれる
-- `pnpm lint` / `pnpm typecheck` / `pnpm test` が成功
+- `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` が成功
 - 既存機能への回帰リスクが評価されている
 - `docs/mvp/進捗管理シート_mvp.md` が更新されている
 
