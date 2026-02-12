@@ -1,9 +1,8 @@
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 const TARGET_PATHS = ["apps", "packages"];
-const FILE_GLOBS = ["--glob", "*.ts", "--glob", "*.tsx"];
-const EXCLUDE_GLOBS = ["--glob", "!packages/shared/**"];
+const EXCLUDED_PATH_PREFIXES = ["packages/shared/"];
 
 const source = readFileSync("packages/shared/src/index.ts", "utf8");
 const objectPattern =
@@ -38,31 +37,63 @@ while (true) {
   }
 }
 
+/** @param {string} path */
+const isExcludedPath = (path) =>
+  EXCLUDED_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
+
+/** @param {string} dir */
+const collectTargetFiles = (dir) => {
+  /** @type {string[]} */
+  const files = [];
+  const entries = readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    const normalized = fullPath.replaceAll("\\", "/");
+    if (isExcludedPath(normalized)) {
+      continue;
+    }
+    if (entry.isDirectory()) {
+      files.push(...collectTargetFiles(fullPath));
+      continue;
+    }
+    if (!entry.isFile()) {
+      continue;
+    }
+    if (!normalized.endsWith(".ts") && !normalized.endsWith(".tsx")) {
+      continue;
+    }
+    files.push(normalized);
+  }
+
+  return files;
+};
+
+const targetFiles = TARGET_PATHS.flatMap((path) => {
+  if (!statSync(path).isDirectory()) {
+    return [];
+  }
+  return collectTargetFiles(path);
+});
+
 /** @param {string} literal */
 const findMatches = (literal) => {
-  const result = spawnSync(
-    "rg",
-    [
-      "-n",
-      "--fixed-strings",
-      ...FILE_GLOBS,
-      ...EXCLUDE_GLOBS,
-      `"${literal}"`,
-      ...TARGET_PATHS,
-    ],
-    { encoding: "utf8" },
-  );
+  const needle = `"${literal}"`;
+  /** @type {string[]} */
+  const matches = [];
 
-  if (result.status === 0) {
-    return result.stdout.trim();
+  for (const path of targetFiles) {
+    const content = readFileSync(path, "utf8");
+    const lines = content.split("\n");
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      if (line.includes(needle)) {
+        matches.push(`${path}:${index + 1}:${line}`);
+      }
+    }
   }
 
-  if (result.status === 1) {
-    return "";
-  }
-
-  const stderr = result.stderr?.trim() ?? "";
-  throw new Error(`rg failed for literal \"${literal}\": ${stderr}`);
+  return matches.join("\n");
 };
 
 let violations = 0;
