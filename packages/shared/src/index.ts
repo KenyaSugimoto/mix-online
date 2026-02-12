@@ -89,6 +89,20 @@ export const TABLE_COMMAND_ACTIONS = Object.values(
   TableCommandAction,
 ) as TableCommandAction[];
 
+export const RealtimeTableCommandType = {
+  JOIN: "table.join",
+  SIT_OUT: "table.sitOut",
+  RETURN: "table.return",
+  LEAVE: "table.leave",
+  ACT: "table.act",
+  RESUME: "table.resume",
+} as const;
+export type RealtimeTableCommandType =
+  (typeof RealtimeTableCommandType)[keyof typeof RealtimeTableCommandType];
+export const REALTIME_TABLE_COMMAND_TYPES = Object.values(
+  RealtimeTableCommandType,
+) as RealtimeTableCommandType[];
+
 export const TableEventName = {
   DealInitEvent: "DealInitEvent",
   DealCards3rdEvent: "DealCards3rdEvent",
@@ -115,7 +129,7 @@ export const TABLE_EVENT_NAMES = Object.values(
 ) as TableEventName[];
 
 export const PotSide = {
-  SINGLE: "SINGLE",
+  SCOOP: "SCOOP",
   HI: "HI",
   LO: "LO",
 } as const;
@@ -245,6 +259,312 @@ export type SeatStateChangeAppliesFrom =
 export const SEAT_STATE_CHANGE_APPLIES_FROM = Object.values(
   SeatStateChangeAppliesFrom,
 ) as SeatStateChangeAppliesFrom[];
+
+export const TableBuyIn = {
+  MIN: 400,
+  MAX: 2000,
+} as const;
+
+export type RealtimeTableCommandPayloadBase = {
+  tableId: string;
+};
+
+export type RealtimeTableJoinPayload = RealtimeTableCommandPayloadBase & {
+  buyIn: number;
+};
+
+export type RealtimeTableSitOutPayload = RealtimeTableCommandPayloadBase;
+
+export type RealtimeTableReturnPayload = RealtimeTableCommandPayloadBase;
+
+export type RealtimeTableLeavePayload = RealtimeTableCommandPayloadBase;
+
+export type RealtimeTableActPayload = RealtimeTableCommandPayloadBase & {
+  action: TableCommandAction;
+  amount?: number;
+};
+
+export type RealtimeTableResumePayload = RealtimeTableCommandPayloadBase;
+
+export type RealtimeTableCommandPayload =
+  | RealtimeTableJoinPayload
+  | RealtimeTableSitOutPayload
+  | RealtimeTableReturnPayload
+  | RealtimeTableLeavePayload
+  | RealtimeTableActPayload
+  | RealtimeTableResumePayload;
+
+type RealtimeTableCommandBase<
+  TType extends RealtimeTableCommandType,
+  TPayload extends RealtimeTableCommandPayload,
+> = {
+  type: TType;
+  requestId: string;
+  sentAt: string;
+  payload: TPayload;
+};
+
+export type RealtimeTableJoinCommand = RealtimeTableCommandBase<
+  typeof RealtimeTableCommandType.JOIN,
+  RealtimeTableJoinPayload
+>;
+
+export type RealtimeTableSitOutCommand = RealtimeTableCommandBase<
+  typeof RealtimeTableCommandType.SIT_OUT,
+  RealtimeTableSitOutPayload
+>;
+
+export type RealtimeTableReturnCommand = RealtimeTableCommandBase<
+  typeof RealtimeTableCommandType.RETURN,
+  RealtimeTableReturnPayload
+>;
+
+export type RealtimeTableLeaveCommand = RealtimeTableCommandBase<
+  typeof RealtimeTableCommandType.LEAVE,
+  RealtimeTableLeavePayload
+>;
+
+export type RealtimeTableActCommand = RealtimeTableCommandBase<
+  typeof RealtimeTableCommandType.ACT,
+  RealtimeTableActPayload
+>;
+
+export type RealtimeTableResumeCommand = RealtimeTableCommandBase<
+  typeof RealtimeTableCommandType.RESUME,
+  RealtimeTableResumePayload
+>;
+
+export type RealtimeTableCommand =
+  | RealtimeTableJoinCommand
+  | RealtimeTableSitOutCommand
+  | RealtimeTableReturnCommand
+  | RealtimeTableLeaveCommand
+  | RealtimeTableActCommand
+  | RealtimeTableResumeCommand;
+
+export type RealtimeTableSeat = {
+  seatNo: number;
+  status: SeatStatus;
+  userId: string | null;
+  displayName: string | null;
+  stack: number;
+  disconnectStreak: number;
+  joinedAt: string | null;
+};
+
+export type RealtimeTableState = {
+  tableId: string;
+  status: TableStatus;
+  seats: RealtimeTableSeat[];
+};
+
+export type SeatStateChangedEventPayload = {
+  seatNo: number;
+  previousStatus: SeatStatus;
+  currentStatus: SeatStatus;
+  reason: SeatStateChangeReason;
+  user: { userId: string; displayName: string } | null;
+  stack: number;
+  appliesFrom: SeatStateChangeAppliesFrom;
+};
+
+export type PlayerDisconnectedEventPayload = {
+  seatNo: number;
+  userId: string;
+  displayName: string;
+  seatStatus: SeatStatus;
+  disconnectStreak: number;
+  willAutoLeave: boolean;
+};
+
+export type PlayerReconnectedEventPayload = {
+  seatNo: number;
+  userId: string;
+  displayName: string;
+  restoredSeatStatus: SeatStatus;
+  disconnectStreakResetTo: number;
+};
+
+export type DealInitEventPayload = {
+  handNo: number;
+  gameType: GameType;
+  dealerSeatNo: number;
+  mixIndex: number;
+  handsSinceRotation: number;
+  stakes: {
+    smallBet: number;
+    bigBet: number;
+    ante: number;
+    bringIn: number;
+  };
+  participants: Array<{
+    seatNo: number;
+    userId: string;
+    displayName: string;
+    startStack: number;
+  }>;
+};
+
+export type PostAnteEventPayload = {
+  street: typeof Street.THIRD;
+  contributions: Array<{
+    seatNo: number;
+    amount: number;
+    stackAfter: number;
+    isAllIn: boolean;
+  }>;
+  potAfter: number;
+};
+
+export type DealCards3rdEventPayload = {
+  street: typeof Street.THIRD;
+  bringInSeatNo: number;
+  cards: Array<{
+    seatNo: number;
+    cards: Array<{
+      position:
+        | typeof ThirdStreetCardPosition.HOLE_1
+        | typeof ThirdStreetCardPosition.HOLE_2
+        | typeof ThirdStreetCardPosition.UP_3;
+      visibility: typeof CardVisibility.DOWN_HIDDEN | typeof CardVisibility.UP;
+      card: { rank: CardRank; suit: CardSuit } | null;
+    }>;
+  }>;
+};
+
+export type BringInEventPayload = {
+  street: typeof Street.THIRD;
+  seatNo: number;
+  amount: number;
+  stackAfter: number;
+  potAfter: number;
+  nextToActSeatNo: number | null;
+  isAllIn: boolean;
+};
+
+type ActionEventPayloadBase = {
+  street: Street;
+  seatNo: number;
+  potAfter: number;
+  nextToActSeatNo: number | null;
+};
+
+export type CheckEventPayload = ActionEventPayloadBase & {
+  isAuto: boolean;
+};
+
+export type FoldEventPayload = ActionEventPayloadBase & {
+  remainingPlayers: number;
+  isAuto: boolean;
+};
+
+type ChipActionEventPayloadBase = ActionEventPayloadBase & {
+  amount: number;
+  stackAfter: number;
+  streetBetTo: number;
+  isAllIn: boolean;
+};
+
+export type CallEventPayload = ChipActionEventPayloadBase;
+
+export type CompleteEventPayload = ChipActionEventPayloadBase;
+
+export type RaiseEventPayload = ChipActionEventPayloadBase;
+
+export type RealtimeTableEventPayload =
+  | SeatStateChangedEventPayload
+  | PlayerDisconnectedEventPayload
+  | PlayerReconnectedEventPayload
+  | DealInitEventPayload
+  | PostAnteEventPayload
+  | DealCards3rdEventPayload
+  | BringInEventPayload
+  | CallEventPayload
+  | CheckEventPayload
+  | FoldEventPayload
+  | CompleteEventPayload
+  | RaiseEventPayload;
+
+type RealtimeTableEventBase = {
+  type: "table.event";
+  tableId: string;
+  tableSeq: number;
+  handId: string | null;
+  handSeq: number | null;
+  occurredAt: string;
+};
+
+export type RealtimeTableEventMessage =
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.SeatStateChangedEvent;
+      payload: SeatStateChangedEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.PlayerDisconnectedEvent;
+      payload: PlayerDisconnectedEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.PlayerReconnectedEvent;
+      payload: PlayerReconnectedEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.DealInitEvent;
+      payload: DealInitEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.PostAnteEvent;
+      payload: PostAnteEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.DealCards3rdEvent;
+      payload: DealCards3rdEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.BringInEvent;
+      payload: BringInEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.CallEvent;
+      payload: CallEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.CheckEvent;
+      payload: CheckEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.FoldEvent;
+      payload: FoldEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.CompleteEvent;
+      payload: CompleteEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.RaiseEvent;
+      payload: RaiseEventPayload;
+    });
+
+export type RealtimeTableServiceError = {
+  code: RealtimeErrorCode;
+  message: string;
+  tableId: string | null;
+  requestId: string;
+};
+
+export type RealtimeTableServiceSuccess = {
+  ok: true;
+  tableId: string;
+  events: RealtimeTableEventMessage[];
+};
+
+export type RealtimeTableServiceFailure = {
+  ok: false;
+  error: RealtimeTableServiceError;
+};
+
+export type RealtimeTableServiceResult =
+  | RealtimeTableServiceSuccess
+  | RealtimeTableServiceFailure;
 
 export const SnapshotReason = {
   OUT_OF_RANGE: "OUT_OF_RANGE",

@@ -1,6 +1,8 @@
 import {
-  type CardRank,
-  type CardSuit,
+  CardRank,
+  type CardRank as CardRankType,
+  CardSuit,
+  type CardSuit as CardSuitType,
   GameType,
   type GameType as GameTypeType,
   Street,
@@ -10,8 +12,8 @@ import {
 export type StreetViewPlayer = {
   seatNo: number;
   upCards: Array<{
-    rank: CardRank;
-    suit: CardSuit;
+    rank: CardRankType;
+    suit: CardSuitType;
   }>;
   hasPairOnBoard?: boolean;
 };
@@ -25,37 +27,63 @@ export interface GameRule {
   ): number | null;
 }
 
-const studRankHighValue = (rank: CardRank): number => {
-  if (rank === "A") return 14;
-  if (rank === "K") return 13;
-  if (rank === "Q") return 12;
-  if (rank === "J") return 11;
-  if (rank === "T") return 10;
-  return Number.parseInt(rank, 10);
+const STUD_RANK_HIGH_VALUES: Record<CardRankType, number> = {
+  [CardRank.A]: 14,
+  [CardRank.K]: 13,
+  [CardRank.Q]: 12,
+  [CardRank.J]: 11,
+  [CardRank.T]: 10,
+  [CardRank.N9]: 9,
+  [CardRank.N8]: 8,
+  [CardRank.N7]: 7,
+  [CardRank.N6]: 6,
+  [CardRank.N5]: 5,
+  [CardRank.N4]: 4,
+  [CardRank.N3]: 3,
+  [CardRank.N2]: 2,
 };
 
-const razzRankLowValue = (rank: CardRank): number => {
-  if (rank === "A") return 1;
-  if (rank === "K") return 13;
-  if (rank === "Q") return 12;
-  if (rank === "J") return 11;
-  if (rank === "T") return 10;
-  return Number.parseInt(rank, 10);
+const RAZZ_RANK_LOW_VALUES: Record<CardRankType, number> = {
+  [CardRank.A]: 1,
+  [CardRank.K]: 13,
+  [CardRank.Q]: 12,
+  [CardRank.J]: 11,
+  [CardRank.T]: 10,
+  [CardRank.N9]: 9,
+  [CardRank.N8]: 8,
+  [CardRank.N7]: 7,
+  [CardRank.N6]: 6,
+  [CardRank.N5]: 5,
+  [CardRank.N4]: 4,
+  [CardRank.N3]: 3,
+  [CardRank.N2]: 2,
 };
 
-const studWeakSuitScore = (suit: CardSuit): number => {
-  if (suit === "C") return 4;
-  if (suit === "D") return 3;
-  if (suit === "H") return 2;
-  return 1;
+const STUD_WEAK_SUIT_SCORES: Record<CardSuitType, number> = {
+  [CardSuit.C]: 4,
+  [CardSuit.D]: 3,
+  [CardSuit.H]: 2,
+  [CardSuit.S]: 1,
 };
 
-const razzWeakSuitScore = (suit: CardSuit): number => {
-  if (suit === "S") return 4;
-  if (suit === "H") return 3;
-  if (suit === "D") return 2;
-  return 1;
+const RAZZ_WEAK_SUIT_SCORES: Record<CardSuitType, number> = {
+  [CardSuit.S]: 4,
+  [CardSuit.H]: 3,
+  [CardSuit.D]: 2,
+  [CardSuit.C]: 1,
 };
+
+const studRankHighValue = (rank: CardRankType): number =>
+  STUD_RANK_HIGH_VALUES[rank];
+
+const razzRankLowValue = (rank: CardRankType): number =>
+  RAZZ_RANK_LOW_VALUES[rank];
+
+const studWeakSuitScore = (suit: CardSuitType): number =>
+  STUD_WEAK_SUIT_SCORES[suit];
+
+const razzWeakSuitScore = (suit: CardSuitType): number =>
+  RAZZ_WEAK_SUIT_SCORES[suit];
 
 const getUpCard = (player: StreetViewPlayer) => player.upCards.at(-1);
 

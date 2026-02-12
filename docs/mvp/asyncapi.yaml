@@ -263,7 +263,7 @@ components:
                   handLabel: null
               potResults:
                 - potNo: 1
-                  side: SINGLE
+                  side: SCOOP
                   amount: 680
                   winners:
                     - seatNo: 2
@@ -508,7 +508,7 @@ components:
     PotSide:
       type: string
       enum:
-        - SINGLE
+        - SCOOP
         - HI
         - LO
 

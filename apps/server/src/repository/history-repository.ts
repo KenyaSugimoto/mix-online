@@ -125,7 +125,7 @@ const MVP_HAND_DETAILS_FOR_AUTH_USER: HandHistoryDetailRecord[] = [
       potResults: [
         {
           potNo: 1,
-          side: PotSide.SINGLE,
+          side: PotSide.SCOOP,
           winners: [
             {
               userId: MVP_AUTH_USER_ID,
@@ -226,7 +226,7 @@ const MVP_HAND_DETAILS_FOR_AUTH_USER: HandHistoryDetailRecord[] = [
       potResults: [
         {
           potNo: 1,
-          side: PotSide.SINGLE,
+          side: PotSide.SCOOP,
           winners: [
             {
               userId: "e1b2c3d4-7777-4777-8777-777777777777",
