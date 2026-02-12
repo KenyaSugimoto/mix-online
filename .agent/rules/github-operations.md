@@ -231,10 +231,12 @@ Footer例:
 
 ## 12. 契約リテラル再発防止（既定）
 
-- 実装コードおよび通常テスト（`apps/`配下）で、契約由来enumを文字列リテラルで直書きしない
+- 実装コードおよび通常テスト（`apps/` と `packages/`、ただし `packages/shared` を除く）で、`packages/shared/src/index.ts` 由来の定数値を文字列リテラルで直書きしない
   - 例: `"FIXED_LIMIT"` / `"STUD_HI"` / `"RAZZ"` / `"STUD_8"`
 - 上記は `@mix-online/shared` の定数参照を使用する
   - 例: `BettingStructure.FIXED_LIMIT`, `GameType.STUD_HI`
+- `pnpm check:contract-literals` は `packages/shared/src/index.ts` から検査対象リテラルを自動抽出する
+  - 新規定数追加時は、通常 `check-contract-literals` のルール追記は不要
 - 例外:
   - 契約そのものを定義する箇所（`packages/shared/src/index.ts` など）
   - 契約値の整合を固定検証する専用テスト

@@ -351,7 +351,7 @@ describe("HTTP統合テスト", () => {
     expect(body.streetActions[0]?.street).toBe(Street.THIRD);
     expect(body.streetActions[0]?.actions[0]?.actionType).toBe(ActionType.ANTE);
     expect(body.showdown.hasShowdown).toBe(true);
-    expect(body.showdown.potResults[0]?.side).toBe(PotSide.SINGLE);
+    expect(body.showdown.potResults[0]?.side).toBe(PotSide.SCOOP);
   });
 
   it("一覧と詳細で handId/tableId/profitLoss が整合する", async () => {

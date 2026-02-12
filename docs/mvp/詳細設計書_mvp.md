@@ -632,7 +632,7 @@ erDiagram
 - `id uuid pk`
 - `hand_id uuid fk hands(id)`
 - `pot_no integer not null`
-- `side text not null` (`HI`, `LO`, `SINGLE`)
+- `side text not null` (`HI`, `LO`, `SCOOP`)
 - `winner_user_id uuid fk users(id)`
 - `amount integer not null`
 

@@ -143,7 +143,7 @@ CREATE TABLE hand_results (
   id              uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
   hand_id         uuid    NOT NULL REFERENCES hands(id) ON DELETE CASCADE,
   pot_no          integer NOT NULL CHECK (pot_no >= 1),
-  side            text    NOT NULL CHECK (side IN ('HI', 'LO', 'SINGLE')),
+  side            text    NOT NULL CHECK (side IN ('HI', 'LO', 'SCOOP')),
   winner_user_id  uuid    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   amount          integer NOT NULL CHECK (amount >= 0)
 );

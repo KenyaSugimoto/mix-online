@@ -12,7 +12,7 @@
 - `pnpm build`: すべてのワークスペースパッケージをビルドします。
 - `pnpm typecheck`: ワークスペース全体の TypeScript 型チェックを実行します。
 - `pnpm lint`: Biome を使用してリポジトリ全体の Lint/フォーマットチェックを実行します。
-- `pnpm check:contract-literals`: `apps/` 配下の契約由来enum文字列リテラル直書きを検知します。
+- `pnpm check:contract-literals`: `packages/shared/src/index.ts` の定数値を自動抽出し、`apps/` と `packages/`（`packages/shared` を除く）での文字列リテラル直書きを検知します。
 - `pnpm lint:fix`: Biome による修正とフォーマットを適用します。
 - `pnpm test`: ワークスペース全体のテスト（Vitest）を実行します。
 
