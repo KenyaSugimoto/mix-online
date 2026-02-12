@@ -1,6 +1,10 @@
 import {
   RealtimeErrorCode,
+  type RealtimeTableCommand,
+  RealtimeTableCommandType,
+  SeatStateChangeReason,
   SeatStatus,
+  TableBuyIn,
   TableEventName,
 } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
@@ -9,6 +13,10 @@ import { createRealtimeTableService } from "../../realtime/table-service";
 
 const NOW = new Date("2026-02-11T12:00:00.000Z");
 const TABLE_ID = "a1b2c3d4-0001-4000-8000-000000000001";
+const DEFAULT_REQUEST_ID = "11111111-1111-4111-8111-111111111111";
+const REQUEST_ID_PREFIX = "11111111-1111-4111-8111-";
+const BUY_IN_STANDARD = TableBuyIn.MIN + 100;
+const BUY_IN_HIGH = TableBuyIn.MIN + 600;
 
 const createUser = (index: number, walletBalance = 4000): SessionUser => ({
   userId: `00000000-0000-4000-8000-${index.toString().padStart(12, "0")}`,
@@ -16,13 +24,16 @@ const createUser = (index: number, walletBalance = 4000): SessionUser => ({
   walletBalance,
 });
 
+const createRequestId = (index: number): string =>
+  `${REQUEST_ID_PREFIX}${index.toString().padStart(12, "0")}`;
+
 const createCommand = (params: {
-  type: "table.join" | "table.sitOut" | "table.return" | "table.leave";
+  type: RealtimeTableCommandType;
   requestId?: string;
   payload?: Record<string, unknown>;
-}) => ({
+}): RealtimeTableCommand => ({
   type: params.type,
-  requestId: params.requestId ?? "11111111-1111-4111-8111-111111111111",
+  requestId: params.requestId ?? DEFAULT_REQUEST_ID,
   sentAt: NOW.toISOString(),
   payload: {
     tableId: TABLE_ID,
@@ -37,8 +48,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const join = await service.executeCommand({
       command: createCommand({
-        type: "table.join",
-        payload: { buyIn: 1000 },
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: BUY_IN_HIGH },
       }),
       user,
       occurredAt: NOW,
@@ -52,10 +63,10 @@ describe("RealtimeTableService 席管理", () => {
     expect(join.event.eventName).toBe(TableEventName.SeatStateChangedEvent);
     expect(join.event.payload.previousStatus).toBe(SeatStatus.EMPTY);
     expect(join.event.payload.currentStatus).toBe(SeatStatus.ACTIVE);
-    expect(join.event.payload.reason).toBe("JOIN");
+    expect(join.event.payload.reason).toBe(SeatStateChangeReason.JOIN);
 
     const sitOut = await service.executeCommand({
-      command: createCommand({ type: "table.sitOut" }),
+      command: createCommand({ type: RealtimeTableCommandType.SIT_OUT }),
       user,
       occurredAt: NOW,
     });
@@ -65,10 +76,10 @@ describe("RealtimeTableService 席管理", () => {
     }
     expect(sitOut.event.tableSeq).toBe(2);
     expect(sitOut.event.payload.currentStatus).toBe(SeatStatus.SIT_OUT);
-    expect(sitOut.event.payload.reason).toBe("SIT_OUT");
+    expect(sitOut.event.payload.reason).toBe(SeatStateChangeReason.SIT_OUT);
 
     const back = await service.executeCommand({
-      command: createCommand({ type: "table.return" }),
+      command: createCommand({ type: RealtimeTableCommandType.RETURN }),
       user,
       occurredAt: NOW,
     });
@@ -78,10 +89,10 @@ describe("RealtimeTableService 席管理", () => {
     }
     expect(back.event.tableSeq).toBe(3);
     expect(back.event.payload.currentStatus).toBe(SeatStatus.ACTIVE);
-    expect(back.event.payload.reason).toBe("RETURN");
+    expect(back.event.payload.reason).toBe(SeatStateChangeReason.RETURN);
 
     const leave = await service.executeCommand({
-      command: createCommand({ type: "table.leave" }),
+      command: createCommand({ type: RealtimeTableCommandType.LEAVE }),
       user,
       occurredAt: NOW,
     });
@@ -91,7 +102,7 @@ describe("RealtimeTableService 席管理", () => {
     }
     expect(leave.event.tableSeq).toBe(4);
     expect(leave.event.payload.currentStatus).toBe(SeatStatus.EMPTY);
-    expect(leave.event.payload.reason).toBe("LEAVE");
+    expect(leave.event.payload.reason).toBe(SeatStateChangeReason.LEAVE);
   });
 
   it("buyIn 範囲外を拒否する", async () => {
@@ -100,8 +111,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const result = await service.executeCommand({
       command: createCommand({
-        type: "table.join",
-        payload: { buyIn: 399 },
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: TableBuyIn.MIN - 1 },
       }),
       user,
       occurredAt: NOW,
@@ -120,9 +131,9 @@ describe("RealtimeTableService 席管理", () => {
     for (let index = 1; index <= 6; index += 1) {
       const joined = await service.executeCommand({
         command: createCommand({
-          type: "table.join",
-          payload: { buyIn: 500 },
-          requestId: `11111111-1111-4111-8111-${index.toString().padStart(12, "0")}`,
+          type: RealtimeTableCommandType.JOIN,
+          payload: { buyIn: BUY_IN_STANDARD },
+          requestId: createRequestId(index),
         }),
         user: createUser(index),
         occurredAt: NOW,
@@ -132,8 +143,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const overflow = await service.executeCommand({
       command: createCommand({
-        type: "table.join",
-        payload: { buyIn: 500 },
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: BUY_IN_STANDARD },
       }),
       user: createUser(7),
       occurredAt: NOW,
@@ -152,8 +163,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const insufficient = await service.executeCommand({
       command: createCommand({
-        type: "table.join",
-        payload: { buyIn: 400 },
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: TableBuyIn.MIN },
       }),
       user,
       occurredAt: NOW,
@@ -169,8 +180,8 @@ describe("RealtimeTableService 席管理", () => {
     const richUser = createUser(2, 4000);
     const joined = await service2.executeCommand({
       command: createCommand({
-        type: "table.join",
-        payload: { buyIn: 500 },
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: BUY_IN_STANDARD },
       }),
       user: richUser,
       occurredAt: NOW,
@@ -179,8 +190,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const duplicate = await service2.executeCommand({
       command: createCommand({
-        type: "table.join",
-        payload: { buyIn: 500 },
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: BUY_IN_STANDARD },
       }),
       user: richUser,
       occurredAt: NOW,

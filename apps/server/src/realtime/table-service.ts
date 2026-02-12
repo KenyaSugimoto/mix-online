@@ -1,12 +1,17 @@
 import {
   RealtimeErrorCode,
+  type RealtimeTableCommand,
+  RealtimeTableCommandType,
+  type RealtimeTableEventMessage,
+  type RealtimeTableServiceError,
+  type RealtimeTableServiceResult,
+  type RealtimeTableState,
   SeatStateChangeAppliesFrom,
   SeatStateChangeReason,
   SeatStatus,
-  type SeatStatus as SeatStatusType,
+  TableBuyIn,
   TableEventName,
   TableStatus,
-  type TableStatus as TableStatusType,
 } from "@mix-online/shared";
 import type { SessionUser } from "../auth-session";
 import {
@@ -14,82 +19,11 @@ import {
   createTableActorRegistry,
 } from "./table-actor";
 
-type TableCommandType =
-  | "table.join"
-  | "table.sitOut"
-  | "table.return"
-  | "table.leave"
-  | "table.act"
-  | "table.resume";
-
-type BaseCommand = {
-  type: TableCommandType;
-  requestId: string;
-  sentAt: string;
-  payload: Record<string, unknown>;
-};
-
-type TableSeat = {
-  seatNo: number;
-  status: SeatStatusType;
-  userId: string | null;
-  displayName: string | null;
-  stack: number;
-  disconnectStreak: number;
-  joinedAt: string | null;
-};
-
-type TableState = {
-  tableId: string;
-  status: TableStatusType;
-  seats: TableSeat[];
-};
-
-type TableEventMessage = {
-  type: "table.event";
-  tableId: string;
-  tableSeq: number;
-  handId: null;
-  handSeq: null;
-  occurredAt: string;
-  eventName: typeof TableEventName.SeatStateChangedEvent;
-  payload: {
-    seatNo: number;
-    previousStatus: SeatStatusType;
-    currentStatus: SeatStatusType;
-    reason: (typeof SeatStateChangeReason)[keyof typeof SeatStateChangeReason];
-    user: { userId: string; displayName: string } | null;
-    stack: number;
-    appliesFrom: (typeof SeatStateChangeAppliesFrom)[keyof typeof SeatStateChangeAppliesFrom];
-  };
-};
-
-type TableServiceError = {
-  code: (typeof RealtimeErrorCode)[keyof typeof RealtimeErrorCode];
-  message: string;
-  tableId: string | null;
-  requestId: string;
-};
-
-type TableServiceResult =
-  | {
-      ok: true;
-      tableId: string;
-      event: TableEventMessage;
-    }
-  | {
-      ok: false;
-      error: TableServiceError;
-    };
-
 type RealtimeTableServiceOptions = {
   actorRegistry?: TableActorRegistry;
 };
 
-const BUY_IN_MIN = 400;
-const BUY_IN_MAX = 2000;
-
-const createDefaultTableState = (tableId: string): TableState => ({
+const createDefaultTableState = (tableId: string): RealtimeTableState => ({
   tableId,
   status: TableStatus.WAITING,
   seats: Array.from({ length: 6 }, (_, index) => ({
@@ -105,7 +39,7 @@ const createDefaultTableState = (tableId: string): TableState => ({
 
 export class RealtimeTableService {
   private readonly actorRegistry: TableActorRegistry;
-  private readonly tables = new Map<string, TableState>();
+  private readonly tables = new Map<string, RealtimeTableState>();
   private readonly walletByUserId = new Map<string, number>();
 
   constructor(options: RealtimeTableServiceOptions = {}) {
@@ -113,10 +47,10 @@ export class RealtimeTableService {
   }
 
   async executeCommand(params: {
-    command: BaseCommand;
+    command: RealtimeTableCommand;
     user: SessionUser;
     occurredAt: Date;
-  }): Promise<TableServiceResult> {
+  }): Promise<RealtimeTableServiceResult> {
     const tableId = this.resolveTableId(params.command.payload);
 
     if (tableId === null) {
@@ -174,7 +108,7 @@ export class RealtimeTableService {
     return raw;
   }
 
-  private getOrCreateTable(tableId: string): TableState {
+  private getOrCreateTable(tableId: string): RealtimeTableState {
     const existing = this.tables.get(tableId);
     if (existing) {
       return existing;
@@ -190,26 +124,26 @@ export class RealtimeTableService {
   }
 
   private applyCommand(params: {
-    table: TableState;
+    table: RealtimeTableState;
     user: SessionUser;
-    command: BaseCommand;
+    command: RealtimeTableCommand;
     currentBalance: number;
     occurredAt: Date;
   }):
     | {
         ok: true;
-        eventPayload: TableEventMessage["payload"];
+        eventPayload: RealtimeTableEventMessage["payload"];
         nextWalletBalance: number;
       }
     | {
         ok: false;
-        error: TableServiceError;
+        error: RealtimeTableServiceError;
       } {
     const seat = params.table.seats.find(
       (entry) => entry.userId === params.user.userId,
     );
 
-    if (params.command.type === "table.join") {
+    if (params.command.type === RealtimeTableCommandType.JOIN) {
       if (seat) {
         return this.fail(
           RealtimeErrorCode.ALREADY_SEATED,
@@ -223,12 +157,12 @@ export class RealtimeTableService {
       if (
         typeof buyIn !== "number" ||
         !Number.isInteger(buyIn) ||
-        buyIn < BUY_IN_MIN ||
-        buyIn > BUY_IN_MAX
+        buyIn < TableBuyIn.MIN ||
+        buyIn > TableBuyIn.MAX
       ) {
         return this.fail(
           RealtimeErrorCode.BUYIN_OUT_OF_RANGE,
-          `buyIn は ${BUY_IN_MIN}〜${BUY_IN_MAX} の整数で指定してください。`,
+          `buyIn は ${TableBuyIn.MIN}〜${TableBuyIn.MAX} の整数で指定してください。`,
           params.command.requestId,
           params.table.tableId,
         );
@@ -297,7 +231,7 @@ export class RealtimeTableService {
       );
     }
 
-    if (params.command.type === "table.sitOut") {
+    if (params.command.type === RealtimeTableCommandType.SIT_OUT) {
       if (
         seat.status !== SeatStatus.ACTIVE &&
         seat.status !== SeatStatus.SEATED_WAIT_NEXT_HAND
@@ -331,7 +265,7 @@ export class RealtimeTableService {
       };
     }
 
-    if (params.command.type === "table.return") {
+    if (params.command.type === RealtimeTableCommandType.RETURN) {
       if (seat.status !== SeatStatus.SIT_OUT) {
         return this.fail(
           RealtimeErrorCode.INVALID_ACTION,
@@ -369,7 +303,7 @@ export class RealtimeTableService {
       };
     }
 
-    if (params.command.type === "table.leave") {
+    if (params.command.type === RealtimeTableCommandType.LEAVE) {
       // M3-03 時点ではハンド未実装のため即時離席のみ扱う。
       const previousStatus = seat.status;
       const cashOut = seat.stack;
@@ -404,11 +338,11 @@ export class RealtimeTableService {
   }
 
   private fail(
-    code: (typeof RealtimeErrorCode)[keyof typeof RealtimeErrorCode],
+    code: RealtimeErrorCode,
     message: string,
     requestId: string,
     tableId: string | null,
-  ): { ok: false; error: TableServiceError } {
+  ): { ok: false; error: RealtimeTableServiceError } {
     return {
       ok: false,
       error: {
