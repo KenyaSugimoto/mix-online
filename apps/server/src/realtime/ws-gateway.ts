@@ -2,6 +2,7 @@ import type { IncomingMessage } from "node:http";
 import {
   type RealtimeErrorCode,
   RealtimeErrorCode as RealtimeErrorCodeMap,
+  type RealtimeTableCommand,
 } from "@mix-online/shared";
 import type { WebSocket } from "ws";
 import {
@@ -35,6 +36,17 @@ type ClientCommandContext = {
   requestId: string | null;
   tableId: string | null;
 };
+
+type JsonCommandParseSuccess = {
+  ok: true;
+  value: unknown;
+};
+
+type JsonCommandParseFailure = {
+  ok: false;
+};
+
+type JsonCommandParseResult = JsonCommandParseSuccess | JsonCommandParseFailure;
 
 const resolveTableIdFromPayload = (
   payload: Record<string, unknown>,
@@ -143,13 +155,15 @@ export class WsGateway {
         return;
       }
 
+      const command: RealtimeTableCommand = {
+        type: baseCommand.type as RealtimeTableCommand["type"],
+        requestId: baseCommand.requestId,
+        sentAt: baseCommand.sentAt,
+        payload: baseCommand.payload as RealtimeTableCommand["payload"],
+      } as RealtimeTableCommand;
+
       const result = await this.tableService.executeCommand({
-        command: {
-          type: baseCommand.type,
-          requestId: baseCommand.requestId,
-          sentAt: baseCommand.sentAt,
-          payload: baseCommand.payload,
-        },
+        command,
         user: session.user,
         occurredAt,
       });
@@ -180,7 +194,7 @@ export class WsGateway {
     connection: TrackedConnection,
     commandContext: ClientCommandContext,
     occurredAt: Date,
-  ): { ok: true; value: unknown } | { ok: false } {
+  ): JsonCommandParseResult {
     try {
       return {
         ok: true,

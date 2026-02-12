@@ -12,6 +12,7 @@
 - `pnpm build`: すべてのワークスペースパッケージをビルドします。
 - `pnpm typecheck`: ワークスペース全体の TypeScript 型チェックを実行します。
 - `pnpm lint`: Biome を使用してリポジトリ全体の Lint/フォーマットチェックを実行します。
+- `pnpm check:contract-literals`: `apps/` 配下の契約由来enum文字列リテラル直書きを検知します。
 - `pnpm lint:fix`: Biome による修正とフォーマットを適用します。
 - `pnpm test`: ワークスペース全体のテスト（Vitest）を実行します。
 
@@ -24,6 +25,7 @@
 テストフレームワークとして **Vitest** を導入しています。
 
 - `pnpm test`: ワークスペース全体のテスト（vitest run）を実行します。CIで使用されます。
+- `pnpm check:contract-literals`: PR作成前の品質ゲートとして、`pnpm typecheck` / `pnpm test` の前に実行します。
 - `pnpm -r test:watch`: 各パッケージでウォッチモードでテストを実行します。
 - テストファイル命名規則: `*.test.ts` または `*.spec.ts` とし、原則として対象ファイルと同じ階層の `__tests__/` ディレクトリに配置します。
 - 共用パッケージ（`packages/shared`）など、ロジックが集中する場所には必ず単体テストを追加してください。
@@ -41,7 +43,7 @@ AIエージェントは、実装タスクを開始する前に以下を必ず適
 - 作業開始前に **最新mainから作業ブランチを作成** する（`codex/` プレフィックス必須）
 - ユーザーから明示指示があるまで **コミットしない**
 - 作業ごとに **更新可能なドキュメントを確認** し、該当があれば同一タスク内で更新する
-- 完了時は `pnpm lint` / `pnpm typecheck` / `pnpm test` を実行し、結果を報告する
+- 完了時は `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` を実行し、結果を報告する
 
 `AGENTS.md` と `/.agent/rules/github-operations.md` に差分がある場合は、より厳しい方を優先する。
 
