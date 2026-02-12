@@ -1,3 +1,9 @@
+import {
+  RealtimeErrorCode,
+  SeatStateChangeReason,
+  SeatStatus,
+  TableEventName,
+} from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createSessionCookie } from "../../auth-session";
@@ -90,7 +96,7 @@ describe("WebSocketゲートウェイ統合", () => {
       };
 
       expect(message.type).toBe("table.error");
-      expect(message.code).toBe("AUTH_EXPIRED");
+      expect(message.code).toBe(RealtimeErrorCode.AUTH_EXPIRED);
       expect(message.requestId).toBeNull();
       expect(message.tableId).toBeNull();
     } finally {
@@ -119,7 +125,7 @@ describe("WebSocketゲートウェイ統合", () => {
       };
 
       expect(message.type).toBe("table.error");
-      expect(message.code).toBe("INVALID_ACTION");
+      expect(message.code).toBe(RealtimeErrorCode.INVALID_ACTION);
     } finally {
       socket.terminate();
       await server.close();
@@ -163,11 +169,11 @@ describe("WebSocketゲートウェイ統合", () => {
       };
 
       expect(message.type).toBe("table.event");
-      expect(message.eventName).toBe("SeatStateChangedEvent");
+      expect(message.eventName).toBe(TableEventName.SeatStateChangedEvent);
       expect(message.tableSeq).toBe(1);
       expect(message.tableId).toBe("22222222-2222-4222-8222-222222222222");
-      expect(message.payload.reason).toBe("JOIN");
-      expect(message.payload.currentStatus).toBe("ACTIVE");
+      expect(message.payload.reason).toBe(SeatStateChangeReason.JOIN);
+      expect(message.payload.currentStatus).toBe(SeatStatus.ACTIVE);
       expect(message.payload.stack).toBe(1000);
     } finally {
       socket.terminate();
