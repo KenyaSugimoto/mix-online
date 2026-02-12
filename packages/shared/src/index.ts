@@ -302,11 +302,11 @@ export type RealtimeTableEventMessage = {
   type: "table.event";
   tableId: string;
   tableSeq: number;
-  handId: null;
-  handSeq: null;
+  handId: string | null;
+  handSeq: number | null;
   occurredAt: string;
-  eventName: typeof TableEventName.SeatStateChangedEvent;
-  payload: SeatStateChangedEventPayload;
+  eventName: TableEventName;
+  payload: Record<string, unknown>;
 };
 
 export type RealtimeTableServiceError = {
@@ -319,7 +319,7 @@ export type RealtimeTableServiceError = {
 export type RealtimeTableServiceSuccess = {
   ok: true;
   tableId: string;
-  event: RealtimeTableEventMessage;
+  events: RealtimeTableEventMessage[];
 };
 
 export type RealtimeTableServiceFailure = {
