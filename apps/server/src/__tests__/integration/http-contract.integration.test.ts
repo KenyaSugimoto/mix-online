@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { GameType } from "@mix-online/shared";
+import { ErrorCode, GameType } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../../app";
 import { createInMemorySessionStore } from "../../auth-session";
@@ -38,7 +38,7 @@ describe("HTTP契約テスト（M2-06）", () => {
     expect(openapi).toContain("/api/tables/{tableId}:");
     expect(openapi).toContain("/api/history/hands:");
     expect(openapi).toContain("/api/history/hands/{handId}:");
-    expect(openapi).toContain("INVALID_CURSOR");
+    expect(openapi).toContain(ErrorCode.INVALID_CURSOR);
   });
 
   it("認証系エンドポイントの正常系/異常系が契約どおり", async () => {
@@ -49,7 +49,7 @@ describe("HTTP契約テスト（M2-06）", () => {
       error: { code: string };
     };
     expect(unauthorizedMe.status).toBe(401);
-    expect(unauthorizedMeBody.error.code).toBe("AUTH_EXPIRED");
+    expect(unauthorizedMeBody.error.code).toBe(ErrorCode.AUTH_EXPIRED);
 
     const unauthorizedLogout = await app.request("/api/auth/logout", {
       method: "POST",
@@ -58,7 +58,7 @@ describe("HTTP契約テスト（M2-06）", () => {
       error: { code: string };
     };
     expect(unauthorizedLogout.status).toBe(401);
-    expect(unauthorizedLogoutBody.error.code).toBe("AUTH_EXPIRED");
+    expect(unauthorizedLogoutBody.error.code).toBe(ErrorCode.AUTH_EXPIRED);
 
     const { app: authenticatedApp, cookie } = createAuthenticatedApp();
     const authorizedMe = await authenticatedApp.request("/api/auth/me", {
@@ -100,7 +100,7 @@ describe("HTTP契約テスト（M2-06）", () => {
       error: { code: string };
     };
     expect(badTableIdResponse.status).toBe(400);
-    expect(badTableIdBody.error.code).toBe("BAD_REQUEST");
+    expect(badTableIdBody.error.code).toBe(ErrorCode.BAD_REQUEST);
 
     const tableNotFoundResponse = await app.request(
       "/api/tables/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -109,7 +109,7 @@ describe("HTTP契約テスト（M2-06）", () => {
       error: { code: string };
     };
     expect(tableNotFoundResponse.status).toBe(404);
-    expect(tableNotFoundBody.error.code).toBe("NOT_FOUND");
+    expect(tableNotFoundBody.error.code).toBe(ErrorCode.NOT_FOUND);
   });
 
   it("履歴APIの正常系/異常系が契約どおり", async () => {
@@ -141,7 +141,7 @@ describe("HTTP契約テスト（M2-06）", () => {
       error: { code: string };
     };
     expect(invalidCursorResponse.status).toBe(400);
-    expect(invalidCursorBody.error.code).toBe("INVALID_CURSOR");
+    expect(invalidCursorBody.error.code).toBe(ErrorCode.INVALID_CURSOR);
 
     const detailResponse = await app.request(
       "/api/history/hands/d1b2c3d4-0002-4000-8000-000000000002",
@@ -175,6 +175,6 @@ describe("HTTP契約テスト（M2-06）", () => {
       error: { code: string };
     };
     expect(detailNotFoundResponse.status).toBe(404);
-    expect(detailNotFoundBody.error.code).toBe("NOT_FOUND");
+    expect(detailNotFoundBody.error.code).toBe(ErrorCode.NOT_FOUND);
   });
 });

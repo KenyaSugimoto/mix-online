@@ -1,4 +1,8 @@
-import { TableStatus } from "@mix-online/shared";
+import {
+  ErrorCode,
+  RealtimeTableCommandType,
+  TableStatus,
+} from "@mix-online/shared";
 import { HttpAppError } from "./error-response";
 
 const UUID_REGEX =
@@ -8,12 +12,12 @@ const ISO_DATE_TIME_REGEX =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 
 const WS_COMMAND_TYPES = [
-  "table.join",
-  "table.sitOut",
-  "table.return",
-  "table.leave",
-  "table.act",
-  "table.resume",
+  RealtimeTableCommandType.JOIN,
+  RealtimeTableCommandType.SIT_OUT,
+  RealtimeTableCommandType.RETURN,
+  RealtimeTableCommandType.LEAVE,
+  RealtimeTableCommandType.ACT,
+  RealtimeTableCommandType.RESUME,
   "ping",
 ] as const;
 
@@ -41,7 +45,7 @@ export const resolveRequestId = (
 export const validateUuid = (value: string, fieldName: string): string => {
   if (!isUuid(value)) {
     throw new HttpAppError(
-      "BAD_REQUEST",
+      ErrorCode.BAD_REQUEST,
       `${fieldName} は UUID 形式で指定してください。`,
     );
   }
@@ -59,7 +63,7 @@ export const validateOptionalTableStatus = (value: string | undefined) => {
     )
   ) {
     throw new HttpAppError(
-      "BAD_REQUEST",
+      ErrorCode.BAD_REQUEST,
       "state は定義済みの TableStatus を指定してください。",
     );
   }
@@ -70,7 +74,7 @@ export const validateOptionalTableStatus = (value: string | undefined) => {
 export const validateWsBaseCommand = (input: unknown): WsBaseCommand => {
   if (typeof input !== "object" || input === null) {
     throw new HttpAppError(
-      "BAD_REQUEST",
+      ErrorCode.BAD_REQUEST,
       "WebSocketコマンドはオブジェクト形式で指定してください。",
     );
   }
@@ -79,26 +83,26 @@ export const validateWsBaseCommand = (input: unknown): WsBaseCommand => {
 
   if (!WS_COMMAND_TYPES.includes(raw.type as WsCommandType)) {
     throw new HttpAppError(
-      "BAD_REQUEST",
+      ErrorCode.BAD_REQUEST,
       "type は定義済みのコマンド種別を指定してください。",
     );
   }
 
   if (typeof raw.requestId !== "string") {
-    throw new HttpAppError("BAD_REQUEST", "requestId は必須です。");
+    throw new HttpAppError(ErrorCode.BAD_REQUEST, "requestId は必須です。");
   }
   validateUuid(raw.requestId, "requestId");
 
   if (typeof raw.sentAt !== "string" || !ISO_DATE_TIME_REGEX.test(raw.sentAt)) {
     throw new HttpAppError(
-      "BAD_REQUEST",
+      ErrorCode.BAD_REQUEST,
       "sentAt は UTC の date-time 形式で指定してください。",
     );
   }
 
   if (typeof raw.payload !== "object" || raw.payload === null) {
     throw new HttpAppError(
-      "BAD_REQUEST",
+      ErrorCode.BAD_REQUEST,
       "payload はオブジェクト形式で指定してください。",
     );
   }

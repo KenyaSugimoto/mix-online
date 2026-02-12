@@ -37,6 +37,7 @@ AIエージェント実行ルールです。AIエージェントは、実装タ�
 
 - 完了時に最低限以下を実行:
   - `pnpm lint`
+  - `pnpm check:contract-literals`
   - `pnpm typecheck`
   - `pnpm test`
 - 受け入れ条件を満たしたかをチェックリストで報告する
@@ -106,7 +107,7 @@ git checkout -b codex/feature/issue-45-lobby-tables-api
 ## 完了条件
 - [ ] 実装完了
 - [ ] テスト追加・更新
-- [ ] `pnpm lint` / `pnpm typecheck` / `pnpm test` が通過
+- [ ] `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` が通過
 - [ ] 関連ドキュメント更新（必要時）
 - [ ] `docs/mvp/進捗管理シート_mvp.md` 更新
 
@@ -148,6 +149,7 @@ git checkout -b codex/feature/issue-45-lobby-tables-api
 
 - コミット前に以下がすべて成功していること:
   - `pnpm lint`
+  - `pnpm check:contract-literals`
   - `pnpm typecheck`
   - `pnpm test`
 
@@ -202,7 +204,7 @@ Footer例:
 ## 8. AI向け完了チェックリスト（作業後）
 
 - [ ] 受け入れ条件をすべて満たした
-- [ ] `pnpm lint` / `pnpm typecheck` / `pnpm test` が成功
+- [ ] `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` が成功
 - [ ] 仕様差分があればドキュメント更新済み
 - [ ] 更新対象ドキュメントの確認結果を報告した（更新あり/なしの理由）
 - [ ] `docs/mvp/進捗管理シート_mvp.md` を更新済み
@@ -229,10 +231,12 @@ Footer例:
 
 ## 12. 契約リテラル再発防止（既定）
 
-- 実装コードおよび通常テスト（`apps/`配下）で、契約由来enumを文字列リテラルで直書きしない
+- 実装コードおよび通常テスト（`apps/` と `packages/`、ただし `packages/shared` を除く）で、`packages/shared/src/index.ts` 由来の定数値を文字列リテラルで直書きしない
   - 例: `"FIXED_LIMIT"` / `"STUD_HI"` / `"RAZZ"` / `"STUD_8"`
 - 上記は `@mix-online/shared` の定数参照を使用する
   - 例: `BettingStructure.FIXED_LIMIT`, `GameType.STUD_HI`
+- `pnpm check:contract-literals` は `packages/shared/src/index.ts` から検査対象リテラルを自動抽出する
+  - 新規定数追加時は、通常 `check-contract-literals` のルール追記は不要
 - 例外:
   - 契約そのものを定義する箇所（`packages/shared/src/index.ts` など）
   - 契約値の整合を固定検証する専用テスト

@@ -1,4 +1,8 @@
-import { TableStatus } from "@mix-online/shared";
+import {
+  RealtimeTableCommandType,
+  TableCommandAction,
+  TableStatus,
+} from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import { HttpAppError } from "../../error-response";
 import {
@@ -40,13 +44,13 @@ describe("入力バリデーション", () => {
   it("WebSocketコマンドの基本フォーマットを検証する", () => {
     expect(
       validateWsBaseCommand({
-        type: "table.join",
+        type: RealtimeTableCommandType.JOIN,
         requestId: "11111111-1111-4111-8111-111111111111",
         sentAt: "2026-02-11T00:00:00.000Z",
         payload: { tableId: "22222222-2222-4222-8222-222222222222" },
       }),
     ).toEqual({
-      type: "table.join",
+      type: RealtimeTableCommandType.JOIN,
       requestId: "11111111-1111-4111-8111-111111111111",
       sentAt: "2026-02-11T00:00:00.000Z",
       payload: { tableId: "22222222-2222-4222-8222-222222222222" },
@@ -56,7 +60,7 @@ describe("入力バリデーション", () => {
   it("WebSocketコマンドの必須項目欠落を拒否する", () => {
     expect(() =>
       validateWsBaseCommand({
-        type: "table.join",
+        type: RealtimeTableCommandType.JOIN,
         sentAt: "2026-02-11T00:00:00.000Z",
         payload: {},
       }),
@@ -69,44 +73,44 @@ describe("入力バリデーション", () => {
 
     expect(
       validateWsBaseCommand({
-        type: "table.sitOut",
+        type: RealtimeTableCommandType.SIT_OUT,
         requestId,
         sentAt,
         payload: {},
       }).type,
-    ).toBe("table.sitOut");
+    ).toBe(RealtimeTableCommandType.SIT_OUT);
     expect(
       validateWsBaseCommand({
-        type: "table.return",
+        type: RealtimeTableCommandType.RETURN,
         requestId,
         sentAt,
         payload: {},
       }).type,
-    ).toBe("table.return");
+    ).toBe(RealtimeTableCommandType.RETURN);
     expect(
       validateWsBaseCommand({
-        type: "table.leave",
+        type: RealtimeTableCommandType.LEAVE,
         requestId,
         sentAt,
         payload: {},
       }).type,
-    ).toBe("table.leave");
+    ).toBe(RealtimeTableCommandType.LEAVE);
     expect(
       validateWsBaseCommand({
-        type: "table.act",
+        type: RealtimeTableCommandType.ACT,
         requestId,
         sentAt,
-        payload: { action: "CHECK" },
+        payload: { action: TableCommandAction.CHECK },
       }).type,
-    ).toBe("table.act");
+    ).toBe(RealtimeTableCommandType.ACT);
     expect(
       validateWsBaseCommand({
-        type: "table.resume",
+        type: RealtimeTableCommandType.RESUME,
         requestId,
         sentAt,
         payload: { lastTableSeq: 12 },
       }).type,
-    ).toBe("table.resume");
+    ).toBe(RealtimeTableCommandType.RESUME);
     expect(
       validateWsBaseCommand({
         type: "ping",

@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { HandStatus, TableEventName, TableStatus } from "@mix-online/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 
 const dbContainerName =
@@ -180,7 +181,7 @@ describeDb("DBスキーマ統合テスト（M1-04）", () => {
     `);
     expect(
       executeSql(`SELECT status FROM tables WHERE id = '${tableId}';`),
-    ).toBe("WAITING");
+    ).toBe(TableStatus.WAITING);
 
     executeSql(`
       UPDATE tables
@@ -189,7 +190,7 @@ describeDb("DBスキーマ統合テスト（M1-04）", () => {
     `);
     expect(
       executeSql(`SELECT status FROM tables WHERE id = '${tableId}';`),
-    ).toBe("BETTING");
+    ).toBe(TableStatus.BETTING);
 
     const checkError = executeSqlExpectFailure(`
       INSERT INTO tables (id, name, max_players)
@@ -275,7 +276,7 @@ describeDb("DBスキーマ統合テスト（M1-04）", () => {
       VALUES ('${handId}', '${tableId}', 1, 'STUD_HI', 'deck-hash-1');
     `);
     expect(executeSql(`SELECT status FROM hands WHERE id = '${handId}';`)).toBe(
-      "IN_PROGRESS",
+      HandStatus.IN_PROGRESS,
     );
 
     executeSql(`
@@ -284,7 +285,7 @@ describeDb("DBスキーマ統合テスト（M1-04）", () => {
       WHERE id = '${handId}';
     `);
     expect(executeSql(`SELECT status FROM hands WHERE id = '${handId}';`)).toBe(
-      "HAND_END",
+      HandStatus.HAND_END,
     );
 
     const fkError = executeSqlExpectFailure(`
@@ -330,7 +331,7 @@ describeDb("DBスキーマ統合テスト（M1-04）", () => {
       executeSql(
         `SELECT event_name FROM hand_events WHERE hand_id = '${handId}' AND hand_seq = 1;`,
       ),
-    ).toBe("DealInitEvent");
+    ).toBe(TableEventName.DealInitEvent);
 
     const tableSeqUniqueError = executeSqlExpectFailure(`
       INSERT INTO hand_events (hand_id, table_id, table_seq, hand_seq, event_name, payload)
