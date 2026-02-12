@@ -425,12 +425,46 @@ export type BringInEventPayload = {
   isAllIn: boolean;
 };
 
+type ActionEventPayloadBase = {
+  street: Street;
+  seatNo: number;
+  potAfter: number;
+  nextToActSeatNo: number | null;
+};
+
+export type CheckEventPayload = ActionEventPayloadBase & {
+  isAuto: boolean;
+};
+
+export type FoldEventPayload = ActionEventPayloadBase & {
+  remainingPlayers: number;
+  isAuto: boolean;
+};
+
+type ChipActionEventPayloadBase = ActionEventPayloadBase & {
+  amount: number;
+  stackAfter: number;
+  streetBetTo: number;
+  isAllIn: boolean;
+};
+
+export type CallEventPayload = ChipActionEventPayloadBase;
+
+export type CompleteEventPayload = ChipActionEventPayloadBase;
+
+export type RaiseEventPayload = ChipActionEventPayloadBase;
+
 export type RealtimeTableEventPayload =
   | SeatStateChangedEventPayload
   | DealInitEventPayload
   | PostAnteEventPayload
   | DealCards3rdEventPayload
-  | BringInEventPayload;
+  | BringInEventPayload
+  | CallEventPayload
+  | CheckEventPayload
+  | FoldEventPayload
+  | CompleteEventPayload
+  | RaiseEventPayload;
 
 type RealtimeTableEventBase = {
   type: "table.event";
@@ -461,6 +495,26 @@ export type RealtimeTableEventMessage =
   | (RealtimeTableEventBase & {
       eventName: typeof TableEventName.BringInEvent;
       payload: BringInEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.CallEvent;
+      payload: CallEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.CheckEvent;
+      payload: CheckEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.FoldEvent;
+      payload: FoldEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.CompleteEvent;
+      payload: CompleteEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.RaiseEvent;
+      payload: RaiseEventPayload;
     });
 
 export type RealtimeTableServiceError = {

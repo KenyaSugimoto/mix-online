@@ -43,7 +43,7 @@
 | NG-04 | 異常系        | 非手番アクション拒否                     |
 | NG-05 | 異常系        | toCallありでCHECK拒否                    |
 | NG-06 | 異常系        | 4th以降のCOMPLETE拒否                    |
-| NG-07 | 異常系        | マルチウェイ5bet cap超過raise拒否        |
+| NG-07 | 異常系        | 5bet cap超過raise拒否（ヘッズアップ含む） |
 | NG-08 | 異常系        | 履歴cursor改ざん（INVALID_CURSOR）       |
 | NG-09 | 異常系        | 認証期限切れWS（AUTH_EXPIRED）           |
 | NG-10 | 異常系        | 切断放置で自動行動/3連続切断LEAVE        |
@@ -58,7 +58,7 @@
 | ED-08 | 境界値/エッジ | 同側複数勝者オッドチップ（dealer起点）   |
 | ED-09 | 境界値/エッジ | 全員All-inランアウト遷移                 |
 | ED-10 | 境界値/エッジ | UNCONTESTED終局（ShowdownEventなし）     |
-| ED-11 | 境界値/エッジ | ヘッズアップ時5bet cap解除               |
+| ED-11 | 境界値/エッジ | ヘッズアップでも5bet cap超過raise拒否     |
 
 ## 5. シナリオ詳細
 
@@ -466,18 +466,17 @@
 3. `DealEndEvent.endReason=UNCONTESTED`。
 4. 例として最終ポット `$25`（ante15+bring-in10）を `S1` が獲得する。
 
-### ED-11 ヘッズアップ時5bet cap解除
+### ED-11 ヘッズアップでも5bet cap超過raise拒否
 
 - 前提条件:
 1. `gameType=STUD_HI`、2人卓（ヘッズアップ）。
 2. 対象ストリートで `1bet + 4raise`（5bet）到達後も両者が継続可能なスタックを保持。
 - 入力（操作）:
 1. 同一ストリートで6回目以降の `RAISE` を送信する。
-2. その後 `CALL` まで進行する。
 - 期待値:
-1. `table.error(code=INVALID_ACTION)` は返らず、6回目以降の `RaiseEvent` が受理される。
-2. `streetBetTo` は追加raise分だけ更新される。
-3. 同条件を3人以上卓で実施した場合は `INVALID_ACTION` となり、ヘッズアップ時のみ cap解除が有効であることを確認できる。
+1. `table.error(code=INVALID_ACTION)` が返る。
+2. 6回目以降の `RaiseEvent` は配信されない。
+3. 同条件を3人以上卓で実施した場合も同様に `INVALID_ACTION` となる。
 
 ## 6. 補足（運用上の推奨）
 
