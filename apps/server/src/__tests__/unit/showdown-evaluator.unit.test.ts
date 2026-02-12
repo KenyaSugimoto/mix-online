@@ -9,6 +9,8 @@ const emptyCards = { cardsUp: [] as never[], cardsDown: [] as never[] };
 
 describe("ShowdownEvaluator", () => {
   it("ED-04 3人1サイドポット分配を計算できる", () => {
+    // メインポット: U1(60) + U2(60) + U3(60) = 180 -> U1勝利
+    // サイドポット: U2(80) + U3(80) = 160 -> U3勝利
     const outcome = createShowdownOutcome({
       gameType: GameType.STUD_HI,
       dealerSeatNo: 1,
@@ -43,19 +45,22 @@ describe("ShowdownEvaluator", () => {
     expect(outcome.potResults).toHaveLength(2);
     expect(outcome.potResults[0]).toMatchObject({
       potNo: 1,
-      side: PotSide.SINGLE,
+      side: PotSide.SCOOP,
       amount: 180,
       winners: [{ seatNo: 1, amount: 180 }],
     });
     expect(outcome.potResults[1]).toMatchObject({
       potNo: 2,
-      side: PotSide.SINGLE,
+      side: PotSide.SCOOP,
       amount: 160,
       winners: [{ seatNo: 3, amount: 160 }],
     });
   });
 
   it("ED-05 4人多段サイドポット分配を計算できる", () => {
+    // メインポット: U1(80) + U2(80) + U3(80) + U4(80) = 320 -> U1勝利
+    // サイドポット1: U2(60) + U3(60) + U4(60) = 180 -> U2勝利
+    // サイドポット2: U3(80) + U4(80) = 160 -> U4勝利
     const outcome = createShowdownOutcome({
       gameType: GameType.STUD_HI,
       dealerSeatNo: 1,
@@ -120,6 +125,9 @@ describe("ShowdownEvaluator", () => {
   });
 
   it("HP-06/HP-07 Stud8 のHi/Lo分配とLo資格なしを扱える", () => {
+    // U1: Hi 100, Lo 9-8-7-6-5 (Not Qualify)
+    // U2: Hi 90,  Lo 8-7-6-4-2
+    // メインポット: U1(25) + U2(25) = 50 -> Hi: U1勝利, Lo: U2勝利
     const withLow = createShowdownOutcome({
       gameType: GameType.STUD_8,
       dealerSeatNo: 1,
@@ -182,13 +190,18 @@ describe("ShowdownEvaluator", () => {
     });
     expect(withoutLow.potResults).toHaveLength(1);
     expect(withoutLow.potResults[0]).toMatchObject({
-      side: PotSide.SINGLE,
+      side: PotSide.SCOOP,
       amount: 50,
       winners: [{ seatNo: 1, amount: 50 }],
     });
   });
 
   it("ED-06 Pot単位の独立Hi/Lo評価を扱える", () => {
+    // U1: Hi 70, Lo 8-7-6-5-4
+    // U2: Hi 80, Lo N/A
+    // U3: Hi 100, Lo N/A
+    // ポット1: U1(80) + U2(80) + U3(80) = 240 -> Hi: U3勝利, Lo: U1勝利
+    // ポット2: U2(80) + U3(80) = 160 -> Hi: U2勝利
     const outcome = createShowdownOutcome({
       gameType: GameType.STUD_8,
       dealerSeatNo: 1,
@@ -244,7 +257,7 @@ describe("ShowdownEvaluator", () => {
       },
       {
         potNo: 2,
-        side: PotSide.SINGLE,
+        side: PotSide.SCOOP,
         amount: 160,
         winners: [{ seatNo: 2, amount: 160 }],
       },

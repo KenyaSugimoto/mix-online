@@ -1,5 +1,6 @@
 import {
-  type CardRank,
+  CardRank,
+  type CardRank as CardRankType,
   type CardSuit,
   GameType,
   type GameType as GameTypeType,
@@ -8,7 +9,7 @@ import {
 } from "@mix-online/shared";
 
 export type CardValue = {
-  rank: CardRank;
+  rank: CardRankType;
   suit: CardSuit;
 };
 
@@ -72,23 +73,41 @@ const HIGH_CARD_LABELS: Record<number, string> = {
   0: "High Card",
 };
 
-const highRankValue = (rank: CardRank): number => {
-  if (rank === "A") return 14;
-  if (rank === "K") return 13;
-  if (rank === "Q") return 12;
-  if (rank === "J") return 11;
-  if (rank === "T") return 10;
-  return Number.parseInt(rank, 10);
+const HIGH_RANK_VALUES: Record<CardRankType, number> = {
+  [CardRank.A]: 14,
+  [CardRank.K]: 13,
+  [CardRank.Q]: 12,
+  [CardRank.J]: 11,
+  [CardRank.T]: 10,
+  [CardRank.N9]: 9,
+  [CardRank.N8]: 8,
+  [CardRank.N7]: 7,
+  [CardRank.N6]: 6,
+  [CardRank.N5]: 5,
+  [CardRank.N4]: 4,
+  [CardRank.N3]: 3,
+  [CardRank.N2]: 2,
 };
 
-const lowRankValue = (rank: CardRank): number => {
-  if (rank === "A") return 1;
-  if (rank === "K") return 13;
-  if (rank === "Q") return 12;
-  if (rank === "J") return 11;
-  if (rank === "T") return 10;
-  return Number.parseInt(rank, 10);
+const LOW_RANK_VALUES: Record<CardRankType, number> = {
+  [CardRank.A]: 1,
+  [CardRank.K]: 13,
+  [CardRank.Q]: 12,
+  [CardRank.J]: 11,
+  [CardRank.T]: 10,
+  [CardRank.N9]: 9,
+  [CardRank.N8]: 8,
+  [CardRank.N7]: 7,
+  [CardRank.N6]: 6,
+  [CardRank.N5]: 5,
+  [CardRank.N4]: 4,
+  [CardRank.N3]: 3,
+  [CardRank.N2]: 2,
 };
+
+const highRankValue = (rank: CardRankType): number => HIGH_RANK_VALUES[rank];
+
+const lowRankValue = (rank: CardRankType): number => LOW_RANK_VALUES[rank];
 
 const compareHighScores = (left: HighScore, right: HighScore): number => {
   const max = Math.max(left.length, right.length);
@@ -430,7 +449,7 @@ export const createShowdownOutcome = (params: {
 
     potResults.push({
       potNo: pot.potNo,
-      side: PotSide.SINGLE,
+      side: PotSide.SCOOP,
       amount: pot.amount,
       winners: splitAmountAcrossWinners({
         amount: pot.amount,

@@ -129,7 +129,7 @@ export const TABLE_EVENT_NAMES = Object.values(
 ) as TableEventName[];
 
 export const PotSide = {
-  SINGLE: "SINGLE",
+  SCOOP: "SCOOP",
   HI: "HI",
   LO: "LO",
 } as const;
