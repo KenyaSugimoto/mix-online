@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
-  type CardRank,
-  type CardSuit,
+  type CardRank as CardRankType,
+  type CardSuit as CardSuitType,
   CardVisibility,
   GameType,
   type GameType as GameTypeType,
@@ -19,6 +19,7 @@ import {
   SeatStatus,
   Street,
   TableBuyIn,
+  TableCommandAction,
   TableEventName,
   TableStatus,
   ThirdStreetCardPosition,
@@ -59,8 +60,8 @@ type HandPlayerState = {
 };
 
 type CardValue = {
-  rank: CardRank;
-  suit: CardSuit;
+  rank: CardRankType;
+  suit: CardSuitType;
 };
 
 type HandState = {
@@ -443,7 +444,7 @@ export class RealtimeTableService {
       };
     }
 
-    if (params.command.type === "table.act") {
+    if (params.command.type === RealtimeTableCommandType.ACT) {
       return this.applyActCommand({
         table: params.table,
         user: params.user,
@@ -529,7 +530,7 @@ export class RealtimeTableService {
       | typeof TableEventName.CompleteEvent
       | typeof TableEventName.RaiseEvent;
 
-    if (action === "CHECK") {
+    if (action === TableCommandAction.CHECK) {
       if (toCall > 0) {
         return this.fail(
           RealtimeErrorCode.INVALID_ACTION,
@@ -541,11 +542,11 @@ export class RealtimeTableService {
 
       player.actedThisRound = true;
       eventName = TableEventName.CheckEvent;
-    } else if (action === "FOLD") {
+    } else if (action === TableCommandAction.FOLD) {
       player.inHand = false;
       player.actedThisRound = true;
       eventName = TableEventName.FoldEvent;
-    } else if (action === "CALL") {
+    } else if (action === TableCommandAction.CALL) {
       amount = Math.min(toCall, seat.stack);
       seat.stack -= amount;
       player.totalContribution += amount;
@@ -556,7 +557,7 @@ export class RealtimeTableService {
       hand.potTotal += amount;
       player.actedThisRound = true;
       eventName = TableEventName.CallEvent;
-    } else if (action === "COMPLETE") {
+    } else if (action === TableCommandAction.COMPLETE) {
       if (
         hand.streetBetTo >= params.table.smallBet ||
         hand.street !== Street.THIRD
@@ -587,7 +588,7 @@ export class RealtimeTableService {
         candidate.actedThisRound = candidate.seatNo === player.seatNo;
       }
       eventName = TableEventName.CompleteEvent;
-    } else if (action === "RAISE") {
+    } else if (action === TableCommandAction.RAISE) {
       if (hand.street !== Street.THIRD && hand.street !== Street.FOURTH) {
         // M3-05 時点では third/fourth 基本ベットのみサポートし、詳細街進行はM3-06以降で拡張する。
       }

@@ -1,6 +1,7 @@
 import {
   ActionType,
   BettingStructure,
+  ErrorCode,
   GameType,
   HandStatus,
   PotSide,
@@ -114,7 +115,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(400);
-    expect(body.error.code).toBe("BAD_REQUEST");
+    expect(body.error.code).toBe(ErrorCode.BAD_REQUEST);
   });
 
   it("Google callbackで state が一致した場合に session Cookieを発行する", async () => {
@@ -145,7 +146,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(401);
-    expect(body.error.code).toBe("AUTH_EXPIRED");
+    expect(body.error.code).toBe(ErrorCode.AUTH_EXPIRED);
   });
 
   it("/api/auth/me が現在ユーザー情報を返す", async () => {
@@ -220,7 +221,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(meResponse.status).toBe(401);
-    expect(meBody.error.code).toBe("AUTH_EXPIRED");
+    expect(meBody.error.code).toBe(ErrorCode.AUTH_EXPIRED);
   });
 
   it("認証なしで /api/history/hands を呼ぶと AUTH_EXPIRED を返す", async () => {
@@ -231,7 +232,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(401);
-    expect(body.error.code).toBe("AUTH_EXPIRED");
+    expect(body.error.code).toBe(ErrorCode.AUTH_EXPIRED);
   });
 
   it("/api/history/hands が `endedAt DESC, handId DESC` で履歴一覧を返す", async () => {
@@ -312,7 +313,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(400);
-    expect(body.error.code).toBe("INVALID_CURSOR");
+    expect(body.error.code).toBe(ErrorCode.INVALID_CURSOR);
   });
 
   it("/api/history/hands/:handId が履歴詳細を返す", async () => {
@@ -405,7 +406,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(404);
-    expect(body.error.code).toBe("NOT_FOUND");
+    expect(body.error.code).toBe(ErrorCode.NOT_FOUND);
   });
 
   it("認証なしで /api/history/hands/:handId を呼ぶと AUTH_EXPIRED を返す", async () => {
@@ -418,7 +419,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(401);
-    expect(body.error.code).toBe("AUTH_EXPIRED");
+    expect(body.error.code).toBe(ErrorCode.AUTH_EXPIRED);
   });
 
   it("x-request-id を受け取った場合はレスポンスに同値を返す", async () => {
@@ -445,7 +446,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(400);
-    expect(body.error.code).toBe("BAD_REQUEST");
+    expect(body.error.code).toBe(ErrorCode.BAD_REQUEST);
   });
 
   it("卓詳細レスポンスが OpenAPI スキーマに準拠する", async () => {
@@ -544,7 +545,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(404);
-    expect(body.error.code).toBe("NOT_FOUND");
+    expect(body.error.code).toBe(ErrorCode.NOT_FOUND);
   });
 
   it("未知のエンドポイントで NOT_FOUND を返す", async () => {
@@ -555,7 +556,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(404);
-    expect(body.error.code).toBe("NOT_FOUND");
+    expect(body.error.code).toBe(ErrorCode.NOT_FOUND);
     expect(body.error.requestId).toBeTypeOf("string");
   });
 
@@ -589,7 +590,7 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(response.status).toBe(500);
-    expect(body.error.code).toBe("INTERNAL_SERVER_ERROR");
+    expect(body.error.code).toBe(ErrorCode.INTERNAL_SERVER_ERROR);
     expect(body.error.requestId).toBeTypeOf("string");
   });
 });

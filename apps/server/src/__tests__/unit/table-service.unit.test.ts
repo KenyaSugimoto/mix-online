@@ -5,7 +5,9 @@ import {
   type RealtimeTableEventMessage,
   SeatStateChangeReason,
   SeatStatus,
+  Street,
   TableBuyIn,
+  TableCommandAction,
   TableEventName,
 } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
@@ -287,7 +289,7 @@ describe("RealtimeTableService 席管理", () => {
       secondJoin.events[4],
       TableEventName.BringInEvent,
     );
-    expect(bringIn.payload.street).toBe("THIRD");
+    expect(bringIn.payload.street).toBe(Street.THIRD);
     expect(bringIn.payload.amount).toBe(10);
     expect(bringIn.payload.potAfter).toBe(20);
   });
@@ -300,7 +302,7 @@ describe("RealtimeTableService 席管理", () => {
     // 両ユーザー着席してハンド開始まで進める
     const joined1 = await service.executeCommand({
       command: createCommand({
-        type: "table.join",
+        type: RealtimeTableCommandType.JOIN,
         payload: { buyIn: 1000 },
       }),
       user: user1,
@@ -308,7 +310,7 @@ describe("RealtimeTableService 席管理", () => {
     });
     const joined2 = await service.executeCommand({
       command: createCommand({
-        type: "table.join",
+        type: RealtimeTableCommandType.JOIN,
         payload: { buyIn: 1000 },
       }),
       user: user2,
@@ -347,8 +349,8 @@ describe("RealtimeTableService 席管理", () => {
     // 非手番ユーザーが CALL するのを拒否する
     const notYourTurn = await service.executeCommand({
       command: createCommand({
-        type: "table.act",
-        payload: { action: "CALL" },
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.CALL },
       }),
       user: nonTurnUser,
       occurredAt: NOW,
@@ -362,8 +364,8 @@ describe("RealtimeTableService 席管理", () => {
     const turnUser = nonTurnUser.userId === user1.userId ? user2 : user1;
     const checkRejected = await service.executeCommand({
       command: createCommand({
-        type: "table.act",
-        payload: { action: "CHECK" },
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.CHECK },
       }),
       user: turnUser,
       occurredAt: NOW,
@@ -381,7 +383,7 @@ describe("RealtimeTableService 席管理", () => {
 
     const joined1 = await service.executeCommand({
       command: createCommand({
-        type: "table.join",
+        type: RealtimeTableCommandType.JOIN,
         payload: { buyIn: 1000 },
       }),
       user: user1,
@@ -389,7 +391,7 @@ describe("RealtimeTableService 席管理", () => {
     });
     const joined2 = await service.executeCommand({
       command: createCommand({
-        type: "table.join",
+        type: RealtimeTableCommandType.JOIN,
         payload: { buyIn: 1000 },
       }),
       user: user2,
@@ -426,8 +428,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const complete = await service.executeCommand({
       command: createCommand({
-        type: "table.act",
-        payload: { action: "COMPLETE" },
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.COMPLETE },
       }),
       user: userBySeat(toActSeatNo),
       occurredAt: NOW,
@@ -442,8 +444,8 @@ describe("RealtimeTableService 席管理", () => {
     for (let count = 0; count < 4; count += 1) {
       const raised = await service.executeCommand({
         command: createCommand({
-          type: "table.act",
-          payload: { action: "RAISE" },
+          type: RealtimeTableCommandType.ACT,
+          payload: { action: TableCommandAction.RAISE },
         }),
         user: userBySeat(toActSeatNo),
         occurredAt: NOW,
@@ -458,8 +460,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const rejected = await service.executeCommand({
       command: createCommand({
-        type: "table.act",
-        payload: { action: "RAISE" },
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.RAISE },
       }),
       user: userBySeat(toActSeatNo),
       occurredAt: NOW,
@@ -519,12 +521,18 @@ describe("RealtimeTableService 席管理", () => {
     const user3 = createUser(3);
 
     await service.executeCommand({
-      command: createCommand({ type: "table.join", payload: { buyIn: 1000 } }),
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
       user: user1,
       occurredAt: NOW,
     });
     await service.executeCommand({
-      command: createCommand({ type: "table.join", payload: { buyIn: 1000 } }),
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
       user: user2,
       occurredAt: NOW,
     });
@@ -562,8 +570,8 @@ describe("RealtimeTableService 席管理", () => {
 
     const rejected = await service.executeCommand({
       command: createCommand({
-        type: "table.act",
-        payload: { action: "RAISE" },
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.RAISE },
       }),
       user: user3,
       occurredAt: NOW,
