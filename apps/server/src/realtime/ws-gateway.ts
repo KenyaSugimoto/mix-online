@@ -365,7 +365,7 @@ export class WsGateway {
     );
   }
 
-  /** 
+  /**
    * 指定されたテーブルに接続している全クライアントにイベントをブロードキャストする
    */
   private broadcastToTable(
@@ -403,7 +403,7 @@ export class WsGateway {
         if (!sessionId) {
           continue;
         }
-      
+
         const session = this.sessionStore.findById(sessionId, this.now());
         if (session && session.user.userId === commandUser.userId) {
           connection.currentTableId = tableId;
