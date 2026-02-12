@@ -46,13 +46,37 @@ describe("GameRule", () => {
     const razzRule = resolveGameRule(GameType.RAZZ);
 
     const studFirst = studRule.determineFirstToAct(Street.FOURTH, [
-      { seatNo: 1, upCards: [{ rank: "9", suit: "C" }] },
-      { seatNo: 2, upCards: [{ rank: "T", suit: "D" }] },
+      {
+        seatNo: 1,
+        upCards: [
+          { rank: "2", suit: "S" },
+          { rank: "9", suit: "C" },
+        ],
+      },
+      {
+        seatNo: 2,
+        upCards: [
+          { rank: "3", suit: "H" },
+          { rank: "T", suit: "D" },
+        ],
+      },
     ]);
 
     const razzFirst = razzRule.determineFirstToAct(Street.FOURTH, [
-      { seatNo: 1, upCards: [{ rank: "9", suit: "C" }] },
-      { seatNo: 2, upCards: [{ rank: "T", suit: "D" }] },
+      {
+        seatNo: 1,
+        upCards: [
+          { rank: "2", suit: "S" },
+          { rank: "9", suit: "C" },
+        ],
+      },
+      {
+        seatNo: 2,
+        upCards: [
+          { rank: "3", suit: "H" },
+          { rank: "T", suit: "D" },
+        ],
+      },
     ]);
 
     expect(studFirst).toBe(2);

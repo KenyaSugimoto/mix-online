@@ -1,4 +1,4 @@
-import { ERROR_CODES } from "@mix-online/shared";
+import { ERROR_CODES, ErrorCode, RealtimeErrorCode } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import {
   HttpAppError,
@@ -8,15 +8,15 @@ import {
 
 describe("エラー応答基盤", () => {
   it("HTTPエラーを code と status に正規化する", () => {
-    const error = new HttpAppError("BAD_REQUEST");
-    expect(error.code).toBe("BAD_REQUEST");
+    const error = new HttpAppError(ErrorCode.BAD_REQUEST);
+    expect(error.code).toBe(ErrorCode.BAD_REQUEST);
     expect(error.status).toBe(400);
   });
 
   it("HTTPエラーレスポンスに requestId を含める", () => {
-    expect(toHttpErrorResponse("NOT_FOUND", "req-1")).toEqual({
+    expect(toHttpErrorResponse(ErrorCode.NOT_FOUND, "req-1")).toEqual({
       error: {
-        code: "NOT_FOUND",
+        code: ErrorCode.NOT_FOUND,
         message: "対象リソースが見つかりません。",
         requestId: "req-1",
       },
@@ -34,7 +34,7 @@ describe("エラー応答基盤", () => {
   it("table.error メッセージ形式を生成する", () => {
     expect(
       toTableErrorMessage({
-        code: "INVALID_ACTION",
+        code: RealtimeErrorCode.INVALID_ACTION,
         message: "アクションが不正です。",
         occurredAt: "2026-02-11T00:00:00.000Z",
         requestId: null,
@@ -44,7 +44,7 @@ describe("エラー応答基盤", () => {
       type: "table.error",
       requestId: null,
       tableId: null,
-      code: "INVALID_ACTION",
+      code: RealtimeErrorCode.INVALID_ACTION,
       message: "アクションが不正です。",
       occurredAt: "2026-02-11T00:00:00.000Z",
     });

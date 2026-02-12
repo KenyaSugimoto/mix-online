@@ -1,20 +1,27 @@
 import { randomUUID } from "node:crypto";
 import {
-  type CardRank,
-  type CardSuit,
+  type CardRank as CardRankType,
+  type CardSuit as CardSuitType,
   CardVisibility,
   GameType,
   type GameType as GameTypeType,
   HandStatus,
   RealtimeErrorCode,
+  type RealtimeTableCommand,
+  RealtimeTableCommandType,
+  type RealtimeTableEventMessage,
+  type RealtimeTableServiceFailure,
+  type RealtimeTableServiceResult,
+  type RealtimeTableServiceSuccess,
+  type RealtimeTableState,
   SeatStateChangeAppliesFrom,
   SeatStateChangeReason,
   SeatStatus,
-  type SeatStatus as SeatStatusType,
   Street,
+  TableBuyIn,
+  TableCommandAction,
   TableEventName,
   TableStatus,
-  type TableStatus as TableStatusType,
   ThirdStreetCardPosition,
 } from "@mix-online/shared";
 import type { SessionUser } from "../auth-session";
@@ -25,34 +32,7 @@ import {
   createTableActorRegistry,
 } from "./table-actor";
 
-type TableCommandType =
-  | "table.join"
-  | "table.sitOut"
-  | "table.return"
-  | "table.leave"
-  | "table.act"
-  | "table.resume";
-
-type BaseCommand = {
-  type: TableCommandType;
-  requestId: string;
-  sentAt: string;
-  payload: Record<string, unknown>;
-};
-
-type TableSeat = {
-  seatNo: number;
-  status: SeatStatusType;
-  userId: string | null;
-  displayName: string | null;
-  stack: number;
-  disconnectStreak: number;
-  joinedAt: string | null;
-};
-
-type TableState = {
-  tableId: string;
-  status: TableStatusType;
+type TableState = RealtimeTableState & {
   gameType: GameTypeType;
   mixIndex: number;
   handsSinceRotation: number;
@@ -63,7 +43,6 @@ type TableState = {
   bringIn: number;
   currentHand: HandState | null;
   nextHandNo: number;
-  seats: TableSeat[];
 };
 
 type HandPlayerState = {
@@ -81,8 +60,8 @@ type HandPlayerState = {
 };
 
 type CardValue = {
-  rank: CardRank;
-  suit: CardSuit;
+  rank: CardRankType;
+  suit: CardSuitType;
 };
 
 type HandState = {
@@ -98,47 +77,29 @@ type HandState = {
   raiseCount: number;
 };
 
-type TableEventMessage = {
-  type: "table.event";
-  tableId: string;
-  tableSeq: number;
-  handId: string | null;
-  handSeq: number | null;
-  occurredAt: string;
-  eventName: (typeof TableEventName)[keyof typeof TableEventName];
-  payload: Record<string, unknown>;
-};
-
-type TableServiceError = {
-  code: (typeof RealtimeErrorCode)[keyof typeof RealtimeErrorCode];
-  message: string;
-  tableId: string | null;
-  requestId: string;
-};
-
-type TableServiceResult =
-  | {
-      ok: true;
-      tableId: string;
-      events: TableEventMessage[];
-    }
-  | {
-      ok: false;
-      error: TableServiceError;
-    };
-
 type RealtimeTableServiceOptions = {
   actorRegistry?: TableActorRegistry;
 };
 
-type PendingEvent = {
-  handId: string | null;
-  eventName: (typeof TableEventName)[keyof typeof TableEventName];
-  payload: Record<string, unknown>;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+  ? Omit<T, K>
+  : never;
+
+type PendingEvent = DistributiveOmit<
+  RealtimeTableEventMessage,
+  "type" | "tableId" | "tableSeq" | "handSeq" | "occurredAt"
+>;
+
+type ApplyCommandSuccess = {
+  ok: true;
+  events: PendingEvent[];
+  nextWalletBalance: number;
+  startHand: boolean;
 };
 
-const BUY_IN_MIN = 400;
-const BUY_IN_MAX = 2000;
+type ApplyCommandFailure = RealtimeTableServiceFailure;
+
+type ApplyCommandResult = ApplyCommandSuccess | ApplyCommandFailure;
 
 const createDefaultTableState = (tableId: string): TableState => ({
   tableId,
@@ -174,14 +135,14 @@ export class RealtimeTableService {
   }
 
   async executeCommand(params: {
-    command: BaseCommand;
+    command: RealtimeTableCommand;
     user: SessionUser;
     occurredAt: Date;
-  }): Promise<TableServiceResult> {
+  }): Promise<RealtimeTableServiceResult> {
     const tableId = this.resolveTableId(params.command.payload);
 
     if (tableId === null) {
-      return {
+      const failure: RealtimeTableServiceFailure = {
         ok: false,
         error: {
           code: RealtimeErrorCode.INVALID_ACTION,
@@ -190,6 +151,7 @@ export class RealtimeTableService {
           requestId: params.command.requestId,
         },
       };
+      return failure;
     }
 
     const actor = this.actorRegistry.getOrCreate(tableId);
@@ -214,20 +176,24 @@ export class RealtimeTableService {
       }
 
       this.walletByUserId.set(params.user.userId, outcome.nextWalletBalance);
-      return {
+      const success: RealtimeTableServiceSuccess = {
         ok: true,
         tableId,
-        events: outcome.events.map((event) => ({
-          type: "table.event",
-          tableId,
-          tableSeq: allocateTableSeq(),
-          handId: event.handId,
-          handSeq: event.handId ? allocateHandSeq(event.handId) : null,
-          occurredAt: params.occurredAt.toISOString(),
-          eventName: event.eventName,
-          payload: event.payload,
-        })),
+        events: outcome.events.map(
+          (event) =>
+            ({
+              type: "table.event",
+              tableId,
+              tableSeq: allocateTableSeq(),
+              handId: event.handId,
+              handSeq: event.handId ? allocateHandSeq(event.handId) : null,
+              occurredAt: params.occurredAt.toISOString(),
+              eventName: event.eventName,
+              payload: event.payload,
+            }) as RealtimeTableEventMessage,
+        ),
       };
+      return success;
     });
   }
 
@@ -257,25 +223,15 @@ export class RealtimeTableService {
   private applyCommand(params: {
     table: TableState;
     user: SessionUser;
-    command: BaseCommand;
+    command: RealtimeTableCommand;
     currentBalance: number;
     occurredAt: Date;
-  }):
-    | {
-        ok: true;
-        events: PendingEvent[];
-        nextWalletBalance: number;
-        startHand: boolean;
-      }
-    | {
-        ok: false;
-        error: TableServiceError;
-      } {
+  }): ApplyCommandResult {
     const seat = params.table.seats.find(
       (entry) => entry.userId === params.user.userId,
     );
 
-    if (params.command.type === "table.join") {
+    if (params.command.type === RealtimeTableCommandType.JOIN) {
       if (seat) {
         return this.fail(
           RealtimeErrorCode.ALREADY_SEATED,
@@ -289,12 +245,12 @@ export class RealtimeTableService {
       if (
         typeof buyIn !== "number" ||
         !Number.isInteger(buyIn) ||
-        buyIn < BUY_IN_MIN ||
-        buyIn > BUY_IN_MAX
+        buyIn < TableBuyIn.MIN ||
+        buyIn > TableBuyIn.MAX
       ) {
         return this.fail(
           RealtimeErrorCode.BUYIN_OUT_OF_RANGE,
-          `buyIn は ${BUY_IN_MIN}〜${BUY_IN_MAX} の整数で指定してください。`,
+          `buyIn は ${TableBuyIn.MIN}〜${TableBuyIn.MAX} の整数で指定してください。`,
           params.command.requestId,
           params.table.tableId,
         );
@@ -370,7 +326,7 @@ export class RealtimeTableService {
       );
     }
 
-    if (params.command.type === "table.sitOut") {
+    if (params.command.type === RealtimeTableCommandType.SIT_OUT) {
       if (
         seat.status !== SeatStatus.ACTIVE &&
         seat.status !== SeatStatus.SEATED_WAIT_NEXT_HAND
@@ -411,7 +367,7 @@ export class RealtimeTableService {
       };
     }
 
-    if (params.command.type === "table.return") {
+    if (params.command.type === RealtimeTableCommandType.RETURN) {
       if (seat.status !== SeatStatus.SIT_OUT) {
         return this.fail(
           RealtimeErrorCode.INVALID_ACTION,
@@ -456,7 +412,7 @@ export class RealtimeTableService {
       };
     }
 
-    if (params.command.type === "table.leave") {
+    if (params.command.type === RealtimeTableCommandType.LEAVE) {
       const previousStatus = seat.status;
       const cashOut = seat.stack;
       seat.status = SeatStatus.EMPTY;
@@ -488,8 +444,13 @@ export class RealtimeTableService {
       };
     }
 
-    if (params.command.type === "table.act") {
-      return this.applyActCommand(params);
+    if (params.command.type === RealtimeTableCommandType.ACT) {
+      return this.applyActCommand({
+        table: params.table,
+        user: params.user,
+        command: params.command,
+        currentBalance: params.currentBalance,
+      });
     }
 
     return this.fail(
@@ -503,19 +464,12 @@ export class RealtimeTableService {
   private applyActCommand(params: {
     table: TableState;
     user: SessionUser;
-    command: BaseCommand;
+    command: Extract<
+      RealtimeTableCommand,
+      { type: typeof RealtimeTableCommandType.ACT }
+    >;
     currentBalance: number;
-  }):
-    | {
-        ok: true;
-        events: PendingEvent[];
-        nextWalletBalance: number;
-        startHand: boolean;
-      }
-    | {
-        ok: false;
-        error: TableServiceError;
-      } {
+  }): ApplyCommandResult {
     const hand = params.table.currentHand;
     if (!hand || params.table.status !== TableStatus.BETTING) {
       return this.fail(
@@ -576,7 +530,7 @@ export class RealtimeTableService {
       | typeof TableEventName.CompleteEvent
       | typeof TableEventName.RaiseEvent;
 
-    if (action === "CHECK") {
+    if (action === TableCommandAction.CHECK) {
       if (toCall > 0) {
         return this.fail(
           RealtimeErrorCode.INVALID_ACTION,
@@ -588,11 +542,11 @@ export class RealtimeTableService {
 
       player.actedThisRound = true;
       eventName = TableEventName.CheckEvent;
-    } else if (action === "FOLD") {
+    } else if (action === TableCommandAction.FOLD) {
       player.inHand = false;
       player.actedThisRound = true;
       eventName = TableEventName.FoldEvent;
-    } else if (action === "CALL") {
+    } else if (action === TableCommandAction.CALL) {
       amount = Math.min(toCall, seat.stack);
       seat.stack -= amount;
       player.totalContribution += amount;
@@ -603,7 +557,7 @@ export class RealtimeTableService {
       hand.potTotal += amount;
       player.actedThisRound = true;
       eventName = TableEventName.CallEvent;
-    } else if (action === "COMPLETE") {
+    } else if (action === TableCommandAction.COMPLETE) {
       if (
         hand.streetBetTo >= params.table.smallBet ||
         hand.street !== Street.THIRD
@@ -634,7 +588,7 @@ export class RealtimeTableService {
         candidate.actedThisRound = candidate.seatNo === player.seatNo;
       }
       eventName = TableEventName.CompleteEvent;
-    } else if (action === "RAISE") {
+    } else if (action === TableCommandAction.RAISE) {
       if (hand.street !== Street.THIRD && hand.street !== Street.FOURTH) {
         // M3-05 時点では third/fourth 基本ベットのみサポートし、詳細街進行はM3-06以降で拡張する。
       }
@@ -647,11 +601,7 @@ export class RealtimeTableService {
         );
       }
 
-      const activePlayers = hand.players.filter(
-        (entry) => entry.inHand && !entry.allIn,
-      );
-      const isHeadsUp = activePlayers.length <= 2;
-      if (!isHeadsUp && hand.raiseCount >= 4) {
+      if (hand.raiseCount >= 4) {
         return this.fail(
           RealtimeErrorCode.INVALID_ACTION,
           "このストリートのRAISE上限に達しています。",
@@ -1027,12 +977,12 @@ export class RealtimeTableService {
   }
 
   private fail(
-    code: (typeof RealtimeErrorCode)[keyof typeof RealtimeErrorCode],
+    code: RealtimeErrorCode,
     message: string,
     requestId: string,
     tableId: string | null,
-  ): { ok: false; error: TableServiceError } {
-    return {
+  ): ApplyCommandFailure {
+    const failure: ApplyCommandFailure = {
       ok: false,
       error: {
         code,
@@ -1041,6 +991,7 @@ export class RealtimeTableService {
         tableId,
       },
     };
+    return failure;
   }
 }
 
