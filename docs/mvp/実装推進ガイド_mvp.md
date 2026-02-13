@@ -46,11 +46,11 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 
 - 目的: 開発品質を担保する最小基盤を揃える
 - 主タスク:
-  - workspaceの `lint/typecheck/test` を常時グリーンに保つ
+  - workspaceの `lint/check:contract-literals/typecheck/test` を常時グリーンに保つ
   - `packages/shared` の共通型を仕様準拠で整理
   - エラーハンドリング・ログ方針を決める
 - 完了条件:
-  - `pnpm lint`, `pnpm typecheck`, `pnpm test` が通る
+  - `pnpm lint`, `pnpm check:contract-literals`, `pnpm typecheck`, `pnpm test` が通る
   - 共通型に対するテストが追加されている
 
 ## Phase 1: データ層確定
@@ -116,7 +116,7 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 2. 受け入れ条件を3〜7個で定義  
 3. 実装（必要ならリファクタ含む）  
 4. テスト追加（単体優先、必要に応じ統合）  
-5. `pnpm lint` / `pnpm typecheck` / `pnpm test` 実行  
+5. `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` 実行  
 6. 仕様差分のドキュメント更新  
 7. 進捗管理シート更新（ステータス・リスク・決定事項）
 
@@ -128,7 +128,7 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 
 - 対応範囲が要件/設計にトレース可能
 - 実装とテストが同一PRに含まれる
-- `pnpm lint` / `pnpm typecheck` / `pnpm test` が成功
+- `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` が成功
 - 既存機能への回帰リスクが評価されている
 - `docs/mvp/進捗管理シート_mvp.md` が更新されている
 
@@ -166,7 +166,7 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 この順序にする理由:
 
 - `lint` で静的な記述問題を最速で検知し、後続の調査コストを下げる
-- `check:contract-literals` で契約由来enumのハードコードを早期に検知し、仕様変更時の追従漏れを防ぐ
+- `check:contract-literals` で `packages/shared/src/index.ts` の定数値ハードコードを早期に検知し、仕様変更時の追従漏れを防ぐ
 - `typecheck` で契約/型差分を確定してから、`test` の実行結果を読む
 - `test` は最終確認として実行し、仕様挙動の回帰を評価する
 
@@ -177,7 +177,8 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
    - 残件は対象ファイルに限定して手動修正し、`pnpm lint` を再実行
 2. `check:contract-literals` 失敗時:
    - 指摘された文字列リテラルを `@mix-online/shared` の定数参照へ置換
-   - 契約定義ファイル/契約整合テストが理由なら、対象を `apps/` から除外しないまま実装側のみ修正
+   - `check:contract-literals` は `packages/shared/src/index.ts` から検査対象を自動生成するため、新規定数追加時のルール追記は不要
+   - 契約定義ファイル/契約整合テスト（`packages/shared`）は検査対象外とし、実装側（`apps/`・`packages/`）で違反を解消する
    - 修正後に `pnpm check:contract-literals` を再実行
 3. `typecheck` 失敗時:
    - エラー先頭から順に、型定義の不整合か実装の不整合かを分類

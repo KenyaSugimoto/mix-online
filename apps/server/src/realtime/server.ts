@@ -44,18 +44,22 @@ export const startRealtimeServer = (
     tableService,
     actionTimeoutMs: options.actionTimeoutMs,
   });
+  // Pending状態のテーブルについて、アクション自動実行タイマーをスケジュールする (サーバ再起動対策)
   wsGateway.schedulePendingActions(tableService.listPendingActionTableIds());
 
+  // Start HTTP server
   const server = serve({
     fetch: app.fetch,
     port: options.port ?? 3000,
   });
 
+  // Start WebSocket server
   const wsServer = new WebSocketServer({
     server: server as HttpServer,
     path: "/ws",
   });
 
+  // Handle WebSocket connections
   wsServer.on("connection", (socket, request) => {
     wsGateway.handleConnection({ socket, request });
   });

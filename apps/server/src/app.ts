@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { ErrorCode } from "@mix-online/shared";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
@@ -58,12 +59,12 @@ const requireSession = (params: {
   const sessionId = getSessionIdFromCookie(params.cookieHeader);
 
   if (!sessionId) {
-    throw new HttpAppError("AUTH_EXPIRED");
+    throw new HttpAppError(ErrorCode.AUTH_EXPIRED);
   }
 
   const session = params.sessionStore.findById(sessionId, params.now);
   if (!session) {
-    throw new HttpAppError("AUTH_EXPIRED");
+    throw new HttpAppError(ErrorCode.AUTH_EXPIRED);
   }
 
   return session;
@@ -105,7 +106,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
     console.error(error);
     return c.json(
       toHttpErrorResponse(
-        "INTERNAL_SERVER_ERROR",
+        ErrorCode.INTERNAL_SERVER_ERROR,
         requestId,
         "サーバー内部でエラーが発生しました。",
       ),
@@ -116,7 +117,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
   app.notFound((c) => {
     return c.json(
       toHttpErrorResponse(
-        "NOT_FOUND",
+        ErrorCode.NOT_FOUND,
         c.get("requestId"),
         "対象リソースが見つかりません。",
       ),
@@ -154,7 +155,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
 
     if (!code || !state) {
       throw new HttpAppError(
-        "BAD_REQUEST",
+        ErrorCode.BAD_REQUEST,
         "code と state は必須のクエリパラメータです。",
       );
     }
@@ -162,7 +163,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
     const stateFromCookie = getOauthStateFromCookie(c.req.header("cookie"));
     if (!stateFromCookie || stateFromCookie !== state) {
       throw new HttpAppError(
-        "AUTH_EXPIRED",
+        ErrorCode.AUTH_EXPIRED,
         "認証セッションが無効です。再度ログインをやり直してください。",
       );
     }
@@ -210,7 +211,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
 
     if (table === null) {
       throw new HttpAppError(
-        "NOT_FOUND",
+        ErrorCode.NOT_FOUND,
         `tableId=${tableId} の卓は存在しません。`,
       );
     }
@@ -230,7 +231,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       throw new HttpAppError(
-        "BAD_REQUEST",
+        ErrorCode.BAD_REQUEST,
         "limit は 1 以上 100 以下の整数で指定してください。",
       );
     }
@@ -286,7 +287,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
 
     if (hand === null) {
       throw new HttpAppError(
-        "NOT_FOUND",
+        ErrorCode.NOT_FOUND,
         `handId=${handId} の履歴は存在しません。`,
       );
     }

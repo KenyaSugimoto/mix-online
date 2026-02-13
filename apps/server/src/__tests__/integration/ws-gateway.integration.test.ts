@@ -1,8 +1,19 @@
+import {
+  RealtimeErrorCode,
+  RealtimeTableCommandType,
+  SeatStateChangeReason,
+  SeatStatus,
+  SnapshotReason,
+  TableEventName,
+} from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createSessionCookie } from "../../auth-session";
 import { startRealtimeServer } from "../../realtime/server";
-import { createRealtimeTableService } from "../../realtime/table-service";
+import {
+  TABLE_SNAPSHOT_MESSAGE_TYPE,
+  createRealtimeTableService,
+} from "../../realtime/table-service";
 
 const TEST_USER = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -134,7 +145,7 @@ describe("WebSocketゲートウェイ統合", () => {
       };
 
       expect(message.type).toBe("table.error");
-      expect(message.code).toBe("AUTH_EXPIRED");
+      expect(message.code).toBe(RealtimeErrorCode.AUTH_EXPIRED);
       expect(message.requestId).toBeNull();
       expect(message.tableId).toBeNull();
     } finally {
@@ -163,7 +174,7 @@ describe("WebSocketゲートウェイ統合", () => {
       };
 
       expect(message.type).toBe("table.error");
-      expect(message.code).toBe("INVALID_ACTION");
+      expect(message.code).toBe(RealtimeErrorCode.INVALID_ACTION);
     } finally {
       socket.terminate();
       await server.close();
@@ -184,7 +195,7 @@ describe("WebSocketゲートウェイ統合", () => {
       await waitForOpen(socket);
       socket.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111111",
           sentAt: "2026-02-11T12:00:00.000Z",
           payload: {
@@ -207,11 +218,11 @@ describe("WebSocketゲートウェイ統合", () => {
       };
 
       expect(message.type).toBe("table.event");
-      expect(message.eventName).toBe("SeatStateChangedEvent");
+      expect(message.eventName).toBe(TableEventName.SeatStateChangedEvent);
       expect(message.tableSeq).toBe(1);
       expect(message.tableId).toBe("22222222-2222-4222-8222-222222222222");
-      expect(message.payload.reason).toBe("JOIN");
-      expect(message.payload.currentStatus).toBe("ACTIVE");
+      expect(message.payload.reason).toBe(SeatStateChangeReason.JOIN);
+      expect(message.payload.currentStatus).toBe(SeatStatus.ACTIVE);
       expect(message.payload.stack).toBe(1000);
     } finally {
       socket.terminate();
@@ -250,7 +261,7 @@ describe("WebSocketゲートウェイ統合", () => {
 
       socket1.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111111",
           sentAt: now.toISOString(),
           payload: {
@@ -263,7 +274,7 @@ describe("WebSocketゲートウェイ統合", () => {
 
       socket2.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111112",
           sentAt: now.toISOString(),
           payload: {
@@ -276,7 +287,7 @@ describe("WebSocketゲートウェイ統合", () => {
 
       socket1.send(
         JSON.stringify({
-          type: "table.resume",
+          type: RealtimeTableCommandType.RESUME,
           requestId: "11111111-1111-4111-8111-111111111113",
           sentAt: now.toISOString(),
           payload: {
@@ -340,7 +351,7 @@ describe("WebSocketゲートウェイ統合", () => {
 
       socket1.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111111",
           sentAt: now.toISOString(),
           payload: {
@@ -353,7 +364,7 @@ describe("WebSocketゲートウェイ統合", () => {
 
       socket2.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111112",
           sentAt: now.toISOString(),
           payload: {
@@ -366,7 +377,7 @@ describe("WebSocketゲートウェイ統合", () => {
 
       socket1.send(
         JSON.stringify({
-          type: "table.resume",
+          type: RealtimeTableCommandType.RESUME,
           requestId: "11111111-1111-4111-8111-111111111114",
           sentAt: now.toISOString(),
           payload: {
@@ -395,9 +406,9 @@ describe("WebSocketゲートウェイ統合", () => {
         };
       };
 
-      expect(snapshot.type).toBe("table.snapshot");
+      expect(snapshot.type).toBe(TABLE_SNAPSHOT_MESSAGE_TYPE);
       expect(snapshot.tableId).toBe(tableId);
-      expect(snapshot.payload.reason).toBe("OUT_OF_RANGE");
+      expect(snapshot.payload.reason).toBe(SnapshotReason.OUT_OF_RANGE);
       expect(snapshot.payload.table).toMatchObject({
         status: expect.any(String),
         gameType: expect.any(String),
@@ -435,7 +446,7 @@ describe("WebSocketゲートウェイ統合", () => {
     try {
       await server1.tableService.executeCommand({
         command: {
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111121",
           sentAt: now.toISOString(),
           payload: {
@@ -449,7 +460,7 @@ describe("WebSocketゲートウェイ統合", () => {
 
       await server1.tableService.executeCommand({
         command: {
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111122",
           sentAt: now.toISOString(),
           payload: {
