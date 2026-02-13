@@ -280,6 +280,9 @@ export class WsGateway {
     });
   }
 
+  /**
+   * 指定されたテーブルID群について、次のアクションを自動実行するタイマーをスケジュールする
+   */
   schedulePendingActions(tableIds: string[]): void {
     for (const tableId of tableIds) {
       this.scheduleAutoAction(tableId);
