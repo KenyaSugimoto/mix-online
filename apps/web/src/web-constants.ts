@@ -55,5 +55,11 @@ export const AuthStateStatus = {
   ERROR: "error",
 } as const;
 
+export const LobbyStateStatus = {
+  LOADING: "loading",
+  LOADED: "loaded",
+  ERROR: "error",
+} as const;
+
 export const toTablePath = (tableId: string) =>
   `${RoutePath.TABLES_ROOT}/${tableId}`;

@@ -1,4 +1,10 @@
 import { ErrorCode, type ErrorCode as ErrorCodeType } from "@mix-online/shared";
+import {
+  ApiPath,
+  HttpHeaderName,
+  HttpStatusCode,
+  MediaType,
+} from "./web-constants";
 
 export type TableStakes = {
   smallBet: number;
@@ -110,7 +116,7 @@ const validateLobbyResponse = (value: LobbyTablesResponse | null) => {
     typeof value.serverTime !== "string"
   ) {
     throw new LobbyApiError({
-      status: 500,
+      status: HttpStatusCode.INTERNAL_SERVER_ERROR,
       code: ErrorCode.INTERNAL_SERVER_ERROR,
       message: "ロビー一覧レスポンス形式が不正です。",
     });
@@ -121,10 +127,10 @@ const validateLobbyResponse = (value: LobbyTablesResponse | null) => {
 
 export const createLobbyApi = (fetchImpl: FetchLike) => ({
   async getTables(): Promise<LobbyTablesResponse> {
-    const response = await fetchImpl("/api/lobby/tables", {
+    const response = await fetchImpl(ApiPath.LOBBY_TABLES, {
       credentials: "include",
       headers: {
-        Accept: "application/json",
+        [HttpHeaderName.ACCEPT]: MediaType.APPLICATION_JSON,
       },
     });
 

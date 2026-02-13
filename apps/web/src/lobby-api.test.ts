@@ -1,6 +1,7 @@
 import { BettingStructure, ErrorCode, GameType } from "@mix-online/shared";
 import { describe, expect, it, vi } from "vitest";
 import { type LobbyApiError, createLobbyApi } from "./lobby-api";
+import { HttpHeaderName, HttpStatusCode, MediaType } from "./web-constants";
 
 describe("lobby-api", () => {
   it("getTables がロビー卓一覧を返す", async () => {
@@ -28,9 +29,9 @@ describe("lobby-api", () => {
           serverTime: "2026-02-13T12:00:00.000Z",
         }),
         {
-          status: 200,
+          status: HttpStatusCode.OK,
           headers: {
-            "Content-Type": "application/json",
+            [HttpHeaderName.CONTENT_TYPE]: MediaType.APPLICATION_JSON,
           },
         },
       );
@@ -61,9 +62,9 @@ describe("lobby-api", () => {
           },
         }),
         {
-          status: 500,
+          status: HttpStatusCode.INTERNAL_SERVER_ERROR,
           headers: {
-            "Content-Type": "application/json",
+            [HttpHeaderName.CONTENT_TYPE]: MediaType.APPLICATION_JSON,
           },
         },
       );
@@ -72,7 +73,7 @@ describe("lobby-api", () => {
     const api = createLobbyApi(fetchMock);
     await expect(api.getTables()).rejects.toMatchObject({
       name: "LobbyApiError",
-      status: 500,
+      status: HttpStatusCode.INTERNAL_SERVER_ERROR,
       code: ErrorCode.INTERNAL_SERVER_ERROR,
     } satisfies Partial<LobbyApiError>);
   });
@@ -85,9 +86,9 @@ describe("lobby-api", () => {
           serverTime: "2026-02-13T12:00:00.000Z",
         }),
         {
-          status: 200,
+          status: HttpStatusCode.OK,
           headers: {
-            "Content-Type": "application/json",
+            [HttpHeaderName.CONTENT_TYPE]: MediaType.APPLICATION_JSON,
           },
         },
       );
