@@ -1,3 +1,5 @@
+import { RoutePath } from "./web-constants";
+
 export const AppRouteKind = {
   LOGIN: "login",
   LOBBY: "lobby",
@@ -18,18 +20,23 @@ const normalizePathname = (pathname: string) => {
   return pathname;
 };
 
+const tablePathPattern = new RegExp(`^${RoutePath.TABLES_ROOT}/([^/]+)$`);
+
 export const resolveRoute = (pathname: string): AppRoute => {
   const normalizedPathname = normalizePathname(pathname);
 
-  if (normalizedPathname === "/" || normalizedPathname === "/login") {
+  if (
+    normalizedPathname === RoutePath.ROOT ||
+    normalizedPathname === RoutePath.LOGIN
+  ) {
     return { kind: AppRouteKind.LOGIN };
   }
 
-  if (normalizedPathname === "/lobby") {
+  if (normalizedPathname === RoutePath.LOBBY) {
     return { kind: AppRouteKind.LOBBY };
   }
 
-  const tableMatch = /^\/tables\/([^/]+)$/.exec(normalizedPathname);
+  const tableMatch = tablePathPattern.exec(normalizedPathname);
   if (tableMatch) {
     const tableId = tableMatch.at(1);
     if (tableId) {

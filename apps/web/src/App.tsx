@@ -8,20 +8,28 @@ import {
   postAuthLogout,
 } from "./auth-api";
 import { AppRouteKind, resolveRoute } from "./routes";
+import {
+  ApiPath,
+  AuthStateStatus,
+  HttpStatusCode,
+  RoutePath,
+} from "./web-constants";
 
 type AuthState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "authenticated"; user: UserProfile }
-  | { status: "unauthenticated" }
-  | { status: "error"; message: string };
+  | { status: typeof AuthStateStatus.IDLE }
+  | { status: typeof AuthStateStatus.LOADING }
+  | { status: typeof AuthStateStatus.AUTHENTICATED; user: UserProfile }
+  | { status: typeof AuthStateStatus.UNAUTHENTICATED }
+  | { status: typeof AuthStateStatus.ERROR; message: string };
 
 const isProtectedRoute = (pathname: string) =>
-  pathname === "/lobby" || pathname.startsWith("/tables/");
+  pathname === RoutePath.LOBBY || pathname.startsWith(RoutePath.TABLES_PREFIX);
 
 export function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
-  const [authState, setAuthState] = useState<AuthState>({ status: "idle" });
+  const [authState, setAuthState] = useState<AuthState>({
+    status: AuthStateStatus.IDLE,
+  });
   const [authCheckVersion, setAuthCheckVersion] = useState(0);
   const route = useMemo(() => resolveRoute(pathname), [pathname]);
   const isProtected = isProtectedRoute(pathname);
@@ -45,14 +53,14 @@ export function App() {
     }
 
     let isCancelled = false;
-    setAuthState({ status: "loading" });
+    setAuthState({ status: AuthStateStatus.LOADING });
 
     getAuthMe()
       .then((user) => {
         if (isCancelled) {
           return;
         }
-        setAuthState({ status: "authenticated", user });
+        setAuthState({ status: AuthStateStatus.AUTHENTICATED, user });
       })
       .catch((error: unknown) => {
         if (isCancelled) {
@@ -61,14 +69,15 @@ export function App() {
 
         if (
           error instanceof AuthApiError &&
-          (error.code === ErrorCode.AUTH_EXPIRED || error.status === 401)
+          (error.code === ErrorCode.AUTH_EXPIRED ||
+            error.status === HttpStatusCode.UNAUTHORIZED)
         ) {
-          setAuthState({ status: "unauthenticated" });
+          setAuthState({ status: AuthStateStatus.UNAUTHENTICATED });
           return;
         }
 
         setAuthState({
-          status: "error",
+          status: AuthStateStatus.ERROR,
           message:
             error instanceof Error
               ? error.message
@@ -91,7 +100,7 @@ export function App() {
   };
 
   const startLogin = () => {
-    window.location.assign("/api/auth/google/start");
+    window.location.assign(ApiPath.AUTH_GOOGLE_START);
   };
 
   const retryAuth = () => {
@@ -104,8 +113,8 @@ export function App() {
     } catch {
       // ローカルセッション状態の破棄を優先する。
     }
-    setAuthState({ status: "unauthenticated" });
-    navigate("/login");
+    setAuthState({ status: AuthStateStatus.UNAUTHENTICATED });
+    navigate(RoutePath.LOGIN);
   };
 
   return (
@@ -122,14 +131,14 @@ export function App() {
           <button
             className="ghost-button"
             type="button"
-            onClick={() => navigate("/login")}
+            onClick={() => navigate(RoutePath.LOGIN)}
           >
             ログイン画面
           </button>
           <button
             className="ghost-button"
             type="button"
-            onClick={() => navigate("/lobby")}
+            onClick={() => navigate(RoutePath.LOBBY)}
           >
             ロビー画面
           </button>
@@ -141,7 +150,7 @@ export function App() {
           authState={authState}
           onLoginStart={startLogin}
           onRetry={retryAuth}
-          onGoLogin={() => navigate("/login")}
+          onGoLogin={() => navigate(RoutePath.LOGIN)}
           onLogout={logout}
           route={route}
         />
@@ -149,7 +158,7 @@ export function App() {
         <LoginScreen
           authState={authState}
           onLoginStart={startLogin}
-          onGoLobby={() => navigate("/lobby")}
+          onGoLobby={() => navigate(RoutePath.LOBBY)}
         />
       )}
     </div>
@@ -167,7 +176,10 @@ const ProtectedContent = (props: {
   const { authState, onLoginStart, onRetry, onGoLogin, onLogout, route } =
     props;
 
-  if (authState.status === "loading" || authState.status === "idle") {
+  if (
+    authState.status === AuthStateStatus.LOADING ||
+    authState.status === AuthStateStatus.IDLE
+  ) {
     return (
       <section className="surface state-panel" aria-live="polite">
         <h2>認証状態を確認しています</h2>
@@ -178,7 +190,7 @@ const ProtectedContent = (props: {
     );
   }
 
-  if (authState.status === "unauthenticated") {
+  if (authState.status === AuthStateStatus.UNAUTHENTICATED) {
     return (
       <section className="surface state-panel">
         <h2>未認証です</h2>
@@ -202,7 +214,7 @@ const ProtectedContent = (props: {
     );
   }
 
-  if (authState.status === "error") {
+  if (authState.status === AuthStateStatus.ERROR) {
     return (
       <section className="surface state-panel">
         <h2>認証状態の取得に失敗しました</h2>
@@ -278,7 +290,7 @@ const LoginScreen = (props: {
   onGoLobby: () => void;
 }) => {
   const { authState, onLoginStart, onGoLobby } = props;
-  const isAuthenticated = authState.status === "authenticated";
+  const isAuthenticated = authState.status === AuthStateStatus.AUTHENTICATED;
 
   return (
     <section className="surface state-panel">

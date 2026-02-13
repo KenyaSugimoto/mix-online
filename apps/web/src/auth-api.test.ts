@@ -1,6 +1,7 @@
 import { ErrorCode } from "@mix-online/shared";
 import { describe, expect, it, vi } from "vitest";
 import { type AuthApiError, createAuthApi, formatChipsToUsd } from "./auth-api";
+import { HttpHeaderName, HttpStatusCode, MediaType } from "./web-constants";
 
 describe("auth-api", () => {
   it("getMe が認証ユーザー情報を返す", async () => {
@@ -14,9 +15,9 @@ describe("auth-api", () => {
           },
         }),
         {
-          status: 200,
+          status: HttpStatusCode.OK,
           headers: {
-            "Content-Type": "application/json",
+            [HttpHeaderName.CONTENT_TYPE]: MediaType.APPLICATION_JSON,
           },
         },
       );
@@ -40,9 +41,9 @@ describe("auth-api", () => {
           },
         }),
         {
-          status: 401,
+          status: HttpStatusCode.UNAUTHORIZED,
           headers: {
-            "Content-Type": "application/json",
+            [HttpHeaderName.CONTENT_TYPE]: MediaType.APPLICATION_JSON,
           },
         },
       );
@@ -51,7 +52,7 @@ describe("auth-api", () => {
     const api = createAuthApi(fetchMock);
     await expect(api.getMe()).rejects.toMatchObject({
       name: "AuthApiError",
-      status: 401,
+      status: HttpStatusCode.UNAUTHORIZED,
       code: ErrorCode.AUTH_EXPIRED,
     } satisfies Partial<AuthApiError>);
   });

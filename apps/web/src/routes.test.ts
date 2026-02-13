@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { AppRouteKind, resolveRoute } from "./routes";
+import { RoutePath, toTablePath } from "./web-constants";
 
 describe("routes", () => {
   it("ログイン画面の経路を判定する", () => {
-    expect(resolveRoute("/")).toEqual({ kind: AppRouteKind.LOGIN });
-    expect(resolveRoute("/login")).toEqual({ kind: AppRouteKind.LOGIN });
-    expect(resolveRoute("/login/")).toEqual({ kind: AppRouteKind.LOGIN });
+    expect(resolveRoute(RoutePath.ROOT)).toEqual({ kind: AppRouteKind.LOGIN });
+    expect(resolveRoute(RoutePath.LOGIN)).toEqual({ kind: AppRouteKind.LOGIN });
+    expect(resolveRoute(`${RoutePath.LOGIN}/`)).toEqual({
+      kind: AppRouteKind.LOGIN,
+    });
   });
 
   it("ロビー画面の経路を判定する", () => {
-    expect(resolveRoute("/lobby")).toEqual({ kind: AppRouteKind.LOBBY });
+    expect(resolveRoute(RoutePath.LOBBY)).toEqual({ kind: AppRouteKind.LOBBY });
   });
 
   it("卓詳細の経路を判定する", () => {
-    expect(resolveRoute("/tables/table-01")).toEqual({
+    expect(resolveRoute(toTablePath("table-01"))).toEqual({
       kind: AppRouteKind.TABLE,
       tableId: "table-01",
     });

@@ -1,4 +1,14 @@
 import { ErrorCode, type ErrorCode as ErrorCodeType } from "@mix-online/shared";
+import {
+  ApiPath,
+  CurrencyCode,
+  HttpHeaderName,
+  HttpMethod,
+  HttpStatusCode,
+  LocaleCode,
+  MediaType,
+  NumberFormatStyle,
+} from "./web-constants";
 
 export type UserProfile = {
   userId: string;
@@ -69,7 +79,7 @@ const validateAuthMeResponse = (value: AuthMeResponse | null): UserProfile => {
     typeof value.user.walletBalance !== "number"
   ) {
     throw new AuthApiError({
-      status: 500,
+      status: HttpStatusCode.INTERNAL_SERVER_ERROR,
       code: ErrorCode.INTERNAL_SERVER_ERROR,
       message: "認証ユーザー情報のレスポンス形式が不正です。",
     });
@@ -80,10 +90,10 @@ const validateAuthMeResponse = (value: AuthMeResponse | null): UserProfile => {
 
 export const createAuthApi = (fetchImpl: FetchLike) => ({
   async getMe(): Promise<UserProfile> {
-    const response = await fetchImpl("/api/auth/me", {
+    const response = await fetchImpl(ApiPath.AUTH_ME, {
       credentials: "include",
       headers: {
-        Accept: "application/json",
+        [HttpHeaderName.ACCEPT]: MediaType.APPLICATION_JSON,
       },
     });
 
@@ -96,15 +106,15 @@ export const createAuthApi = (fetchImpl: FetchLike) => ({
   },
 
   async logout(): Promise<void> {
-    const response = await fetchImpl("/api/auth/logout", {
-      method: "POST",
+    const response = await fetchImpl(ApiPath.AUTH_LOGOUT, {
+      method: HttpMethod.POST,
       credentials: "include",
       headers: {
-        Accept: "application/json",
+        [HttpHeaderName.ACCEPT]: MediaType.APPLICATION_JSON,
       },
     });
 
-    if (response.status === 204) {
+    if (response.status === HttpStatusCode.NO_CONTENT) {
       return;
     }
 
@@ -120,8 +130,8 @@ export const getAuthMe = () => authApi.getMe();
 export const postAuthLogout = () => authApi.logout();
 
 export const formatChipsToUsd = (chips: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  new Intl.NumberFormat(LocaleCode.EN_US, {
+    style: NumberFormatStyle.CURRENCY,
+    currency: CurrencyCode.USD,
     maximumFractionDigits: 0,
   }).format(chips);
