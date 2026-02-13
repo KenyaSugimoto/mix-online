@@ -15,6 +15,10 @@
     "lint:fix": "biome check --write .",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
+    "uiux:search": "python3 .codex/skills/ui-ux-pro-max/scripts/search.py",
+    "uiux:design-system": "python3 .codex/skills/ui-ux-pro-max/scripts/search.py --design-system",
+    "uiux:design-system:persist": "python3 .codex/skills/ui-ux-pro-max/scripts/search.py --design-system --persist",
+    "uiux:link-claude": "bash ./scripts/setup-uiux-claude-compat.sh",
     "test:unit": "vitest run apps/server/src/__tests__/unit packages/shared/src/__tests__",
     "test:integration": "vitest run apps/server/src/__tests__/integration",
     "test:e2e": "vitest run apps/server/src/__tests__/e2e"

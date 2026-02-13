@@ -34,6 +34,9 @@ coverage/
 *.tsbuildinfo
 supabase/.branches/
 supabase/.temp/
+design-system/
+**/__pycache__/
+*.pyc
 
 # Serena
 .serena/

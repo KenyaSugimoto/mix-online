@@ -44,6 +44,11 @@ AIエージェントは、実装タスクを開始する前に以下を必ず適
 - ユーザーから明示指示があるまで **コミットしない**
 - 作業ごとに **更新可能なドキュメントを確認** し、該当があれば同一タスク内で更新する
 - 完了時は `pnpm lint` / `pnpm check:contract-literals` / `pnpm typecheck` / `pnpm test` を実行し、結果を報告する
+- フロントエンドUI実装・UI改善・デザイン検討タスクでは、`/Users/kenya/dev/github.com/KenyaSugimoto/mix-online/.codex/skills/ui-ux-pro-max/` を必ず利用する
+  - 実装前に `python3 .codex/skills/ui-ux-pro-max/scripts/search.py "<query>" --design-system` で方針を生成
+  - 永続化が必要な場合は `--persist -p "<ProjectName>"` を付与して `design-system/` に保存
+  - `.claude` 互換パスが必要な場合は `pnpm uiux:link-claude` を実行し、`.claude/skills/ui-ux-pro-max` シンボリックリンクを再生成する
+  - 生成された `design-system/<project>/MASTER.md` の方針に反するUI実装を行う場合は、理由を最終報告に明記する
 
 `AGENTS.md` と `/.agent/rules/github-operations.md` に差分がある場合は、より厳しい方を優先する。
 
