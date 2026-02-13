@@ -576,6 +576,10 @@ export class RealtimeTableService {
     return table?.currentHand?.toActSeatNo ?? null;
   }
 
+  /**
+   * アクション保留中のテーブルID群を返す
+   * （BETTING 状態で、かつ toActSeatNo が設定されているテーブル）
+   * */
   listPendingActionTableIds(): string[] {
     return [...this.tables.values()]
       .filter(

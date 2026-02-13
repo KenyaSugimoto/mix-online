@@ -44,6 +44,7 @@ export const startRealtimeServer = (
     tableService,
     actionTimeoutMs: options.actionTimeoutMs,
   });
+  // Pending状態のテーブルについて、アクション自動実行タイマーをスケジュールする (サーバ再起動対策)
   wsGateway.schedulePendingActions(tableService.listPendingActionTableIds());
 
   // Start HTTP server
