@@ -7,7 +7,7 @@ import {
   getAuthMe,
   postAuthLogout,
 } from "./auth-api";
-import { resolveRoute } from "./routes";
+import { AppRouteKind, resolveRoute } from "./routes";
 
 type AuthState =
   | { status: "idle" }
@@ -214,7 +214,7 @@ const ProtectedContent = (props: {
     );
   }
 
-  if (route.kind === "table") {
+  if (route.kind === AppRouteKind.TABLE) {
     return (
       <section className="surface state-panel">
         <h2>卓詳細（準備中）</h2>
@@ -241,7 +241,7 @@ const ProtectedContent = (props: {
     );
   }
 
-  if (route.kind === "lobby") {
+  if (route.kind === AppRouteKind.LOBBY) {
     return (
       <section className="surface state-panel">
         <h2>ロビー（M4-02で一覧実装）</h2>
