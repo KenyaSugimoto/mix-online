@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { RealtimeErrorCode } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createSessionCookie } from "../../auth-session";
@@ -154,7 +155,7 @@ describe("Realtime契約テスト（M3-11）", () => {
         "occurredAt",
       ]);
       expect(message.type).toBe("table.error");
-      expect(message.code).toBe("AUTH_EXPIRED");
+      expect(message.code).toBe(RealtimeErrorCode.AUTH_EXPIRED);
       expect(message.requestId).toBeNull();
       expect(message.tableId).toBeNull();
       expect(typeof message.occurredAt).toBe("string");
