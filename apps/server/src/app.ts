@@ -36,6 +36,13 @@ export type AppVariables = {
   requestId: string;
 };
 
+export type GoogleOAuthConfig = {
+  authEndpoint: string;
+  clientId: string;
+  redirectUri: string;
+  scope: string;
+};
+
 type CreateAppOptions = {
   lobbyTableRepository?: LobbyTableRepository;
   tableDetailRepository?: TableDetailRepository;
@@ -43,6 +50,8 @@ type CreateAppOptions = {
   historyCursorSecret?: string;
   sessionStore?: SessionStore;
   now?: () => Date;
+  googleOAuthConfig?: GoogleOAuthConfig;
+  webClientOrigin?: string;
 };
 
 const MVP_AUTH_USER: SessionUser = {
@@ -50,6 +59,15 @@ const MVP_AUTH_USER: SessionUser = {
   displayName: "MVP User",
   walletBalance: 4000,
 };
+
+const DEFAULT_GOOGLE_OAUTH_CONFIG: GoogleOAuthConfig = {
+  authEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+  clientId: "",
+  redirectUri: "http://localhost:3000/api/auth/google/callback",
+  scope: "openid email profile",
+};
+const GOOGLE_OAUTH_RESPONSE_TYPE = "code";
+const POST_AUTH_REDIRECT_PATH = "/lobby";
 
 const requireSession = (params: {
   cookieHeader: string | undefined;
@@ -82,6 +100,9 @@ export const createApp = (options: CreateAppOptions = {}) => {
     options.historyCursorSecret ?? "mvp-history-cursor-secret";
   const sessionStore = options.sessionStore ?? createInMemorySessionStore();
   const now = options.now ?? (() => new Date());
+  const googleOAuthConfig =
+    options.googleOAuthConfig ?? DEFAULT_GOOGLE_OAUTH_CONFIG;
+  const webClientOrigin = options.webClientOrigin;
 
   app.use("/*", cors());
 
@@ -139,13 +160,23 @@ export const createApp = (options: CreateAppOptions = {}) => {
   });
 
   app.get("/api/auth/google/start", (c) => {
+    if (!googleOAuthConfig.clientId) {
+      throw new HttpAppError(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "GOOGLE_OAUTH_CLIENT_ID が未設定です。サーバー環境変数を設定してください。",
+      );
+    }
+
     const state = randomUUID();
-    const redirectUrl =
-      "https://accounts.google.com/o/oauth2/v2/auth?client_id=mvp-client&response_type=code&scope=openid%20email%20profile&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fgoogle%2Fcallback";
-    const location = `${redirectUrl}&state=${encodeURIComponent(state)}`;
+    const location = new URL(googleOAuthConfig.authEndpoint);
+    location.searchParams.set("client_id", googleOAuthConfig.clientId);
+    location.searchParams.set("response_type", GOOGLE_OAUTH_RESPONSE_TYPE);
+    location.searchParams.set("scope", googleOAuthConfig.scope);
+    location.searchParams.set("redirect_uri", googleOAuthConfig.redirectUri);
+    location.searchParams.set("state", state);
 
     c.header("Set-Cookie", createOauthStateCookie(state));
-    c.header("Location", location);
+    c.header("Location", location.toString());
     return c.body(null, 302);
   });
 
@@ -169,9 +200,12 @@ export const createApp = (options: CreateAppOptions = {}) => {
     }
 
     const session = sessionStore.create(MVP_AUTH_USER, now());
+    const redirectLocation = webClientOrigin
+      ? new URL(POST_AUTH_REDIRECT_PATH, webClientOrigin).toString()
+      : POST_AUTH_REDIRECT_PATH;
     c.header("Set-Cookie", createSessionCookie(session.sessionId));
     c.header("Set-Cookie", clearOauthStateCookie(), { append: true });
-    c.header("Location", "/lobby");
+    c.header("Location", redirectLocation);
     return c.body(null, 302);
   });
 

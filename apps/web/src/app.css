@@ -88,6 +88,13 @@ h1 {
   padding: 24px 20px;
 }
 
+.lobby-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 h2 {
   margin-top: 0;
 }
@@ -157,8 +164,64 @@ button {
   font-weight: 600;
 }
 
+.timestamp {
+  margin: 4px 0 16px;
+  font-size: 0.86rem;
+}
+
+.table-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.table-card {
+  border: 1px solid #a5f3fc;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  padding: 16px;
+}
+
+.table-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: start;
+}
+
+.table-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.table-card p {
+  margin: 8px 0;
+}
+
+.table-action {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.table-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inline-panel {
+  margin: 8px 0 12px;
+  padding: 16px;
+}
+
 @media (max-width: 768px) {
   .app-header {
+    flex-direction: column;
+  }
+
+  .lobby-header {
     flex-direction: column;
   }
 
