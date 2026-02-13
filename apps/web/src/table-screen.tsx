@@ -10,7 +10,10 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { formatChipsToUsd } from "./auth-api";
 import { TableApiError, type TableDetail, getTableDetail } from "./table-api";
 import {
+  SEAT_COMMAND_TYPES,
+  type SeatCommandType,
   actionRequiresAmount,
+  formatSeatCommandLabel,
   formatSeatStatusLabel,
   resolveTableControlState,
 } from "./table-control";
@@ -32,19 +35,6 @@ const resolveRemainingSeconds = (deadlineAt: string | null, now: number) => {
   }
 
   return Math.max(0, Math.ceil((deadline - now) / 1000));
-};
-
-const toSeatCommandType = (command: "join" | "sitOut" | "return" | "leave") => {
-  if (command === "join") {
-    return RealtimeTableCommandType.JOIN;
-  }
-  if (command === "sitOut") {
-    return RealtimeTableCommandType.SIT_OUT;
-  }
-  if (command === "return") {
-    return RealtimeTableCommandType.RETURN;
-  }
-  return RealtimeTableCommandType.LEAVE;
 };
 
 const formatTableStatusLabel = (status: TableStatus) => {
@@ -149,10 +139,7 @@ export const TableScreen = (props: {
     [actionDeadlineAt, timerNow],
   );
 
-  const handleSeatCommand = (
-    command: "join" | "sitOut" | "return" | "leave",
-  ) => {
-    const commandType = toSeatCommandType(command);
+  const handleSeatCommand = (commandType: SeatCommandType) => {
     setCommandPreview(
       `送信プレビュー: ${commandType}（M4-04 で WebSocket 送信を接続予定）`,
     );
@@ -317,8 +304,8 @@ export const TableScreen = (props: {
           <h3>アクション入力</h3>
           <p>
             {controlState.actionInputEnabled
-              ? "手番中のため table.act 入力を有効化しています。"
-              : "手番外または非ACTIVE状態のため table.act 入力は無効です。"}
+              ? `手番中のため ${RealtimeTableCommandType.ACT} 入力を有効化しています。`
+              : `手番外または非ACTIVE状態のため ${RealtimeTableCommandType.ACT} 入力は無効です。`}
           </p>
           <form className="action-form" onSubmit={onActionSubmit}>
             <label className="field-label" htmlFor="table-action-type">
@@ -368,38 +355,17 @@ export const TableScreen = (props: {
         <div className="surface inline-panel action-panel">
           <h3>席操作</h3>
           <div className="row-actions">
-            <button
-              className="ghost-button"
-              type="button"
-              disabled={!controlState.seatCommandAvailability.join}
-              onClick={() => handleSeatCommand("join")}
-            >
-              JOIN
-            </button>
-            <button
-              className="ghost-button"
-              type="button"
-              disabled={!controlState.seatCommandAvailability.sitOut}
-              onClick={() => handleSeatCommand("sitOut")}
-            >
-              SIT OUT
-            </button>
-            <button
-              className="ghost-button"
-              type="button"
-              disabled={!controlState.seatCommandAvailability.returnToTable}
-              onClick={() => handleSeatCommand("return")}
-            >
-              RETURN
-            </button>
-            <button
-              className="ghost-button"
-              type="button"
-              disabled={!controlState.seatCommandAvailability.leave}
-              onClick={() => handleSeatCommand("leave")}
-            >
-              LEAVE
-            </button>
+            {SEAT_COMMAND_TYPES.map((commandType) => (
+              <button
+                key={commandType}
+                className="ghost-button"
+                type="button"
+                disabled={!controlState.seatCommandAvailability[commandType]}
+                onClick={() => handleSeatCommand(commandType)}
+              >
+                {formatSeatCommandLabel(commandType)}
+              </button>
+            ))}
           </div>
           {commandPreview ? (
             <p className="command-preview">{commandPreview}</p>

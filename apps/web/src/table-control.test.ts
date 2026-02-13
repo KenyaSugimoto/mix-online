@@ -1,4 +1,8 @@
-import { SeatStatus, TableCommandAction } from "@mix-online/shared";
+import {
+  RealtimeTableCommandType,
+  SeatStatus,
+  TableCommandAction,
+} from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import {
   actionRequiresAmount,
@@ -14,10 +18,10 @@ describe("table-control", () => {
 
     expect(state.actionInputEnabled).toBe(false);
     expect(state.seatCommandAvailability).toEqual({
-      join: true,
-      sitOut: false,
-      returnToTable: false,
-      leave: false,
+      [RealtimeTableCommandType.JOIN]: true,
+      [RealtimeTableCommandType.SIT_OUT]: false,
+      [RealtimeTableCommandType.RETURN]: false,
+      [RealtimeTableCommandType.LEAVE]: false,
     });
   });
 
@@ -29,10 +33,10 @@ describe("table-control", () => {
 
     expect(state.actionInputEnabled).toBe(false);
     expect(state.seatCommandAvailability).toEqual({
-      join: false,
-      sitOut: true,
-      returnToTable: false,
-      leave: true,
+      [RealtimeTableCommandType.JOIN]: false,
+      [RealtimeTableCommandType.SIT_OUT]: true,
+      [RealtimeTableCommandType.RETURN]: false,
+      [RealtimeTableCommandType.LEAVE]: true,
     });
   });
 
@@ -62,10 +66,10 @@ describe("table-control", () => {
 
     expect(state.actionInputEnabled).toBe(false);
     expect(state.seatCommandAvailability).toEqual({
-      join: false,
-      sitOut: false,
-      returnToTable: true,
-      leave: true,
+      [RealtimeTableCommandType.JOIN]: false,
+      [RealtimeTableCommandType.SIT_OUT]: false,
+      [RealtimeTableCommandType.RETURN]: true,
+      [RealtimeTableCommandType.LEAVE]: true,
     });
   });
 
@@ -82,16 +86,16 @@ describe("table-control", () => {
     expect(leavePending.actionInputEnabled).toBe(false);
     expect(disconnected.actionInputEnabled).toBe(false);
     expect(leavePending.seatCommandAvailability).toEqual({
-      join: false,
-      sitOut: false,
-      returnToTable: false,
-      leave: false,
+      [RealtimeTableCommandType.JOIN]: false,
+      [RealtimeTableCommandType.SIT_OUT]: false,
+      [RealtimeTableCommandType.RETURN]: false,
+      [RealtimeTableCommandType.LEAVE]: false,
     });
     expect(disconnected.seatCommandAvailability).toEqual({
-      join: false,
-      sitOut: false,
-      returnToTable: false,
-      leave: false,
+      [RealtimeTableCommandType.JOIN]: false,
+      [RealtimeTableCommandType.SIT_OUT]: false,
+      [RealtimeTableCommandType.RETURN]: false,
+      [RealtimeTableCommandType.LEAVE]: false,
     });
   });
 

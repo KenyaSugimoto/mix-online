@@ -1,16 +1,20 @@
 import {
+  RealtimeTableCommandType,
   SeatStatus,
   type SeatStatus as SeatStatusType,
   TableCommandAction,
   type TableCommandAction as TableCommandActionType,
 } from "@mix-online/shared";
 
-type SeatCommandAvailability = {
-  join: boolean;
-  sitOut: boolean;
-  returnToTable: boolean;
-  leave: boolean;
-};
+export const SEAT_COMMAND_TYPES = [
+  RealtimeTableCommandType.JOIN,
+  RealtimeTableCommandType.SIT_OUT,
+  RealtimeTableCommandType.RETURN,
+  RealtimeTableCommandType.LEAVE,
+] as const;
+export type SeatCommandType = (typeof SEAT_COMMAND_TYPES)[number];
+
+type SeatCommandAvailability = Record<SeatCommandType, boolean>;
 
 export type TableControlState = {
   modeLabel: string;
@@ -20,11 +24,29 @@ export type TableControlState = {
 };
 
 const noSeatCommands: SeatCommandAvailability = {
-  join: false,
-  sitOut: false,
-  returnToTable: false,
-  leave: false,
+  [RealtimeTableCommandType.JOIN]: false,
+  [RealtimeTableCommandType.SIT_OUT]: false,
+  [RealtimeTableCommandType.RETURN]: false,
+  [RealtimeTableCommandType.LEAVE]: false,
 };
+
+export const formatSeatCommandLabel = (commandType: SeatCommandType) => {
+  if (commandType === RealtimeTableCommandType.JOIN) {
+    return "着席";
+  }
+  if (commandType === RealtimeTableCommandType.SIT_OUT) {
+    return "SIT OUT";
+  }
+  if (commandType === RealtimeTableCommandType.RETURN) {
+    return "復帰";
+  }
+  return "退席";
+};
+
+const joinCommandLabels = (commandTypes: SeatCommandType[]) =>
+  commandTypes
+    .map((commandType) => formatSeatCommandLabel(commandType))
+    .join(" / ");
 
 export const resolveTableControlState = (params: {
   seatStatus: SeatStatusType | null;
@@ -39,7 +61,7 @@ export const resolveTableControlState = (params: {
       actionInputEnabled: false,
       seatCommandAvailability: {
         ...noSeatCommands,
-        join: true,
+        [RealtimeTableCommandType.JOIN]: true,
       },
     };
   }
@@ -47,12 +69,15 @@ export const resolveTableControlState = (params: {
   if (seatStatus === SeatStatus.SEATED_WAIT_NEXT_HAND) {
     return {
       modeLabel: "次ハンド待機中",
-      note: "観戦UIのみ表示します。SIT OUT / LEAVE のみ操作できます。",
+      note: `観戦UIのみ表示します。${joinCommandLabels([
+        RealtimeTableCommandType.SIT_OUT,
+        RealtimeTableCommandType.LEAVE,
+      ])} のみ操作できます。`,
       actionInputEnabled: false,
       seatCommandAvailability: {
         ...noSeatCommands,
-        sitOut: true,
-        leave: true,
+        [RealtimeTableCommandType.SIT_OUT]: true,
+        [RealtimeTableCommandType.LEAVE]: true,
       },
     };
   }
@@ -61,26 +86,29 @@ export const resolveTableControlState = (params: {
     return {
       modeLabel: isYourTurn ? "手番中" : "参加中（手番待ち）",
       note: isYourTurn
-        ? "table.act 入力を有効化しています。"
+        ? `${RealtimeTableCommandType.ACT} 入力を有効化しています。`
         : "手番までアクション入力は無効です。",
       actionInputEnabled: isYourTurn,
       seatCommandAvailability: {
         ...noSeatCommands,
-        sitOut: true,
-        leave: true,
+        [RealtimeTableCommandType.SIT_OUT]: true,
+        [RealtimeTableCommandType.LEAVE]: true,
       },
     };
   }
 
   if (seatStatus === SeatStatus.SIT_OUT) {
     return {
-      modeLabel: "SIT OUT",
-      note: "次ハンド不参加です。RETURN / LEAVE を選択できます。",
+      modeLabel: formatSeatCommandLabel(RealtimeTableCommandType.SIT_OUT),
+      note: `次ハンド不参加です。${joinCommandLabels([
+        RealtimeTableCommandType.RETURN,
+        RealtimeTableCommandType.LEAVE,
+      ])} を選択できます。`,
       actionInputEnabled: false,
       seatCommandAvailability: {
         ...noSeatCommands,
-        returnToTable: true,
-        leave: true,
+        [RealtimeTableCommandType.RETURN]: true,
+        [RealtimeTableCommandType.LEAVE]: true,
       },
     };
   }
