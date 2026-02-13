@@ -25,12 +25,15 @@ import {
   TableStoreSyncStatus,
   createTableStore,
 } from "./table-store";
-import { LocaleCode } from "./web-constants";
+import { LobbyStateStatus, LocaleCode } from "./web-constants";
 
 type TableScreenState =
-  | { status: "loading"; requestVersion: number }
-  | { status: "loaded"; table: TableDetail }
-  | { status: "error"; message: string };
+  | {
+      status: typeof LobbyStateStatus.LOADING;
+      requestVersion: number;
+    }
+  | { status: typeof LobbyStateStatus.LOADED; table: TableDetail }
+  | { status: typeof LobbyStateStatus.ERROR; message: string };
 
 const resolveRemainingSeconds = (deadlineAt: string | null, now: number) => {
   if (!deadlineAt) {
@@ -93,15 +96,16 @@ const formatSyncStatusLabel = (
 
 export const TableScreen = (props: {
   tableId: string;
+  currentUserId: string;
   onGoLobby: () => void;
   onLogout: () => void;
 }) => {
-  const { tableId, onGoLobby, onLogout } = props;
+  const { tableId, currentUserId, onGoLobby, onLogout } = props;
   const tableStoreRef = useRef<TableStore | null>(null);
   const tableStoreUnsubscribeRef = useRef<(() => void) | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
   const [state, setState] = useState<TableScreenState>({
-    status: "loading",
+    status: LobbyStateStatus.LOADING,
     requestVersion: 0,
   });
   const [selectedAction, setSelectedAction] = useState<TableCommandActionType>(
@@ -142,7 +146,7 @@ export const TableScreen = (props: {
 
   useEffect(() => {
     let isCancelled = false;
-    setState({ status: "loading", requestVersion });
+    setState({ status: LobbyStateStatus.LOADING, requestVersion });
     if (tableStoreRef.current === null) {
       setRealtimeState({
         connectionStatus: TableStoreConnectionStatus.IDLE,
@@ -164,7 +168,7 @@ export const TableScreen = (props: {
         }
 
         setState({
-          status: "loaded",
+          status: LobbyStateStatus.LOADED,
           table: response.table,
         });
       })
@@ -177,7 +181,7 @@ export const TableScreen = (props: {
           error instanceof TableApiError
             ? error.message
             : "卓詳細の取得に失敗しました。";
-        setState({ status: "error", message });
+        setState({ status: LobbyStateStatus.ERROR, message });
       });
 
     return () => {
@@ -186,7 +190,7 @@ export const TableScreen = (props: {
   }, [requestVersion, tableId]);
 
   useEffect(() => {
-    if (state.status !== "loaded") {
+    if (state.status !== LobbyStateStatus.LOADED) {
       return;
     }
     if (tableStoreRef.current) {
@@ -196,6 +200,7 @@ export const TableScreen = (props: {
     const store = createTableStore({
       tableId,
       initialTable: state.table,
+      currentUserId,
     });
 
     const applyRealtimeSnapshot = (snapshot: TableStoreSnapshot) => {
@@ -206,11 +211,11 @@ export const TableScreen = (props: {
         lastErrorMessage: snapshot.lastErrorMessage,
       });
       setState((previousState) => {
-        if (previousState.status !== "loaded") {
+        if (previousState.status !== LobbyStateStatus.LOADED) {
           return previousState;
         }
         return {
-          status: "loaded",
+          status: LobbyStateStatus.LOADED,
           table: snapshot.table,
         };
       });
@@ -219,10 +224,10 @@ export const TableScreen = (props: {
     tableStoreRef.current = store;
     tableStoreUnsubscribeRef.current = store.subscribe(applyRealtimeSnapshot);
     store.start();
-  }, [state, tableId]);
+  }, [currentUserId, state, tableId]);
 
   const actionDeadlineAt =
-    state.status === "loaded"
+    state.status === LobbyStateStatus.LOADED
       ? (state.table.currentHand?.actionDeadlineAt ?? null)
       : null;
   useEffect(() => {
@@ -240,7 +245,7 @@ export const TableScreen = (props: {
     };
   }, [actionDeadlineAt]);
 
-  const table = state.status === "loaded" ? state.table : null;
+  const table = state.status === LobbyStateStatus.LOADED ? state.table : null;
   const mySeat = table?.seats.find((seat) => seat.isYou) ?? null;
   const isYourTurn =
     !!table &&
@@ -341,7 +346,7 @@ export const TableScreen = (props: {
     );
   };
 
-  if (state.status === "loading") {
+  if (state.status === LobbyStateStatus.LOADING) {
     return (
       <section className="surface state-panel" aria-live="polite">
         <h2>卓詳細を読み込み中です</h2>
@@ -356,7 +361,7 @@ export const TableScreen = (props: {
     );
   }
 
-  if (state.status === "error") {
+  if (state.status === LobbyStateStatus.ERROR) {
     return (
       <section className="surface state-panel">
         <h2>卓詳細の取得に失敗しました</h2>
@@ -377,7 +382,7 @@ export const TableScreen = (props: {
     );
   }
 
-  if (state.status === "loaded") {
+  if (state.status === LobbyStateStatus.LOADED) {
     return (
       <section className="surface table-panel">
         <header className="table-panel-header">

@@ -3,6 +3,8 @@ import {
   GameType,
   HandStatus,
   RealtimeTableCommandType,
+  SeatStateChangeAppliesFrom,
+  SeatStateChangeReason,
   SeatStatus,
   SnapshotReason,
   Street,
@@ -439,5 +441,62 @@ describe("table-store", () => {
       action: TableCommandAction.RAISE,
       amount: 40,
     });
+  });
+
+  it("currentUserId 指定時はイベント適用で自席フラグを復元できる", () => {
+    const sockets: FakeWebSocket[] = [];
+    const initialTable = createInitialTable();
+    initialTable.seats = initialTable.seats.map((seat) => ({
+      ...seat,
+      isYou: false,
+    }));
+
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable,
+      currentUserId: "f1b2c3d4-9999-4999-8999-999999999999",
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 1,
+        handId: null,
+        handSeq: null,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.SeatStateChangedEvent,
+        payload: {
+          seatNo: 3,
+          previousStatus: SeatStatus.EMPTY,
+          currentStatus: SeatStatus.ACTIVE,
+          reason: SeatStateChangeReason.JOIN,
+          user: {
+            userId: "f1b2c3d4-9999-4999-8999-999999999999",
+            displayName: "MVP User",
+          },
+          stack: 1000,
+          appliesFrom: SeatStateChangeAppliesFrom.IMMEDIATE,
+        },
+      }),
+    );
+
+    const seat3 = store
+      .getSnapshot()
+      .table.seats.find((seat) => seat.seatNo === 3);
+    expect(seat3?.isYou).toBe(true);
+    expect(seat3?.userId).toBe("f1b2c3d4-9999-4999-8999-999999999999");
   });
 });

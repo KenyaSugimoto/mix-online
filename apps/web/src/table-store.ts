@@ -73,6 +73,7 @@ type ClearTimeoutLike = (timerId: TimerId) => void;
 export type TableStoreOptions = {
   tableId: string;
   initialTable: TableDetail;
+  currentUserId?: string;
   wsUrl?: string;
   reconnectDelayMs?: number;
   resumeAckTimeoutMs?: number;
@@ -335,6 +336,20 @@ const resolveCurrentUserId = (table: TableDetail) =>
   table.seats.find((seat) => seat.isYou && seat.userId !== null)?.userId ??
   null;
 
+const normalizeTableForCurrentUser = (
+  table: TableDetail,
+  currentUserId: string | null,
+): TableDetail => ({
+  ...table,
+  seats: table.seats.map((seat) => ({
+    ...seat,
+    isYou:
+      currentUserId !== null &&
+      seat.userId !== null &&
+      seat.userId === currentUserId,
+  })),
+});
+
 const updateSeat = (
   table: TableDetail,
   seatNo: number,
@@ -368,9 +383,8 @@ const formatStakesDisplay = (smallBet: number, bigBet: number) =>
 const mapSnapshotTable = (
   current: TableDetail,
   snapshot: TableSnapshotMessage,
+  currentUserId: string | null,
 ) => {
-  const currentUserId = resolveCurrentUserId(current);
-
   const nextSeats = snapshot.payload.table.seats.map((seat) => {
     const existing = current.seats.find(
       (candidate) => candidate.seatNo === seat.seatNo,
@@ -596,9 +610,12 @@ const isChipActionPayload = (
   return isActionPayload(payload) && isInteger(stackAfter);
 };
 
-const applyEventToTable = (table: TableDetail, event: TableEventMessage) => {
+const applyEventToTable = (
+  table: TableDetail,
+  event: TableEventMessage,
+  currentUserId: string | null,
+) => {
   const payload = event.payload;
-  const currentUserId = resolveCurrentUserId(table);
 
   if (
     event.eventName === TableEventName.SeatStateChangedEvent &&
@@ -936,9 +953,15 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
   const now = options.now ?? (() => new Date());
   const setTimeoutFn = options.setTimeoutFn ?? setTimeout;
   const clearTimeoutFn = options.clearTimeoutFn ?? clearTimeout;
+  const explicitCurrentUserId = options.currentUserId ?? null;
+  let inferredCurrentUserId =
+    explicitCurrentUserId ?? resolveCurrentUserId(options.initialTable);
 
   let state: TableStoreState = {
-    table: options.initialTable,
+    table: normalizeTableForCurrentUser(
+      options.initialTable,
+      inferredCurrentUserId,
+    ),
     tableSeq: 0,
     connectionStatus: TableStoreConnectionStatus.IDLE,
     syncStatus: TableStoreSyncStatus.IDLE,
@@ -1078,7 +1101,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
     clearResumeInFlight();
 
     patchState({
-      table: applyEventToTable(state.table, message),
+      table: applyEventToTable(state.table, message, inferredCurrentUserId),
       tableSeq: message.tableSeq,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,
@@ -1093,7 +1116,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
 
     clearResumeInFlight();
     patchState({
-      table: mapSnapshotTable(state.table, message),
+      table: mapSnapshotTable(state.table, message, inferredCurrentUserId),
       tableSeq: message.tableSeq,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,
@@ -1239,8 +1262,11 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
   };
 
   const replaceTable = (table: TableDetail) => {
+    if (explicitCurrentUserId === null) {
+      inferredCurrentUserId = resolveCurrentUserId(table);
+    }
     patchState({
-      table,
+      table: normalizeTableForCurrentUser(table, inferredCurrentUserId),
     });
   };
 
