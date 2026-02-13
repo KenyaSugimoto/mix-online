@@ -471,6 +471,17 @@ interface GameRule {
 - `POST /api/auth/logout` ではセッションを無効化し、Cookieを破棄する。
 - 本番ドメイン分離時のCORS固定値、Cookie設定コード例、OAuth redirect URI一覧は [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) の「8. 本番ドメイン方針」を正とする。
 
+Google OAuth開始API設定（実装ルール）:
+
+- `GOOGLE_OAUTH_CLIENT_ID` は必須。未設定時、`GET /api/auth/google/start` は `500 INTERNAL_SERVER_ERROR` を返す。
+- `GOOGLE_OAUTH_REDIRECT_URI` は任意。未設定時のデフォルトは `http://localhost:3000/api/auth/google/callback`。
+- `GOOGLE_OAUTH_SCOPE` は任意。未設定時のデフォルトは `openid email profile`。
+- `GOOGLE_OAUTH_AUTH_ENDPOINT` は任意。未設定時のデフォルトは `https://accounts.google.com/o/oauth2/v2/auth`。
+- `WEB_CLIENT_ORIGIN` は任意。`GET /api/auth/google/callback` 成功時のリダイレクト先生成に使用し、未設定時のローカル既定値は `http://localhost:5173`（`/lobby` へ遷移）。
+- サーバー起動時に `process.cwd()` 配下の `.env.local` → `.env` の順で環境変数を自動読込する（既存の環境変数は上書きしない）。
+  - `pnpm --filter server dev` の既定起動では `apps/server/.env.local` が読込対象。
+  - テンプレートは `apps/server/.env.local.example` を参照。
+
 ## 8.2 ロビー
 
 | Method | Path                   | 説明                           |

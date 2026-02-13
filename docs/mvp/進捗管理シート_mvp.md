@@ -1,7 +1,7 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.24  
-Last Updated: 2026-02-13  
+Version: v1.26  
+Last Updated: 2026-02-14  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 詳細設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)
@@ -120,6 +120,9 @@ Last Updated: 2026-02-13
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-14 | ローカル環境変数の自動読込（LOCAL-AUTH-03） | `apps/server` 起動時に `.env.local` → `.env` を自動読込し、既存環境変数の上書きを禁止する実装に変更 | OAuth設定の `export` 手作業を省きつつ、CIや本番の明示設定値を意図せず書き換えないため | [`env-loader.ts`](../../apps/server/src/env-loader.ts), [`index.ts`](../../apps/server/src/index.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| 2026-02-14 | OAuth callback遷移先の環境差分吸収（LOCAL-AUTH-02） | callback後リダイレクト先を `WEB_CLIENT_ORIGIN` で構成可能にし、ローカル既定を `http://localhost:5173/lobby` に統一した | APIサーバー相対パス `/lobby` へ遷移して `NOT_FOUND` になる誤配線を防ぐため | [`app.ts`](../../apps/server/src/app.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| 2026-02-13 | Google OAuth `invalid_client` 再発防止（LOCAL-AUTH-01） | `GOOGLE_OAUTH_CLIENT_ID` を必須設定にし、未設定時は `GET /api/auth/google/start` で即時エラーを返す運用に変更 | Google Console未設定のままOAuth開始して `401 invalid_client` になる曖昧な失敗を、設定漏れとして早期に検知するため | [`app.ts`](../../apps/server/src/app.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-11 | 実装推進方式 | AIエージェント委譲 + DoD厳格運用 | 速度より品質を優先するため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | 2026-02-11 | 品質ゲート運用（M0-01） | `pnpm lint` → `pnpm check:contract-literals` → `pnpm typecheck` → `pnpm test` の固定順と一次切り分け手順を採用 | 失敗時の調査順序を固定し、復旧時間のばらつきを減らすため | [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | 2026-02-11 | 共通型契約同期（M0-02） | `packages/shared` で契約由来enumを定数化し、契約整合テストを導入 | OpenAPI/AsyncAPI/DDLとの差分を早期検知し、下流実装の型逸脱を防ぐため | [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml), [`20260211190000_create_tables.sql`](../../supabase/migrations/20260211190000_create_tables.sql) |

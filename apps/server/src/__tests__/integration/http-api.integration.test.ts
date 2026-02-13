@@ -14,6 +14,13 @@ import { createApp } from "../../app";
 import { createInMemorySessionStore } from "../../auth-session";
 
 describe("HTTP統合テスト", () => {
+  const TEST_GOOGLE_OAUTH_CONFIG = {
+    authEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    clientId: "test-google-client-id",
+    redirectUri: "http://localhost:3000/api/auth/google/callback",
+    scope: "openid email profile",
+  } as const;
+
   const createAuthenticatedApp = () => {
     const sessionStore = createInMemorySessionStore();
     const session = sessionStore.create(
@@ -95,16 +102,31 @@ describe("HTTP統合テスト", () => {
   });
 
   it("Google OAuth開始APIが state Cookie付きでリダイレクトする", async () => {
-    const app = createApp();
+    const app = createApp({
+      googleOAuthConfig: TEST_GOOGLE_OAUTH_CONFIG,
+    });
     const response = await app.request("/api/auth/google/start");
     const location = response.headers.get("location");
     const setCookie = response.headers.get("set-cookie");
 
     expect(response.status).toBe(302);
     expect(location).toContain("https://accounts.google.com/o/oauth2/v2/auth");
+    expect(location).toContain("client_id=test-google-client-id");
     expect(location).toContain("state=");
     expect(setCookie).toContain("oauth_state=");
     expect(setCookie).toContain("HttpOnly");
+  });
+
+  it("Google OAuth client_id 未設定時は INTERNAL_SERVER_ERROR を返す", async () => {
+    const app = createApp();
+    const response = await app.request("/api/auth/google/start");
+    const body = (await response.json()) as {
+      error: { code: string; message: string };
+    };
+
+    expect(response.status).toBe(500);
+    expect(body.error.code).toBe(ErrorCode.INTERNAL_SERVER_ERROR);
+    expect(body.error.message).toContain("GOOGLE_OAUTH_CLIENT_ID");
   });
 
   it("Google callbackで code/state が欠落している場合に BAD_REQUEST を返す", async () => {
@@ -136,6 +158,25 @@ describe("HTTP統合テスト", () => {
     expect(location).toBe("/lobby");
     expect(setCookie).toContain("session=");
     expect(setCookie).toContain("oauth_state=");
+  });
+
+  it("Google callbackで webClientOrigin 指定時はフロントURLへリダイレクトする", async () => {
+    const app = createApp({
+      webClientOrigin: "http://localhost:5173",
+    });
+    const state = "11111111-1111-4111-8111-111111111111";
+    const response = await app.request(
+      `/api/auth/google/callback?code=fake-code&state=${state}`,
+      {
+        headers: {
+          cookie: `oauth_state=${state}`,
+        },
+      },
+    );
+    const location = response.headers.get("location");
+
+    expect(response.status).toBe(302);
+    expect(location).toBe("http://localhost:5173/lobby");
   });
 
   it("認証なしで /api/auth/me を呼ぶと AUTH_EXPIRED を返す", async () => {
