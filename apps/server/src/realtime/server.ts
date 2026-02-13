@@ -5,6 +5,7 @@ import { createApp } from "../app";
 import { type SessionStore, createInMemorySessionStore } from "../auth-session";
 import {
   type RealtimeTableService,
+  type RealtimeTableServiceRuntimeState,
   createRealtimeTableService,
 } from "./table-service";
 import { type WsGateway, createWsGateway } from "./ws-gateway";
@@ -12,6 +13,7 @@ import { type WsGateway, createWsGateway } from "./ws-gateway";
 export type RealtimeServer = {
   app: ReturnType<typeof createApp>;
   sessionStore: SessionStore;
+  tableService: RealtimeTableService;
   wsGateway: WsGateway;
   port: number;
   close: () => Promise<void>;
@@ -22,6 +24,7 @@ type StartRealtimeServerOptions = {
   sessionStore?: SessionStore;
   now?: () => Date;
   tableService?: RealtimeTableService;
+  initialRealtimeState?: RealtimeTableServiceRuntimeState;
   actionTimeoutMs?: number;
 };
 
@@ -29,7 +32,11 @@ export const startRealtimeServer = (
   options: StartRealtimeServerOptions = {},
 ): RealtimeServer => {
   const sessionStore = options.sessionStore ?? createInMemorySessionStore();
-  const tableService = options.tableService ?? createRealtimeTableService();
+  const tableService =
+    options.tableService ??
+    createRealtimeTableService({
+      initialState: options.initialRealtimeState,
+    });
   const app = createApp({ sessionStore, now: options.now });
   const wsGateway = createWsGateway({
     sessionStore,
@@ -37,6 +44,7 @@ export const startRealtimeServer = (
     tableService,
     actionTimeoutMs: options.actionTimeoutMs,
   });
+  wsGateway.schedulePendingActions(tableService.listPendingActionTableIds());
 
   // Start HTTP server
   const server = serve({
@@ -62,6 +70,7 @@ export const startRealtimeServer = (
   return {
     app,
     sessionStore,
+    tableService,
     wsGateway,
     port,
     close: () =>

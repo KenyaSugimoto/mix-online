@@ -280,6 +280,12 @@ export class WsGateway {
     });
   }
 
+  schedulePendingActions(tableIds: string[]): void {
+    for (const tableId of tableIds) {
+      this.scheduleAutoAction(tableId);
+    }
+  }
+
   private async handleDisconnect(connection: TrackedConnection): Promise<void> {
     this.connections.delete(connection);
 

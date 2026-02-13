@@ -5,14 +5,23 @@ type TableActorContext = {
 
 type TableActorOperation<T> = (context: TableActorContext) => Promise<T> | T;
 
+export type TableActorSeed = {
+  nextTableSeq?: number;
+  handSeqByHandId?: Record<string, number>;
+};
+
+export type TableActorRegistrySeed = Record<string, TableActorSeed>;
+
 export class TableActor {
   readonly tableId: string;
   private queue: Promise<void> = Promise.resolve();
   private nextTableSeqValue = 1;
-  private readonly handSeqByHandId = new Map<string, number>();
+  private readonly handSeqByHandId: Map<string, number>;
 
-  constructor(tableId: string) {
+  constructor(tableId: string, seed: TableActorSeed = {}) {
     this.tableId = tableId;
+    this.nextTableSeqValue = seed.nextTableSeq ?? 1;
+    this.handSeqByHandId = new Map(Object.entries(seed.handSeqByHandId ?? {}));
   }
 
   enqueue<T>(operation: TableActorOperation<T>): Promise<T> {
@@ -53,7 +62,12 @@ export class TableActor {
 }
 
 export class TableActorRegistry {
+  private readonly seed: TableActorRegistrySeed;
   private readonly actors = new Map<string, TableActor>();
+
+  constructor(seed: TableActorRegistrySeed = {}) {
+    this.seed = seed;
+  }
 
   getOrCreate(tableId: string): TableActor {
     const existing = this.actors.get(tableId);
@@ -61,11 +75,12 @@ export class TableActorRegistry {
       return existing;
     }
 
-    const actor = new TableActor(tableId);
+    const actor = new TableActor(tableId, this.seed[tableId]);
     this.actors.set(tableId, actor);
     return actor;
   }
 }
 
-export const createTableActorRegistry = (): TableActorRegistry =>
-  new TableActorRegistry();
+export const createTableActorRegistry = (
+  seed: TableActorRegistrySeed = {},
+): TableActorRegistry => new TableActorRegistry(seed);

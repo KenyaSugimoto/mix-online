@@ -30,6 +30,7 @@ import { createStandardDeck } from "../testing/fixed-deck-harness";
 import { resolveGameRule } from "./game-rule";
 import {
   type TableActorRegistry,
+  type TableActorRegistrySeed,
   createTableActorRegistry,
 } from "./table-actor";
 
@@ -83,6 +84,7 @@ type HandState = {
   raiseCount: number;
 };
 
+export type TableEventMessage = RealtimeTableEventMessage;
 export const TABLE_SNAPSHOT_MESSAGE_TYPE = "table.snapshot" as const;
 
 export const TABLE_RESUME_RESULT_KIND = {
@@ -146,6 +148,13 @@ export type TableResumeResult =
 type RealtimeTableServiceOptions = {
   actorRegistry?: TableActorRegistry;
   retainedEventLimit?: number;
+  initialState?: RealtimeTableServiceRuntimeState;
+};
+
+export type RealtimeTableServiceRuntimeState = {
+  tables: Record<string, TableState>;
+  walletByUserId: Record<string, number>;
+  eventHistoryByTableId: Record<string, TableEventMessage[]>;
 };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
@@ -193,6 +202,36 @@ const createDefaultTableState = (tableId: string): TableState => ({
   })),
 });
 
+const cloneValue = <T>(value: T): T => structuredClone(value);
+
+const createActorRegistrySeedFromHistory = (
+  historyByTableId: Record<string, TableEventMessage[]>,
+): TableActorRegistrySeed => {
+  const seed: TableActorRegistrySeed = {};
+
+  for (const [tableId, events] of Object.entries(historyByTableId)) {
+    const latestTableSeq = events[events.length - 1]?.tableSeq ?? 0;
+    const handSeqByHandId: Record<string, number> = {};
+
+    for (const event of events) {
+      if (!event.handId || event.handSeq === null) {
+        continue;
+      }
+      handSeqByHandId[event.handId] = Math.max(
+        handSeqByHandId[event.handId] ?? 0,
+        event.handSeq,
+      );
+    }
+
+    seed[tableId] = {
+      nextTableSeq: latestTableSeq + 1,
+      handSeqByHandId,
+    };
+  }
+
+  return seed;
+};
+
 export class RealtimeTableService {
   private readonly actorRegistry: TableActorRegistry;
   private readonly retainedEventLimit: number;
@@ -204,8 +243,16 @@ export class RealtimeTableService {
   >();
 
   constructor(options: RealtimeTableServiceOptions = {}) {
-    this.actorRegistry = options.actorRegistry ?? createTableActorRegistry();
+    const actorSeed = createActorRegistrySeedFromHistory(
+      options.initialState?.eventHistoryByTableId ?? {},
+    );
+    this.actorRegistry =
+      options.actorRegistry ?? createTableActorRegistry(actorSeed);
     this.retainedEventLimit = options.retainedEventLimit ?? 256;
+
+    if (options.initialState) {
+      this.restoreRuntimeState(options.initialState);
+    }
   }
 
   async executeCommand(params: {
@@ -527,6 +574,57 @@ export class RealtimeTableService {
   getNextToActSeatNo(tableId: string): number | null {
     const table = this.tables.get(tableId);
     return table?.currentHand?.toActSeatNo ?? null;
+  }
+
+  listPendingActionTableIds(): string[] {
+    return [...this.tables.values()]
+      .filter(
+        (table) =>
+          table.status === TableStatus.BETTING &&
+          table.currentHand?.toActSeatNo !== null,
+      )
+      .map((table) => table.tableId);
+  }
+
+  exportRuntimeState(): RealtimeTableServiceRuntimeState {
+    const tables = Object.fromEntries(
+      [...this.tables.entries()].map(([tableId, table]) => [
+        tableId,
+        cloneValue(table),
+      ]),
+    );
+    const walletByUserId = Object.fromEntries(this.walletByUserId.entries());
+    const eventHistoryByTableId = Object.fromEntries(
+      [...this.eventHistoryByTableId.entries()].map(([tableId, events]) => [
+        tableId,
+        cloneValue(events),
+      ]),
+    );
+
+    return {
+      tables,
+      walletByUserId,
+      eventHistoryByTableId,
+    };
+  }
+
+  private restoreRuntimeState(state: RealtimeTableServiceRuntimeState): void {
+    this.tables.clear();
+    for (const [tableId, table] of Object.entries(state.tables)) {
+      this.tables.set(tableId, cloneValue(table));
+    }
+
+    this.walletByUserId.clear();
+    for (const [userId, balance] of Object.entries(state.walletByUserId)) {
+      this.walletByUserId.set(userId, balance);
+    }
+
+    this.eventHistoryByTableId.clear();
+    for (const [tableId, events] of Object.entries(
+      state.eventHistoryByTableId,
+    )) {
+      this.eventHistoryByTableId.set(tableId, cloneValue(events));
+    }
   }
 
   /**

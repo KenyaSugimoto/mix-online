@@ -429,4 +429,86 @@ describe("WebSocketゲートウェイ統合", () => {
       await server.close();
     }
   });
+
+  it("HP-12 再起動後も進行中ハンドを復元し tableSeq を継続できる", async () => {
+    const now = new Date("2026-02-11T12:00:00.000Z");
+    const tableId = "33333333-3333-4333-8333-333333333333";
+
+    const server1 = startRealtimeServer({
+      port: 0,
+      now: () => now,
+      actionTimeoutMs: 30_000,
+    });
+
+    let latestBeforeRestart = 0;
+    let runtimeState = server1.tableService.exportRuntimeState();
+
+    try {
+      await server1.tableService.executeCommand({
+        command: {
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111121",
+          sentAt: now.toISOString(),
+          payload: {
+            tableId,
+            buyIn: 1000,
+          },
+        },
+        user: TEST_USER,
+        occurredAt: now,
+      });
+
+      await server1.tableService.executeCommand({
+        command: {
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111122",
+          sentAt: now.toISOString(),
+          payload: {
+            tableId,
+            buyIn: 1000,
+          },
+        },
+        user: {
+          userId: "00000000-0000-4000-8000-000000000002",
+          displayName: "U2",
+          walletBalance: 4000,
+        },
+        occurredAt: now,
+      });
+
+      runtimeState = server1.tableService.exportRuntimeState();
+      const historyBefore = runtimeState.eventHistoryByTableId[tableId] ?? [];
+      latestBeforeRestart =
+        historyBefore[historyBefore.length - 1]?.tableSeq ?? 0;
+      expect(latestBeforeRestart).toBeGreaterThan(0);
+    } finally {
+      await server1.close();
+    }
+
+    const server2 = startRealtimeServer({
+      port: 0,
+      now: () => now,
+      initialRealtimeState: runtimeState,
+      actionTimeoutMs: 30,
+    });
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      const resumed = await server2.tableService.resumeFrom({
+        tableId,
+        lastTableSeq: latestBeforeRestart,
+        occurredAt: now,
+      });
+      expect(resumed.kind).toBe("events");
+      if (resumed.kind !== "events") {
+        return;
+      }
+
+      expect(resumed.events.length).toBeGreaterThan(0);
+      expect(resumed.events[0]?.tableSeq).toBeGreaterThan(latestBeforeRestart);
+    } finally {
+      await server2.close();
+    }
+  });
 });
