@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.23  
+Version: v1.24  
 Last Updated: 2026-02-13  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -34,7 +34,7 @@ Last Updated: 2026-02-13
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
-| M4 | Web統合（ロビー〜プレイ） | IN_PROGRESS | 20% | Codex | 2026-02-20 | M4-01完了、M4-02着手可能 |
+| M4 | Web統合（ロビー〜プレイ） | IN_PROGRESS | 35% | Codex | 2026-02-20 | M4-01〜M4-02完了 |
 | M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
 
 ---
@@ -45,20 +45,20 @@ Last Updated: 2026-02-13
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M4-02 | ロビー画面実装（卓一覧表示、参加導線、空席/ゲーム種表示） | P0 | IN_PROGRESS | ロビー仕様表示項目を完全充足 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M4-03 | テーブル画面実装（席状態別UI、手番タイマー、アクション入力） | P0 | NOT_STARTED | 状態別UI制御と操作可否が仕様一致 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M4-03 | テーブル画面実装（席状態別UI、手番タイマー、アクション入力） | P0 | NOT_STARTED | M4-02 完了 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
+| M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | NOT_STARTED | M4-03 完了 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 
 ## Backlog
 
 | ID | Task | Priority | Status | 受け入れ観点（要約） | Link |
 | --- | --- | --- | --- | --- | --- |
 | M4-01 | Web認証導線（ログイン開始、callback後初期化、未認証ガード） | P0 | DONE | HP-01 のUI導線成立 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
-| M4-02 | ロビー画面実装（卓一覧表示、参加導線、空席/ゲーム種表示） | P0 | NOT_STARTED | ロビー仕様表示項目を完全充足 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M4-02 | ロビー画面実装（卓一覧表示、参加導線、空席/ゲーム種表示） | P0 | DONE | ロビー仕様表示項目を完全充足 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M4-03 | テーブル画面実装（席状態別UI、手番タイマー、アクション入力） | P0 | NOT_STARTED | 状態別UI制御と操作可否が仕様一致 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | NOT_STARTED | 欠番検知→resume→再収束の動作確認 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | NOT_STARTED | HP-08 のUI要件を満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
@@ -98,6 +98,7 @@ Last Updated: 2026-02-13
 | M3-10 | サーバー再起動復元（`IN_PROGRESS` リプレイ、タイマー再設定） | P0 | DONE | 2026-02-11 | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-actor.ts`](../../apps/server/src/realtime/table-actor.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
 | M3-11 | Realtime契約テスト（AsyncAPI準拠のイベント/エラー/snapshot） | P0 | DONE | 2026-02-13 | [`ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M4-01 | Web認証導線（ログイン開始、callback後初期化、未認証ガード） | P0 | DONE | 2026-02-13 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/auth-api.ts`](../../apps/web/src/auth-api.ts), [`apps/web/src/routes.ts`](../../apps/web/src/routes.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M4-02 | ロビー画面実装（卓一覧表示、参加導線、空席/ゲーム種表示） | P0 | DONE | 2026-02-13 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/lobby-api.ts`](../../apps/web/src/lobby-api.ts), [`apps/web/src/lobby-api.test.ts`](../../apps/web/src/lobby-api.test.ts), [`要件定義書_mvp.md`](./要件定義書_mvp.md) |
 
 ## Blocked
 
@@ -155,6 +156,7 @@ Last Updated: 2026-02-13
 | 2026-02-13 | M3-11 Realtime契約テスト追加 | AsyncAPI記述と実際のWSメッセージ（`table.event/error/snapshot/pong`）の整合を統合テストで検証し、契約逸脱をCIで検出できる状態に更新 | M3完了条件であるRealtime契約逸脱ゼロを担保し、M4以降の画面実装で契約変更の破壊的影響を即時検知するため | [`ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 | 2026-02-13 | 大規模ファイルの責務分割（LOCAL-REFACTOR-SPLIT-01） | `history-repository` / `showdown-evaluator` / `ws-gateway` / `table-service` を責務単位で分割し、型定義・純粋ロジック・オーケストレーションを分離した | 単一ファイル肥大化によるレビュー負荷と変更時の影響範囲把握コストを下げ、今後の機能追加時の安全性を高めるため | [`history-repository.ts`](../../apps/server/src/repository/history-repository.ts), [`showdown-evaluator.ts`](../../apps/server/src/realtime/showdown-evaluator.ts), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-service-seat-command.ts`](../../apps/server/src/realtime/table-service-seat-command.ts), [`table-service-act-command.ts`](../../apps/server/src/realtime/table-service-act-command.ts), [`table-service-hand.ts`](../../apps/server/src/realtime/table-service-hand.ts), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | 2026-02-13 | M4-01 Web認証導線の実装方針 | `/login` と `/lobby` をSPAルートとして追加し、保護ルート初期表示時に `GET /api/auth/me` を実行して未認証ガードをかける方針を採用 | HP-01 の「callback後初期化」と「未認証ガード」をフロントで先行確立し、M4-02以降のロビー/卓画面へ段階拡張しやすくするため | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/auth-api.ts`](../../apps/web/src/auth-api.ts), [`openapi.yaml`](./openapi.yaml) |
+| 2026-02-13 | M4-02 ロビー一覧と参加導線の実装方針 | `/api/lobby/tables` の取得結果をロビーカードとして表示し、`tableId/tableName/stakes/players/maxPlayers/gameType/emptySeats` を明示して `参加する` から `/tables/:tableId` へ遷移する方針を採用 | 要件定義 11.1 の表示要件をフロントで満たしつつ、M4-03 の卓画面実装へ自然に接続できる導線を先行確立するため | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/lobby-api.ts`](../../apps/web/src/lobby-api.ts), [`要件定義書_mvp.md`](./要件定義書_mvp.md) |
 
 ---
 
@@ -186,4 +188,4 @@ Last Updated: 2026-02-13
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01完了 | M4-02（ロビー画面実装） | 仕様未決事項（DEC-01）が残存 | M4-02（ロビー画面実装）着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-02完了 | M4-03（テーブル画面実装） | 仕様未決事項（DEC-01）が残存 | M4-03（テーブル画面実装）着手 |
