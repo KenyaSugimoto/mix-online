@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { RealtimeErrorCode } from "@mix-online/shared";
+import {
+  RealtimeErrorCode,
+  RealtimeTableCommandType,
+  TableEventName,
+} from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createSessionCookie } from "../../auth-session";
@@ -178,7 +182,7 @@ describe("Realtime契約テスト（M3-11）", () => {
       await waitForOpen(socket);
       socket.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111111",
           sentAt: BASE_TIME.toISOString(),
           payload: {
@@ -203,7 +207,7 @@ describe("Realtime契約テスト（M3-11）", () => {
         "payload",
       ]);
       expect(message.type).toBe("table.event");
-      expect(message.eventName).toBe("SeatStateChangedEvent");
+      expect(message.eventName).toBe(TableEventName.SeatStateChangedEvent);
       expectExactKeys(message.payload, [
         "seatNo",
         "previousStatus",
@@ -247,7 +251,7 @@ describe("Realtime契約テスト（M3-11）", () => {
 
       socket1.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111111",
           sentAt: BASE_TIME.toISOString(),
           payload: {
@@ -260,7 +264,7 @@ describe("Realtime契約テスト（M3-11）", () => {
 
       socket2.send(
         JSON.stringify({
-          type: "table.join",
+          type: RealtimeTableCommandType.JOIN,
           requestId: "11111111-1111-4111-8111-111111111112",
           sentAt: BASE_TIME.toISOString(),
           payload: {
@@ -273,7 +277,7 @@ describe("Realtime契約テスト（M3-11）", () => {
 
       socket1.send(
         JSON.stringify({
-          type: "table.resume",
+          type: RealtimeTableCommandType.RESUME,
           requestId: "11111111-1111-4111-8111-111111111113",
           sentAt: BASE_TIME.toISOString(),
           payload: {
