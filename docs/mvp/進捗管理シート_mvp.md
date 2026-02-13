@@ -34,7 +34,7 @@ Last Updated: 2026-02-14
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
-| M4 | Web統合（ロビー〜プレイ） | IN_PROGRESS | 50% | Codex | 2026-02-20 | M4-01〜M4-03完了 |
+| M4 | Web統合（ロビー〜プレイ） | IN_PROGRESS | 67% | Codex | 2026-02-20 | M4-01〜M4-04完了 |
 | M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
 
 ---
@@ -45,13 +45,13 @@ Last Updated: 2026-02-14
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | NOT_STARTED | 欠番検知→resume→再収束の動作確認 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
+| M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | NOT_STARTED | HP-08 のUI要件を満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | NOT_STARTED | M4-04 完了 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
+| M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | NOT_STARTED | M4-05 完了 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ## Backlog
 
@@ -60,7 +60,7 @@ Last Updated: 2026-02-14
 | M4-01 | Web認証導線（ログイン開始、callback後初期化、未認証ガード） | P0 | DONE | HP-01 のUI導線成立 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
 | M4-02 | ロビー画面実装（卓一覧表示、参加導線、空席/ゲーム種表示） | P0 | DONE | ロビー仕様表示項目を完全充足 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M4-03 | テーブル画面実装（席状態別UI、手番タイマー、アクション入力） | P0 | DONE | 状態別UI制御と操作可否が仕様一致 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
-| M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | NOT_STARTED | 欠番検知→resume→再収束の動作確認 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
+| M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | DONE | 欠番検知→resume→再収束の動作確認 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | NOT_STARTED | HP-08 のUI要件を満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
 | M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | NOT_STARTED | 主要シナリオを段階導入し回帰検知可能 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | 監視最小セットと閾値を運用可能化 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -100,6 +100,7 @@ Last Updated: 2026-02-14
 | M4-01 | Web認証導線（ログイン開始、callback後初期化、未認証ガード） | P0 | DONE | 2026-02-13 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/auth-api.ts`](../../apps/web/src/auth-api.ts), [`apps/web/src/routes.ts`](../../apps/web/src/routes.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M4-02 | ロビー画面実装（卓一覧表示、参加導線、空席/ゲーム種表示） | P0 | DONE | 2026-02-13 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/lobby-api.ts`](../../apps/web/src/lobby-api.ts), [`apps/web/src/lobby-api.test.ts`](../../apps/web/src/lobby-api.test.ts), [`要件定義書_mvp.md`](./要件定義書_mvp.md) |
 | M4-03 | テーブル画面実装（席状態別UI、手番タイマー、アクション入力） | P0 | DONE | 2026-02-14 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-api.ts`](../../apps/web/src/table-api.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
+| M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | DONE | 2026-02-13 | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 
 ## Blocked
 
@@ -121,6 +122,7 @@ Last Updated: 2026-02-14
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-13 | M4-04 TableStore同期方式 | `TableStore` を導入し、`tableSeq` 連番管理・欠番検知時の `table.resume(lastTableSeq)`・`table.snapshot` 反映による再収束をクライアント側で実装する方針を採用 | Cloud Run接続断・一時的な受信欠落があっても、AsyncAPI契約に沿って最終整合へ収束させるため | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 | 2026-02-14 | M4-03 テーブル画面の状態別UI制御方針 | `/api/tables/:tableId` の取得結果をもとに、自席 `SeatStatus` ごとに `table.act` 入力可否と `JOIN/SIT_OUT/RETURN/LEAVE` の操作可否を切り替えるUIを実装し、手番タイマー（`actionDeadlineAt`）を表示する方針を採用 | 画面設計書で定義された表示制御（`SEATED_WAIT_NEXT_HAND` / `ACTIVE` / `SIT_OUT` / `LEAVE_PENDING` / `DISCONNECTED`）を、M4-04 の WebSocket 同期実装前にフロント単体で担保するため | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-api.ts`](../../apps/web/src/table-api.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | 2026-02-14 | ローカル環境変数の自動読込（LOCAL-AUTH-03） | `apps/server` 起動時に `.env.local` → `.env` を自動読込し、既存環境変数の上書きを禁止する実装に変更 | OAuth設定の `export` 手作業を省きつつ、CIや本番の明示設定値を意図せず書き換えないため | [`env-loader.ts`](../../apps/server/src/env-loader.ts), [`index.ts`](../../apps/server/src/index.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-14 | OAuth callback遷移先の環境差分吸収（LOCAL-AUTH-02） | callback後リダイレクト先を `WEB_CLIENT_ORIGIN` で構成可能にし、ローカル既定を `http://localhost:5173/lobby` に統一した | APIサーバー相対パス `/lobby` へ遷移して `NOT_FOUND` になる誤配線を防ぐため | [`app.ts`](../../apps/server/src/app.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -193,4 +195,4 @@ Last Updated: 2026-02-14
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-03完了 | M4-04（`TableStore` 実装） | 仕様未決事項（DEC-01）が残存 | M4-04（`tableSeq`欠番検知・resume再同期）着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-04完了 | M4-05（履歴画面） | 仕様未決事項（DEC-01）が残存 | M4-05（履歴画面）着手 |
