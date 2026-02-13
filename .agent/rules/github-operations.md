@@ -200,6 +200,7 @@ Footer例:
 - [ ] 最新mainから `codex/*` ブランチを作成した
 - [ ] 受け入れ条件を固定した
 - [ ] Out of Scopeを明示した
+- [ ] UI/UXを含むフロントエンドタスクの場合、`ui-ux-pro-max` の利用計画を明示した
 
 ## 8. AI向け完了チェックリスト（作業後）
 
@@ -242,3 +243,12 @@ Footer例:
   - 契約値の整合を固定検証する専用テスト
 - CIでは `pnpm check:contract-literals` を実行し、違反を検知した場合は失敗させる
 - このルールの目的: 契約値変更時の追従漏れ（ハードコード残存）を防ぐため
+
+## 13. UI/UX Skill運用（既定）
+
+- フロントエンドUI実装・UI改善・デザイン検討タスクでは、`/Users/kenya/dev/github.com/KenyaSugimoto/mix-online/.codex/skills/ui-ux-pro-max/` を必ず使用する
+- 実装前に `python3 .codex/skills/ui-ux-pro-max/scripts/search.py "<query>" --design-system` を実行し、設計方針を生成する
+- 継続的に参照する場合は `--persist -p "<ProjectName>"` を付与し、`design-system/<project>/MASTER.md` を作成する
+- `.claude` 互換が必要な環境では `pnpm uiux:link-claude` を実行し、`.claude/skills/ui-ux-pro-max` を `.codex` 側へリンクする
+- 生成方針と異なる実装を採る場合は、最終報告で理由を明記する
+- このルールの目的: UIの一貫性と意思決定速度を維持し、実装品質のばらつきを防ぐため
