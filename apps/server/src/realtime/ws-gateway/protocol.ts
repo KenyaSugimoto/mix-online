@@ -1,10 +1,7 @@
 import type { RealtimeErrorCode } from "@mix-online/shared";
-import { toTableErrorMessage } from "../error-response";
-import { isUuid, validateWsBaseCommand } from "../validation";
-import type {
-  ClientCommandContext,
-  JsonCommandParseResult,
-} from "./ws-gateway-types";
+import { toTableErrorMessage } from "../../error-response";
+import { isUuid, validateWsBaseCommand } from "../../validation";
+import type { ClientCommandContext, JsonCommandParseResult } from "./types";
 
 export const DEFAULT_ACTION_TIMEOUT_MS = 30_000;
 

@@ -9,14 +9,14 @@ import {
   TableEventName,
   TableStatus,
 } from "@mix-online/shared";
-import type { SessionUser } from "../auth-session";
-import { applyActCommand } from "./table-service-act-command";
-import { canStartHand } from "./table-service-turn";
+import type { SessionUser } from "../../auth-session";
+import { applyActCommand } from "./act-command";
+import { canStartHand } from "./turn";
 import type {
   ApplyCommandFailure,
   ApplyCommandResult,
   TableState,
-} from "./table-service-types";
+} from "./types";
 
 const fail = (
   code: RealtimeErrorCode,

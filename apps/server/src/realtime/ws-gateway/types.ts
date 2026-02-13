@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import type { WebSocket } from "ws";
-import type { SessionStore, SessionUser } from "../auth-session";
-import type { RealtimeTableService } from "./table-service";
+import type { SessionStore, SessionUser } from "../../auth-session";
+import type { RealtimeTableService } from "../table-service";
 
 export type TimerHandle = ReturnType<typeof globalThis.setTimeout>;
 

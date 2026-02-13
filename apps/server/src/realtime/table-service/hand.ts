@@ -9,16 +9,16 @@ import {
   TableStatus,
   ThirdStreetCardPosition,
 } from "@mix-online/shared";
-import { createStandardDeck } from "../testing/fixed-deck-harness";
-import { resolveGameRule } from "./game-rule";
-import { resolveNextToAct } from "./table-service-turn";
+import { createStandardDeck } from "../../testing/fixed-deck-harness";
+import { resolveGameRule } from "../game-rule";
+import { resolveNextToAct } from "./turn";
 import type {
   CardValue,
   HandPlayerState,
   HandState,
   PendingEvent,
   TableState,
-} from "./table-service-types";
+} from "./types";
 
 const determineBringInSeat = (
   gameType: GameTypeType,

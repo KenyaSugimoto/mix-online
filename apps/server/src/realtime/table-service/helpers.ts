@@ -1,11 +1,11 @@
 import type { RealtimeTableEventMessage } from "@mix-online/shared";
-import type { SessionUser } from "../auth-session";
+import type { SessionUser } from "../../auth-session";
 import {
   TABLE_SNAPSHOT_MESSAGE_TYPE,
   type TableSnapshotMessage,
-} from "./table-service-protocol";
-import { createDefaultTableState } from "./table-service-state";
-import type { PendingEvent, TableState } from "./table-service-types";
+} from "./protocol";
+import { createDefaultTableState } from "./state";
+import type { PendingEvent, TableState } from "./types";
 
 export const resolveTableIdFromPayload = (
   payload: Record<string, unknown>,

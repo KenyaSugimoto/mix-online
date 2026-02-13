@@ -16,14 +16,14 @@ import {
   parseJsonCommand,
   resolveTableIdFromPayload,
   validateBaseCommand,
-} from "./ws-gateway-protocol";
+} from "./ws-gateway/protocol";
 import type {
   ClientCommandContext,
   GatewayConnection,
   TimerHandle,
   TrackedConnection,
   WsGatewayOptions,
-} from "./ws-gateway-types";
+} from "./ws-gateway/types";
 
 export class WsGateway {
   private readonly sessionStore: WsGatewayOptions["sessionStore"];

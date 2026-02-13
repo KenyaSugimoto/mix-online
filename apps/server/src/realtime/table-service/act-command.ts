@@ -7,13 +7,13 @@ import {
   TableEventName,
   TableStatus,
 } from "@mix-online/shared";
-import type { SessionUser } from "../auth-session";
-import { resolveNextToAct } from "./table-service-turn";
+import type { SessionUser } from "../../auth-session";
+import { resolveNextToAct } from "./turn";
 import type {
   ApplyCommandFailure,
   ApplyCommandResult,
   TableState,
-} from "./table-service-types";
+} from "./types";
 
 const fail = (
   code: RealtimeErrorCode,

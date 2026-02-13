@@ -1,5 +1,5 @@
 import { SeatStatus, TableStatus } from "@mix-online/shared";
-import type { HandState, TableState } from "./table-service-types";
+import type { HandState, TableState } from "./types";
 
 export const canStartHand = (table: TableState): boolean => {
   if (table.currentHand !== null || table.status !== TableStatus.WAITING) {

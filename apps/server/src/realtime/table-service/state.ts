@@ -1,6 +1,6 @@
 import { GameType, SeatStatus, TableStatus } from "@mix-online/shared";
-import type { TableActorRegistrySeed } from "./table-actor";
-import type { TableEventMessage, TableState } from "./table-service-types";
+import type { TableActorRegistrySeed } from "../table-actor";
+import type { TableEventMessage, TableState } from "./types";
 
 export const createDefaultTableState = (tableId: string): TableState => ({
   tableId,

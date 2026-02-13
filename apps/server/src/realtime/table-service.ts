@@ -24,38 +24,38 @@ import {
   applyActCommand,
   applyCommand,
   startThirdStreet,
-} from "./table-service-gameplay";
+} from "./table-service/gameplay";
 import {
   createSnapshotMessage,
   getOrCreateTable,
   mapEvents,
   resolveTableIdFromPayload,
   resolveWalletBalance,
-} from "./table-service-helpers";
+} from "./table-service/helpers";
 import {
   TABLE_RESUME_RESULT_KIND,
   type TableResumeResult,
-} from "./table-service-protocol";
+} from "./table-service/protocol";
 import {
   cloneValue,
   createActorRegistrySeedFromHistory,
-} from "./table-service-state";
+} from "./table-service/state";
 import type {
   PendingEvent,
   RealtimeTableServiceRuntimeState,
   TableEventMessage,
   TableState,
-} from "./table-service-types";
+} from "./table-service/types";
 
 export type { RealtimeTableServiceRuntimeState, TableEventMessage };
 export {
   TABLE_RESUME_RESULT_KIND,
   TABLE_SNAPSHOT_MESSAGE_TYPE,
-} from "./table-service-protocol";
+} from "./table-service/protocol";
 export type {
   TableResumeResult,
   TableSnapshotMessage,
-} from "./table-service-protocol";
+} from "./table-service/protocol";
 
 type RealtimeTableServiceOptions = {
   actorRegistry?: TableActorRegistry;
