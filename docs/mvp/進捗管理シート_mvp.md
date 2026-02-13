@@ -33,7 +33,7 @@ Last Updated: 2026-02-12
 | M0 | 品質ゲート固定（lint/check:contract-literals/typecheck/test） | DONE | 100% | Codex | 2026-02-11 | M0-01〜M0-04完了 |
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
-| M3 | Realtime + Game Engine成立 | IN_PROGRESS | 90% | Codex | 2026-02-11 | M3-01〜M3-10完了、M3-11着手 |
+| M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-12 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | NOT_STARTED | 0% | TBA | TBA | Phase 4 |
 | M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
 
@@ -45,13 +45,13 @@ Last Updated: 2026-02-12
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M3-11 | Realtime契約テスト（AsyncAPI準拠のイベント/エラー/snapshot） | P0 | IN_PROGRESS | `table.event/error/snapshot/pong` の契約逸脱ゼロ | [`asyncapi.yaml`](./asyncapi.yaml) |
+| M4-01 | Web認証導線（ログイン開始、callback後初期化、未認証ガード） | P0 | NOT_STARTED | HP-01 のUI導線成立 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M4-01 | Web認証導線（ログイン開始、callback後初期化、未認証ガード） | P0 | NOT_STARTED | M3完了 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
+| M4-02 | ロビー画面実装（卓一覧表示、参加導線、空席/ゲーム種表示） | P0 | NOT_STARTED | M4-01 完了 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 
 ## Done
 
@@ -81,6 +81,7 @@ Last Updated: 2026-02-12
 | M3-08 | タイムアウト/切断処理（AutoAction、disconnect streak>=3で自動LEAVE） | P0 | DONE | 2026-02-11 | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M3-09 | 再接続復元（`table.resume` 差分再送 + `table.snapshot` フォールバック） | P0 | DONE | 2026-02-11 | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M3-10 | サーバー再起動復元（`IN_PROGRESS` リプレイ、タイマー再設定） | P0 | DONE | 2026-02-11 | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-actor.ts`](../../apps/server/src/realtime/table-actor.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
+| M3-11 | Realtime契約テスト（AsyncAPI準拠のイベント/エラー/snapshot） | P0 | DONE | 2026-02-12 | [`ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 
 ## Backlog
 
@@ -96,6 +97,7 @@ Last Updated: 2026-02-12
 | M3-08 | タイムアウト/切断処理（AutoAction、disconnect streak>=3で自動LEAVE） | P0 | DONE | NG-10、AUTO_CHECK/AUTO_FOLD履歴反映 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M3-09 | 再接続復元（`table.resume` 差分再送 + `table.snapshot` フォールバック） | P0 | DONE | HP-09/HP-11 と snapshot schema検証を満たす | [`asyncapi.yaml`](./asyncapi.yaml), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-10 | サーバー再起動復元（`IN_PROGRESS` リプレイ、タイマー再設定） | P0 | DONE | HP-12 で再起動前後整合を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M3-11 | Realtime契約テスト（AsyncAPI準拠のイベント/エラー/snapshot） | P0 | DONE | `table.event/error/snapshot/pong` の契約逸脱ゼロ | [`asyncapi.yaml`](./asyncapi.yaml) |
 | M3-04 | ハンド開始〜3rd配札基盤（DealInit/PostAnte/DealCards3rd/BringIn） | P0 | NOT_STARTED | ハンド開始条件・Bring-in確定・pot整合 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-05 | アクション合法性実装（手番、toCall、5bet cap全卓適用） | P0 | NOT_STARTED | NG-04〜NG-07, ED-11 を満たす | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M3-06 | `GameRule` 実装（StudHi/Razz/Stud8 Bring-in/先手判定） | P0 | NOT_STARTED | ED-01/ED-02 を再現可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -168,6 +170,7 @@ Last Updated: 2026-02-12
 | 2026-02-11 | M3-08 タイムアウト/切断処理実装 | 手番タイマーを導入し、タイムアウト時の自動 `CHECK/FOLD`（`isAuto=true`）と切断/再接続イベント、`disconnectStreak>=3` の自動LEAVE処理を追加 | NG-10とAutoAction要件をM3-09以降の再接続復元実装前に固定し、切断中進行の整合を先に担保するため | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-11 | M3-09 再接続復元（resume/snapshot）実装 | `table.resume` を実装し、差分再送可能時は `table.event` 連番再送、保持外は `table.snapshot(reason=OUT_OF_RANGE)` フォールバックを返す構成へ更新 | HP-09/HP-11 の復元要件をM3-10再起動復元の前に固定し、再接続経路の整合性とsnapshot必須キーの維持を担保するため | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 | 2026-02-11 | M3-10 サーバー再起動復元基盤実装 | Realtime状態の export/restore と actor採番復元を追加し、起動時に pending action table のタイマー再設定を行う構成へ更新 | HP-12で要求される「再起動後も tableSeq を継続して進行できる」性質をM3-11契約テスト前に固定するため | [`table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`table-actor.ts`](../../apps/server/src/realtime/table-actor.ts), [`server.ts`](../../apps/server/src/realtime/server.ts), [`ws-gateway.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-gateway.integration.test.ts) |
+| 2026-02-12 | M3-11 Realtime契約テスト追加 | AsyncAPI記述と実際のWSメッセージ（`table.event/error/snapshot/pong`）の整合を統合テストで検証し、契約逸脱をCIで検出できる状態に更新 | M3完了条件であるRealtime契約逸脱ゼロを担保し、M4以降の画面実装で契約変更の破壊的影響を即時検知するため | [`ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 
 ---
 
@@ -199,4 +202,4 @@ Last Updated: 2026-02-12
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-10完了 | M3-11（Realtime契約テスト） | 仕様未決事項（DEC-01）が残存 | M3-11（Realtime契約テスト）継続 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了 | M4-01（Web認証導線） | 仕様未決事項（DEC-01）が残存 | M4-01（Web認証導線）着手 |
