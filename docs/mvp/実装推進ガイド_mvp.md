@@ -1,7 +1,7 @@
 # Mix Stud Online 実装推進ガイド（MVP）
 
-Version: v1.2  
-Last Updated: 2026-02-11  
+Version: v1.3  
+Last Updated: 2026-02-13  
 参照要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 参照設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)  
 APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md)  
@@ -24,6 +24,7 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 - **テスト同時実装**: ロジック変更とテスト追加を同一PRで完結
 - **契約維持**: OpenAPI/AsyncAPIと実装差分を残さない
 - **契約値参照**: 契約由来のenum値は文字列直書きせず `@mix-online/shared` の定数を参照する
+- **肥大化抑止**: 1ファイル 400〜500 行を目安に、`types` / `pure logic` / `orchestration` へ責務分割する
 - **履歴明確化**: 進捗と意思決定を必ず記録する
 
 ---
