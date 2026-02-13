@@ -13,6 +13,7 @@ import {
   getLobbyTables,
 } from "./lobby-api";
 import { AppRouteKind, resolveRoute } from "./routes";
+import { TableScreen } from "./table-screen";
 import {
   ApiPath,
   AuthStateStatus,
@@ -159,6 +160,7 @@ export function App() {
           onLoginStart={startLogin}
           onRetry={retryAuth}
           onGoLogin={() => navigate(RoutePath.LOGIN)}
+          onGoLobby={() => navigate(RoutePath.LOBBY)}
           onOpenTable={(tableId) => navigate(toTablePath(tableId))}
           onLogout={logout}
           route={route}
@@ -179,6 +181,7 @@ const ProtectedContent = (props: {
   onLoginStart: () => void;
   onRetry: () => void;
   onGoLogin: () => void;
+  onGoLobby: () => void;
   onOpenTable: (tableId: string) => void;
   onLogout: () => void;
   route: ReturnType<typeof resolveRoute>;
@@ -188,6 +191,7 @@ const ProtectedContent = (props: {
     onLoginStart,
     onRetry,
     onGoLogin,
+    onGoLobby,
     onOpenTable,
     onLogout,
     route,
@@ -245,28 +249,11 @@ const ProtectedContent = (props: {
 
   if (route.kind === AppRouteKind.TABLE) {
     return (
-      <section className="surface state-panel">
-        <h2>卓詳細（準備中）</h2>
-        <p>
-          <strong>tableId:</strong> {route.tableId}
-        </p>
-        <p>
-          M4-03
-          でテーブル画面を実装予定です。現在は認証ガードと画面遷移導線のみ有効です。
-        </p>
-        <div className="row-actions">
-          <button
-            className="primary-button"
-            type="button"
-            onClick={() => window.history.back()}
-          >
-            戻る
-          </button>
-          <button className="ghost-button" type="button" onClick={onLogout}>
-            ログアウト
-          </button>
-        </div>
-      </section>
+      <TableScreen
+        tableId={route.tableId}
+        onGoLobby={onGoLobby}
+        onLogout={onLogout}
+      />
     );
   }
 

@@ -3,6 +3,7 @@ export const ApiPath = {
   AUTH_ME: "/api/auth/me",
   AUTH_LOGOUT: "/api/auth/logout",
   LOBBY_TABLES: "/api/lobby/tables",
+  TABLES_PREFIX: "/api/tables/",
 } as const;
 
 export const RoutePath = {
@@ -22,6 +23,7 @@ export const HttpStatusCode = {
   OK: 200,
   NO_CONTENT: 204,
   UNAUTHORIZED: 401,
+  NOT_FOUND: 404,
   INTERNAL_SERVER_ERROR: 500,
 } as const;
 
@@ -63,3 +65,6 @@ export const LobbyStateStatus = {
 
 export const toTablePath = (tableId: string) =>
   `${RoutePath.TABLES_ROOT}/${tableId}`;
+
+export const toTableDetailApiPath = (tableId: string) =>
+  `${ApiPath.TABLES_PREFIX}${encodeURIComponent(tableId)}`;
