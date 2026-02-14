@@ -4,12 +4,15 @@ export const ApiPath = {
   AUTH_LOGOUT: "/api/auth/logout",
   LOBBY_TABLES: "/api/lobby/tables",
   TABLES_PREFIX: "/api/tables/",
+  HISTORY_HANDS: "/api/history/hands",
+  HISTORY_HANDS_PREFIX: "/api/history/hands/",
 } as const;
 
 export const RoutePath = {
   ROOT: "/",
   LOGIN: "/login",
   LOBBY: "/lobby",
+  HISTORY: "/history",
   TABLES_ROOT: "/tables",
   TABLES_PREFIX: "/tables/",
 } as const;
@@ -20,6 +23,7 @@ export const HttpMethod = {
 } as const;
 
 export const HttpStatusCode = {
+  BAD_REQUEST: 400,
   OK: 200,
   NO_CONTENT: 204,
   UNAUTHORIZED: 401,
@@ -68,3 +72,6 @@ export const toTablePath = (tableId: string) =>
 
 export const toTableDetailApiPath = (tableId: string) =>
   `${ApiPath.TABLES_PREFIX}${encodeURIComponent(tableId)}`;
+
+export const toHistoryHandDetailApiPath = (handId: string) =>
+  `${ApiPath.HISTORY_HANDS_PREFIX}${encodeURIComponent(handId)}`;

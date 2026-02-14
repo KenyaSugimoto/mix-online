@@ -15,6 +15,12 @@ describe("routes", () => {
     expect(resolveRoute(RoutePath.LOBBY)).toEqual({ kind: AppRouteKind.LOBBY });
   });
 
+  it("履歴画面の経路を判定する", () => {
+    expect(resolveRoute(RoutePath.HISTORY)).toEqual({
+      kind: AppRouteKind.HISTORY,
+    });
+  });
+
   it("卓詳細の経路を判定する", () => {
     expect(resolveRoute(toTablePath("table-01"))).toEqual({
       kind: AppRouteKind.TABLE,
