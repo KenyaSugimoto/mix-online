@@ -474,10 +474,15 @@ interface GameRule {
 Google OAuth開始API設定（実装ルール）:
 
 - `GOOGLE_OAUTH_CLIENT_ID` は必須。未設定時、`GET /api/auth/google/start` は `500 INTERNAL_SERVER_ERROR` を返す。
+- `GOOGLE_OAUTH_CLIENT_SECRET` は callback 時に必須。未設定時、`GET /api/auth/google/callback` は `500 INTERNAL_SERVER_ERROR` を返す。
 - `GOOGLE_OAUTH_REDIRECT_URI` は任意。未設定時のデフォルトは `http://localhost:3000/api/auth/google/callback`。
 - `GOOGLE_OAUTH_SCOPE` は任意。未設定時のデフォルトは `openid email profile`。
 - `GOOGLE_OAUTH_AUTH_ENDPOINT` は任意。未設定時のデフォルトは `https://accounts.google.com/o/oauth2/v2/auth`。
+- `GOOGLE_OAUTH_TOKEN_ENDPOINT` は任意。未設定時のデフォルトは `https://oauth2.googleapis.com/token`。
+- `GOOGLE_OAUTH_USERINFO_ENDPOINT` は任意。未設定時のデフォルトは `https://openidconnect.googleapis.com/v1/userinfo`。
 - `WEB_CLIENT_ORIGIN` は任意。`GET /api/auth/google/callback` 成功時のリダイレクト先生成に使用し、未設定時のローカル既定値は `http://localhost:5173`（`/lobby` へ遷移）。
+- callback 後のユーザー永続化は `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` が設定されている場合に Supabase REST（`users` / `wallets`）を使用する。
+- 上記 Supabase 環境変数が未設定の場合、開発用フォールバックとして in-memory のユーザーリポジトリを使用する（プロセス再起動で消える）。
 - サーバー起動時に `process.cwd()` 配下の `.env.local` → `.env` の順で環境変数を自動読込する（既存の環境変数は上書きしない）。
   - `pnpm --filter server dev` の既定起動では `apps/server/.env.local` が読込対象。
   - テンプレートは `apps/server/.env.local.example` を参照。

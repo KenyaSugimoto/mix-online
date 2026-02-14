@@ -35,7 +35,7 @@ Last Updated: 2026-02-14
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
-| M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
+| M5 | リリース準備完了 | IN_PROGRESS | 25% | Codex | TBA | M5-10完了、M5-11待ち |
 
 ---
 
@@ -46,7 +46,7 @@ Last Updated: 2026-02-14
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
 | M5-00 | M4完了時点のリリース監査（できること/未対応の棚卸し） | P0 | DONE | 監査結果を進捗管理シートと実装推進ガイドへ反映済み | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
-| M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | NOT_STARTED | `/api/auth/me` が固定ユーザー以外を返せる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | DONE | `/api/auth/me` が固定ユーザー以外を返せる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-11 | Lobby/Table/History のMVP固定データ撤廃（DB Repositoryへ切替） | P0 | NOT_STARTED | APIが実データを返し、fixture前提が不要 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-12 | ローカル統合プレイ確認（HTTP+WS接続経路固定、手動2ユーザー検証） | P0 | NOT_STARTED | ローカルで2人1ハンド完了を再現可能 | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | M5-12 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -108,6 +108,7 @@ Last Updated: 2026-02-14
 | M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | DONE | 2026-02-13 | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | DONE | 2026-02-14 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/routes.ts`](../../apps/web/src/routes.ts), [`apps/web/src/history-api.ts`](../../apps/web/src/history-api.ts), [`apps/web/src/history-api.test.ts`](../../apps/web/src/history-api.test.ts), [`apps/web/src/history-screen.tsx`](../../apps/web/src/history-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`openapi.yaml`](./openapi.yaml) |
 | M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | DONE | 2026-02-14 | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`apps/server/src/__tests__/e2e/hp.e2e.test.ts`](../../apps/server/src/__tests__/e2e/hp.e2e.test.ts), [`apps/server/src/__tests__/e2e/ng.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ng.e2e.test.ts), [`apps/server/src/__tests__/e2e/ed.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ed.e2e.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | DONE | 2026-02-14 | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/google-oauth-client.ts`](../../apps/server/src/google-oauth-client.ts), [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`apps/server/src/__tests__/integration/http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Blocked
 
@@ -119,7 +120,7 @@ Last Updated: 2026-02-14
 
 | 領域 | できること（確認済み） | まだできないこと / 制約 | リリース判定 |
 | --- | --- | --- | --- |
-| 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立 | callbackで固定ユーザー（`MVP_AUTH_USER`）を発行しており、実ユーザー識別・永続化が未実装 | P0対応が必要 |
+| 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える） | P0主要対応完了 |
 | Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立 | `createMvp*Repository` に依存し、実データ経路の確認ができない | P0対応が必要 |
 | Realtimeプレイ | Game Engine + WS契約テスト（HP/NG/ED）と `TableStore` の再同期（resume/snapshot）は成立 | ローカルWeb起動時の `/ws` 経路が未固定で、手動2ユーザーの実プレイ確認をまだ記録していない | P0対応が必要 |
 | ゲーム画面UI | 席状態に応じた操作可否、手番タイマー、履歴表示が実装済み | `SeatStateChangedEvent.reason` / `appliesFrom` のUIログ保持など、画面設計書の一部要件が未反映 | P1対応が必要 |
@@ -131,7 +132,7 @@ Last Updated: 2026-02-14
 
 | Date | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- | --- |
-| 2026-02-14 | OAuth callbackが固定ユーザーを発行しており、実ユーザー識別ができない | 高 | `M5-10` で code exchange + user永続化 + セッション統合テストを実施 | OPEN |
+| 2026-02-14 | OAuth callbackが固定ユーザーを発行しており、実ユーザー識別ができない | 高 | `M5-10` で code exchange + user永続化 + セッション統合テストを実施 | CLOSED |
 | 2026-02-14 | Lobby/Table/History がMVP固定データ依存で本番データ経路を検証できない | 高 | `M5-11` でPostgreSQL Repositoryへ切替し、MVP fixtureはテスト用途へ限定 | OPEN |
 | 2026-02-14 | Webクライアントの `/ws` 接続経路がローカル起動構成と不整合になる可能性 | 中 | `M5-12` でWS接続経路を固定し、2ユーザー手動試験を最小受け入れ条件に追加 | OPEN |
 | 2026-02-14 | 画面設計書のUIログ要件（`reason`/`appliesFrom`保持）が未充足 | 中 | `M5-13` でUI反映 + 画面仕様テストケースを追加 | OPEN |
@@ -143,6 +144,7 @@ Last Updated: 2026-02-14
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-14 | M5-10 認証実運用化方針 | callbackで固定ユーザー発行を廃止し、Google code exchange結果（`sub`/`name`）を `users`/`wallets` へ永続化したユーザーをセッション化する。Supabase未設定時はin-memory fallbackを使用 | リリース阻害P0だった「固定ユーザー依存」を解消し、`/api/auth/me` を実ユーザー基準へ移行するため | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/google-oauth-client.ts`](../../apps/server/src/google-oauth-client.ts), [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-14 | M5着手順（リリース阻害P0の先行解消） | M5は `M5-10(認証実運用化) -> M5-11(実データ化) -> M5-12(ローカル統合プレイ確認)` をP0優先で実施し、完了後に `M5-13/M5-01/M5-02/M5-03` へ進む | 「ローカルで実際にプレイ可能か」と「本番運用前提のデータ経路成立」を先に確定しないと、UI/運用整備の評価が不安定になるため | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts) |
 | 2026-02-14 | M4-06 E2E段階導入のCI組み込み方針 | E2Eを `foundation -> HP -> NG -> ED` の順にテストファイル分割し、CIジョブを段階実行へ更新する方針を採用 | 回帰検知を維持しながら、失敗時にカテゴリ単位で原因を切り分けやすくするため | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`apps/server/src/__tests__/e2e/hp.e2e.test.ts`](../../apps/server/src/__tests__/e2e/hp.e2e.test.ts), [`apps/server/src/__tests__/e2e/ng.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ng.e2e.test.ts), [`apps/server/src/__tests__/e2e/ed.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ed.e2e.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-13 | M4-04 TableStore同期方式 | `TableStore` を導入し、`tableSeq` 連番管理・欠番検知時の `table.resume(lastTableSeq)`・`table.snapshot` 反映による再収束をクライアント側で実装する方針を採用 | Cloud Run接続断・一時的な受信欠落があっても、AsyncAPI契約に沿って最終整合へ収束させるため | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
@@ -219,4 +221,4 @@ Last Updated: 2026-02-14
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了 | なし | 認証の固定ユーザー発行、MVP固定データ依存、ローカルWS経路未固定、DEC-01 が残存 | M5-10 -> M5-11 -> M5-12 の順にP0解消 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了 | なし | MVP固定データ依存、ローカルWS経路未固定、DEC-01 が残存 | M5-11 -> M5-12 の順にP0解消 |
