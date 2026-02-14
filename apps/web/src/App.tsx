@@ -1,10 +1,11 @@
 import { ErrorCode } from "@mix-online/shared";
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   AuthApiError,
   type UserProfile,
   formatChipsToUsd,
   getAuthMe,
+  patchAuthDisplayName,
   postAuthLogout,
 } from "./auth-api";
 import { HistoryScreen } from "./history-screen";
@@ -131,6 +132,26 @@ export function App() {
     navigate(RoutePath.LOGIN);
   };
 
+  const updateDisplayName = async (displayName: string) => {
+    try {
+      const updatedUser = await patchAuthDisplayName(displayName);
+      setAuthState({
+        status: AuthStateStatus.AUTHENTICATED,
+        user: updatedUser,
+      });
+      return updatedUser;
+    } catch (error: unknown) {
+      if (
+        error instanceof AuthApiError &&
+        (error.code === ErrorCode.AUTH_EXPIRED ||
+          error.status === HttpStatusCode.UNAUTHORIZED)
+      ) {
+        setAuthState({ status: AuthStateStatus.UNAUTHENTICATED });
+      }
+      throw error;
+    }
+  };
+
   return (
     <div className={`app-shell ${isTableRoute ? "is-table-route" : ""}`}>
       {isTableRoute ? null : (
@@ -177,6 +198,7 @@ export function App() {
           onGoLobby={() => navigate(RoutePath.LOBBY)}
           onOpenTable={(tableId) => navigate(toTablePath(tableId))}
           onLogout={logout}
+          onDisplayNameUpdate={updateDisplayName}
           route={route}
         />
       ) : (
@@ -198,6 +220,7 @@ const ProtectedContent = (props: {
   onGoLobby: () => void;
   onOpenTable: (tableId: string) => void;
   onLogout: () => void;
+  onDisplayNameUpdate: (displayName: string) => Promise<UserProfile>;
   route: ReturnType<typeof resolveRoute>;
 }) => {
   const {
@@ -208,6 +231,7 @@ const ProtectedContent = (props: {
     onGoLobby,
     onOpenTable,
     onLogout,
+    onDisplayNameUpdate,
     route,
   } = props;
 
@@ -277,6 +301,7 @@ const ProtectedContent = (props: {
         user={authState.user}
         onLogout={onLogout}
         onOpenTable={onOpenTable}
+        onDisplayNameUpdate={onDisplayNameUpdate}
       />
     );
   }
@@ -338,17 +363,43 @@ type LobbyState =
     }
   | { status: typeof LobbyStateStatus.ERROR; message: string };
 
+type DisplayNameUpdateState =
+  | { status: "idle" }
+  | { status: "saving" }
+  | { status: "success"; message: string }
+  | { status: "error"; message: string };
+
+const toDisplayNameUpdateErrorMessage = (error: unknown) => {
+  if (error instanceof AuthApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message.length > 0) {
+    return error.message;
+  }
+
+  return "表示名の更新に失敗しました。";
+};
+
 const LobbyScreen = (props: {
   user: UserProfile;
   onLogout: () => void;
   onOpenTable: (tableId: string) => void;
+  onDisplayNameUpdate: (displayName: string) => Promise<UserProfile>;
 }) => {
-  const { user, onLogout, onOpenTable } = props;
+  const { user, onLogout, onOpenTable, onDisplayNameUpdate } = props;
   const [requestVersion, setRequestVersion] = useState(0);
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     status: LobbyStateStatus.LOADING,
     requestVersion: 0,
   });
+  const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
+  const [displayNameDraft, setDisplayNameDraft] = useState(user.displayName);
+  const [displayNameUpdateState, setDisplayNameUpdateState] =
+    useState<DisplayNameUpdateState>({
+      status: "idle",
+    });
+  const isSavingDisplayName = displayNameUpdateState.status === "saving";
 
   useEffect(() => {
     let isCancelled = false;
@@ -383,6 +434,41 @@ const LobbyScreen = (props: {
     };
   }, [requestVersion]);
 
+  useEffect(() => {
+    setDisplayNameDraft(user.displayName);
+  }, [user.displayName]);
+
+  const startDisplayNameEdit = () => {
+    setDisplayNameDraft(user.displayName);
+    setDisplayNameUpdateState({ status: "idle" });
+    setIsEditingDisplayName(true);
+  };
+
+  const cancelDisplayNameEdit = () => {
+    setDisplayNameDraft(user.displayName);
+    setDisplayNameUpdateState({ status: "idle" });
+    setIsEditingDisplayName(false);
+  };
+
+  const submitDisplayNameUpdate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setDisplayNameUpdateState({ status: "saving" });
+
+    try {
+      await onDisplayNameUpdate(displayNameDraft);
+      setDisplayNameUpdateState({
+        status: "success",
+        message: "表示名を更新しました。",
+      });
+      setIsEditingDisplayName(false);
+    } catch (error: unknown) {
+      setDisplayNameUpdateState({
+        status: "error",
+        message: toDisplayNameUpdateErrorMessage(error),
+      });
+    }
+  };
+
   return (
     <section className="surface state-panel">
       <header className="lobby-header">
@@ -394,6 +480,62 @@ const LobbyScreen = (props: {
           <p>
             保有チップ: <strong>{formatChipsToUsd(user.walletBalance)}</strong>
           </p>
+          <div className="profile-edit-panel">
+            <p className="profile-edit-label">表示名</p>
+            {isEditingDisplayName ? (
+              <form
+                className="profile-edit-form"
+                onSubmit={submitDisplayNameUpdate}
+              >
+                <input
+                  type="text"
+                  value={displayNameDraft}
+                  maxLength={64}
+                  onChange={(event) => setDisplayNameDraft(event.target.value)}
+                  disabled={isSavingDisplayName}
+                  aria-label="表示名"
+                />
+                <div className="row-actions profile-edit-actions">
+                  <button
+                    className="primary-button"
+                    type="submit"
+                    disabled={isSavingDisplayName}
+                  >
+                    {isSavingDisplayName ? "保存中..." : "保存"}
+                  </button>
+                  <button
+                    className="ghost-button"
+                    type="button"
+                    onClick={cancelDisplayNameEdit}
+                    disabled={isSavingDisplayName}
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="profile-edit-row">
+                <strong>{user.displayName}</strong>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={startDisplayNameEdit}
+                >
+                  表示名を編集
+                </button>
+              </div>
+            )}
+            {displayNameUpdateState.status === "success" ? (
+              <p className="profile-edit-message is-success">
+                {displayNameUpdateState.message}
+              </p>
+            ) : null}
+            {displayNameUpdateState.status === "error" ? (
+              <p className="profile-edit-message is-error">
+                {displayNameUpdateState.message}
+              </p>
+            ) : null}
+          </div>
         </div>
         <div className="row-actions">
           <button

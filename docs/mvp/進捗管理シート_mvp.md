@@ -63,7 +63,7 @@ Last Updated: 2026-02-14
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
 | M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | M5-10 完了 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | NOT_STARTED | M5-14 完了 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
+| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | DONE | M5-14 完了 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
 | M5-02 | 運用Runbook整備（デプロイ手順、ローリング更新、障害復旧） | P1 | NOT_STARTED | M5-01 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) |
 
 ## Backlog
@@ -90,7 +90,7 @@ Last Updated: 2026-02-14
 | M5-24 | 手番持ち時間表示の同期不具合修正（秒数/バー） | P1 | NOT_STARTED | 現在手番者の残り秒数とバーが実時間で正しく減少し、手番交代時に初期化される | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-25 | 配札ランダム性の不具合修正（スート偏り/固定配札の解消） | P0 | NOT_STARTED | 通常対局で毎回同一カード列にならず、4スートを含むランダム配札が行われる | [`apps/server/src/realtime/table-service/gameplay.ts`](../../apps/server/src/realtime/table-service/gameplay.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | ユーザーが任意の表示名へ変更できる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | NOT_STARTED | 表示名変更を画面から完結できる | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
+| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | DONE | 表示名変更を画面から完結できる | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
 | DEC-01 | 未決事項の合意（プレイヤー名変更、最低バイイン、オッドチップ詳細） | P1 | NOT_STARTED | 仕様合意をADR化し関連仕様へ反映 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Done
@@ -138,6 +138,7 @@ Last Updated: 2026-02-14
 | M5-13 | テーブルUIギャップ解消（`reason`/`appliesFrom` 表示、状態不整合検知ログ） | P1 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-19 | テーブルUI再設計（ゲームテーブル表示、カード可視化、操作導線改善） | P1 | DONE | 2026-02-14 | [`docs/mvp/plans/M5-19_table-ui-redesign_plan_2026-02-14.md`](./plans/M5-19_table-ui-redesign_plan_2026-02-14.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | 2026-02-14 | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/contract.ts`](../../apps/server/src/repository/auth/contract.ts), [`apps/server/src/repository/auth/in-memory.ts`](../../apps/server/src/repository/auth/in-memory.ts), [`apps/server/src/repository/auth/supabase.ts`](../../apps/server/src/repository/auth/supabase.ts), [`apps/server/src/__tests__/integration/http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`docs/mvp/openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | DONE | 2026-02-14 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/auth-api.ts`](../../apps/web/src/auth-api.ts), [`apps/web/src/auth-api.test.ts`](../../apps/web/src/auth-api.test.ts), [`apps/web/src/web-constants.ts`](../../apps/web/src/web-constants.ts), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 
 ## Blocked
 
@@ -149,7 +150,7 @@ Last Updated: 2026-02-14
 
 | 領域 | できること（確認済み） | まだできないこと / 制約 | リリース判定 |
 | --- | --- | --- | --- |
-| 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる。初期表示名は匿名ID（`Player-XXXXXX`）で採番し、再ログインで上書きしない。さらに `PATCH /api/auth/me/display-name` で表示名更新APIを実装済み | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える）。表示名変更のUI導線（`M5-15`）は未実装 | P0主要対応完了 |
+| 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる。初期表示名は匿名ID（`Player-XXXXXX`）で採番し、再ログインで上書きしない。さらに `PATCH /api/auth/me/display-name` とロビー画面の表示名編集導線（`M5-15`）を実装済み | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える） | P0主要対応完了 |
 | Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立。Supabase環境変数設定時はRepository経由で実データを返却できる | Realtimeの永続化は未接続のため、実プレイ後の履歴反映は `M5-12` で再確認が必要 | P0主要対応完了 |
 | Realtimeプレイ | `/ws` 接続、着席、3rd開始に加え、`StreetAdvance/DealCard/Showdown/DealEnd` で終局まで進行でき、`table.act` の受理アクションとUI提示候補を一致させた。さらに viewer別カードマスク（`DOWN_SELF`/`DOWN_HIDDEN`）と `table.snapshot` のカード復元情報を配信できる | 履歴永続化との完全整合・E2E拡張（`M5-20`）は未完 | P0主要対応完了 |
 | ゲーム画面UI | 席状態ごとの操作可否、手番タイマー、卓メタ情報、6席フェルトレイアウト、配札カード可視化（viewer別秘匿）、固定額アクションドック、進行ログ（`reason`/`appliesFrom`）を実装済み | 2ユーザー手動統合プレイ（M5-12）による最終確認は未実施 | P0主要対応完了 |
@@ -165,7 +166,7 @@ Last Updated: 2026-02-14
 | 2026-02-14 | `table.act` の契約値とサーバー実装が不一致で、UIに非合法アクションが表示される | 高 | `M5-17` で `PokerActionLogic.md` 準拠の局面別合法アクション判定（server/UI）へ統一し、`BET` / `BRING_IN` を局面制約付きで受理 | CLOSED |
 | 2026-02-14 | Realtime契約/E2Eが全イベント系（DealCard/StreetAdvance/Showdown/DealEnd）を検証できておらず、回帰を見逃す | 高 | `M5-20` で契約テストとHPシナリオを拡張し、停止系不具合をCIで検知 | OPEN |
 | 2026-02-14 | OAuth callbackが固定ユーザーを発行しており、実ユーザー識別ができない | 高 | `M5-10` で code exchange + user永続化 + セッション統合テストを実施 | CLOSED |
-| 2026-02-14 | 表示名変更のUI導線が未実装のため、API実装後も画面から直接変更できない | 中 | `M5-15`（UI）でプロフィール編集導線を追加する | OPEN |
+| 2026-02-14 | 表示名変更のUI導線が未実装のため、API実装後も画面から直接変更できない | 中 | `M5-15`（UI）でプロフィール編集導線を追加した | CLOSED |
 | 2026-02-14 | Lobby/Table/History がMVP固定データ依存で本番データ経路を検証できない | 高 | `M5-11` でSupabase Repositoryへ切替。環境変数未設定時のみMVP fallbackを許容 | CLOSED |
 | 2026-02-14 | Webクライアントの `/ws` 接続経路がローカル起動構成と不整合になる可能性 | 中 | `M5-12` でVite proxyに `/ws` を追加して経路を固定。残件は2ユーザー手動試験の記録化 | IN_PROGRESS |
 | 2026-02-14 | 画面設計書のUIログ要件（`reason`/`appliesFrom`保持）が未充足 | 中 | `M5-13` でUI反映 + 画面仕様テストケースを追加 | CLOSED |
@@ -177,6 +178,7 @@ Last Updated: 2026-02-14
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-14 | M5-15 表示名編集UI方針 | ロビーに表示名編集フォーム（編集モード切替/保存中disable/成功・失敗メッセージ表示）を追加し、`PATCH /api/auth/me/display-name` の結果で `authState` を即時更新する。 | API実装（M5-14）後にユーザーが画面から完結して表示名を変更できる導線を確立し、次画面遷移を待たず表示を同期させるため | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/auth-api.ts`](../../apps/web/src/auth-api.ts), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | 2026-02-14 | M5-14 表示名変更APIの入力制約 | `PATCH /api/auth/me/display-name` は `displayName` を trim 後 1〜64文字で受理し、認証ユーザーの `users.display_name` を更新して `user` を返す。失敗時は `BAD_REQUEST` / `AUTH_EXPIRED` を返す。 | OpenAPI `UserProfile.displayName` の制約（1〜64）と整合させつつ、空白のみ入力や不正payloadを早期に拒否してUI実装（M5-15）と契約を固定するため | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/contract.ts`](../../apps/server/src/repository/auth/contract.ts), [`docs/mvp/openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-14 | M5-19 追加UI調整（カード段差の有効化 + 枠視認性改善） | 表向きカードの段差表現を `margin-top` から `position/top` ベースへ切替え、確実に上方向へオフセットされるよう修正。カード境界の判読性向上のため、表カードの枠色/背景/内側シャドウと裏カード枠色を調整した。 | 実機確認で「段差が視認できない」「境界が曖昧」という課題が残ったため、レイアウト実装を安定化して読み取りやすさを優先するため | [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | 2026-02-14 | M5-19 追加UI調整（カード重なり + 席別直近アクション） | 7枚カードを1列横並びかつ重なり表示へ変更し、表向きカードは上方向オフセットを維持。直近アクション表示はアクションドックから撤去し、各席パネル付近へ移設した。Storeは単一 `lastAction` から `lastActionBySeatNo` に拡張して席ごとの最新アクションを保持する。 | 各席のカード構成と行動履歴を即座に判別できるようにし、操作ドックの情報密度を下げてプレイ中の視認性を高めるため | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
