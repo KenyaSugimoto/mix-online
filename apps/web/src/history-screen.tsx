@@ -7,7 +7,11 @@ import {
   getHandHistories,
   getHandHistoryDetail,
 } from "./history-api";
-import { LobbyStateStatus, LocaleCode } from "./web-constants";
+import {
+  HistoryDetailStateStatus,
+  LobbyStateStatus,
+  LocaleCode,
+} from "./web-constants";
 
 const PAGE_SIZE = 10;
 
@@ -21,10 +25,17 @@ type HistoryListState =
   | { status: typeof LobbyStateStatus.ERROR; message: string };
 
 type DetailState =
-  | { status: "idle" }
-  | { status: "loading"; handId: string }
-  | { status: "loaded"; detail: HandHistoryDetailResponse }
-  | { status: "error"; handId: string; message: string };
+  | { status: typeof HistoryDetailStateStatus.IDLE }
+  | { status: typeof HistoryDetailStateStatus.LOADING; handId: string }
+  | {
+      status: typeof HistoryDetailStateStatus.LOADED;
+      detail: HandHistoryDetailResponse;
+    }
+  | {
+      status: typeof HistoryDetailStateStatus.ERROR;
+      handId: string;
+      message: string;
+    };
 
 const formatDateTime = (dateTime: string) =>
   new Date(dateTime).toLocaleString(LocaleCode.JA_JP);
@@ -61,7 +72,7 @@ export const HistoryScreen = (props: {
   });
   const [selectedHandId, setSelectedHandId] = useState<string | null>(null);
   const [detailState, setDetailState] = useState<DetailState>({
-    status: "idle",
+    status: HistoryDetailStateStatus.IDLE,
   });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreErrorMessage, setLoadMoreErrorMessage] = useState<
@@ -117,12 +128,15 @@ export const HistoryScreen = (props: {
     void detailRequestVersion;
 
     if (selectedHandId === null) {
-      setDetailState({ status: "idle" });
+      setDetailState({ status: HistoryDetailStateStatus.IDLE });
       return;
     }
 
     let isCancelled = false;
-    setDetailState({ status: "loading", handId: selectedHandId });
+    setDetailState({
+      status: HistoryDetailStateStatus.LOADING,
+      handId: selectedHandId,
+    });
 
     getHandHistoryDetail(selectedHandId)
       .then((response) => {
@@ -130,7 +144,10 @@ export const HistoryScreen = (props: {
           return;
         }
 
-        setDetailState({ status: "loaded", detail: response });
+        setDetailState({
+          status: HistoryDetailStateStatus.LOADED,
+          detail: response,
+        });
       })
       .catch((error: unknown) => {
         if (isCancelled) {
@@ -141,7 +158,11 @@ export const HistoryScreen = (props: {
           error instanceof HistoryApiError
             ? error.message
             : "履歴詳細の取得に失敗しました。";
-        setDetailState({ status: "error", handId: selectedHandId, message });
+        setDetailState({
+          status: HistoryDetailStateStatus.ERROR,
+          handId: selectedHandId,
+          message,
+        });
       });
 
     return () => {
@@ -298,15 +319,15 @@ export const HistoryScreen = (props: {
           </section>
 
           <section className="history-detail surface" aria-live="polite">
-            {detailState.status === "idle" ? (
+            {detailState.status === HistoryDetailStateStatus.IDLE ? (
               <p>一覧からハンドを選択してください。</p>
             ) : null}
 
-            {detailState.status === "loading" ? (
+            {detailState.status === HistoryDetailStateStatus.LOADING ? (
               <p>履歴詳細を読み込み中です。</p>
             ) : null}
 
-            {detailState.status === "error" ? (
+            {detailState.status === HistoryDetailStateStatus.ERROR ? (
               <div>
                 <h3>履歴詳細の取得に失敗しました</h3>
                 <p>{detailState.message}</p>
@@ -322,7 +343,7 @@ export const HistoryScreen = (props: {
               </div>
             ) : null}
 
-            {detailState.status === "loaded" ? (
+            {detailState.status === HistoryDetailStateStatus.LOADED ? (
               <>
                 <header className="history-detail-header">
                   <div>

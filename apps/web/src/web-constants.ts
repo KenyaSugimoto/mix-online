@@ -67,6 +67,13 @@ export const LobbyStateStatus = {
   ERROR: "error",
 } as const;
 
+export const HistoryDetailStateStatus = {
+  IDLE: "idle",
+  LOADING: "loading",
+  LOADED: "loaded",
+  ERROR: "error",
+} as const;
+
 export const toTablePath = (tableId: string) =>
   `${RoutePath.TABLES_ROOT}/${tableId}`;
 
