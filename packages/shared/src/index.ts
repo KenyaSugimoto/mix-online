@@ -234,6 +234,17 @@ export const DealEndReason = {
 export type DealEndReason = (typeof DealEndReason)[keyof typeof DealEndReason];
 export const DEAL_END_REASONS = Object.values(DealEndReason) as DealEndReason[];
 
+export const StreetAdvanceReason = {
+  BETTING_ROUND_COMPLETE: "BETTING_ROUND_COMPLETE",
+  ALL_IN_RUNOUT: "ALL_IN_RUNOUT",
+  HAND_CLOSED: "HAND_CLOSED",
+} as const;
+export type StreetAdvanceReason =
+  (typeof StreetAdvanceReason)[keyof typeof StreetAdvanceReason];
+export const STREET_ADVANCE_REASONS = Object.values(
+  StreetAdvanceReason,
+) as StreetAdvanceReason[];
+
 export const SeatStateChangeReason = {
   JOIN: "JOIN",
   SIT_OUT: "SIT_OUT",
@@ -388,6 +399,7 @@ export type PlayerReconnectedEventPayload = {
 export type DealInitEventPayload = {
   handNo: number;
   gameType: GameType;
+  street: typeof Street.THIRD;
   dealerSeatNo: number;
   mixIndex: number;
   handsSinceRotation: number;
@@ -432,6 +444,23 @@ export type DealCards3rdEventPayload = {
   }>;
 };
 
+export type StreetDealCard = {
+  seatNo: number;
+  visibility: CardVisibility;
+  card: { rank: CardRank; suit: CardSuit } | null;
+};
+
+export type DealCardEventPayload = {
+  street:
+    | typeof Street.FOURTH
+    | typeof Street.FIFTH
+    | typeof Street.SIXTH
+    | typeof Street.SEVENTH;
+  cards: StreetDealCard[];
+  toActSeatNo: number | null;
+  potAfter: number;
+};
+
 export type BringInEventPayload = {
   street: typeof Street.THIRD;
   seatNo: number;
@@ -471,6 +500,69 @@ export type CompleteEventPayload = ChipActionEventPayloadBase;
 
 export type RaiseEventPayload = ChipActionEventPayloadBase;
 
+export type StreetAdvanceEventPayload = {
+  fromStreet: Street;
+  toStreet: Street | null;
+  potTotal: number;
+  activeSeatNos: number[];
+  nextToActSeatNo: number | null;
+  tableStatus:
+    | typeof TableStatus.BETTING
+    | typeof TableStatus.SHOWDOWN
+    | typeof TableStatus.HAND_END;
+  reason: StreetAdvanceReason;
+};
+
+export type ShowdownPlayer = {
+  seatNo: number;
+  userId: string;
+  displayName: string;
+  action: ShowdownAction;
+  cardsUp: Array<{ rank: CardRank; suit: CardSuit }>;
+  cardsDown: Array<{ rank: CardRank; suit: CardSuit }>;
+  handLabel: string | null;
+};
+
+export type PotWinner = {
+  seatNo: number;
+  userId: string;
+  displayName: string;
+  amount: number;
+  handLabel: string | null;
+};
+
+export type PotResult = {
+  potNo: number;
+  side: PotSide;
+  amount: number;
+  winners: PotWinner[];
+};
+
+export type ShowdownEventPayload = {
+  hasShowdown: true;
+  showdownOrder: number[];
+  players: ShowdownPlayer[];
+  potResults: PotResult[];
+};
+
+export type SeatChipResult = {
+  seatNo: number;
+  userId: string;
+  displayName: string;
+  delta: number;
+  stackAfter: number;
+};
+
+export type DealEndEventPayload = {
+  endReason: DealEndReason;
+  finalPot: number;
+  results: SeatChipResult[];
+  nextDealerSeatNo: number;
+  nextGameType: GameType;
+  mixIndex: number;
+  handsSinceRotation: number;
+};
+
 export type RealtimeTableEventPayload =
   | SeatStateChangedEventPayload
   | PlayerDisconnectedEventPayload
@@ -478,12 +570,16 @@ export type RealtimeTableEventPayload =
   | DealInitEventPayload
   | PostAnteEventPayload
   | DealCards3rdEventPayload
+  | DealCardEventPayload
   | BringInEventPayload
   | CallEventPayload
   | CheckEventPayload
   | FoldEventPayload
   | CompleteEventPayload
-  | RaiseEventPayload;
+  | RaiseEventPayload
+  | StreetAdvanceEventPayload
+  | ShowdownEventPayload
+  | DealEndEventPayload;
 
 type RealtimeTableEventBase = {
   type: "table.event";
@@ -520,6 +616,10 @@ export type RealtimeTableEventMessage =
       payload: DealCards3rdEventPayload;
     })
   | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.DealCardEvent;
+      payload: DealCardEventPayload;
+    })
+  | (RealtimeTableEventBase & {
       eventName: typeof TableEventName.BringInEvent;
       payload: BringInEventPayload;
     })
@@ -542,6 +642,18 @@ export type RealtimeTableEventMessage =
   | (RealtimeTableEventBase & {
       eventName: typeof TableEventName.RaiseEvent;
       payload: RaiseEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.StreetAdvanceEvent;
+      payload: StreetAdvanceEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.ShowdownEvent;
+      payload: ShowdownEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.DealEndEvent;
+      payload: DealEndEventPayload;
     });
 
 export type RealtimeTableServiceError = {

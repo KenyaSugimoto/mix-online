@@ -8,10 +8,12 @@ import {
   TableStatus,
 } from "@mix-online/shared";
 import type { SessionUser } from "../../auth-session";
+import { progressHandAfterAction } from "./hand";
 import { resolveNextToAct } from "./turn";
 import type {
   ApplyCommandFailure,
   ApplyCommandResult,
+  PendingEvent,
   TableState,
 } from "./types";
 
@@ -222,60 +224,55 @@ export const applyActCommand = (params: {
     nextToActSeatNo,
   };
 
-  if (eventName === TableEventName.CheckEvent) {
+  const buildSuccessResult = (
+    event: PendingEvent | null,
+  ): ApplyCommandResult => {
+    const events: PendingEvent[] = [];
+    if (event) {
+      events.push(event);
+    }
+    events.push(...progressHandAfterAction(params.table));
+
     return {
       ok: true,
       startHand: false,
       nextWalletBalance: params.currentBalance,
-      events: [
-        {
-          handId: hand.handId,
-          eventName,
-          payload: {
-            ...payloadBase,
-            isAuto: params.isAuto,
-          },
-        },
-      ],
+      events,
     };
+  };
+
+  if (eventName === TableEventName.CheckEvent) {
+    return buildSuccessResult({
+      handId: hand.handId,
+      eventName,
+      payload: {
+        ...payloadBase,
+        isAuto: params.isAuto,
+      },
+    });
   }
 
   if (eventName === TableEventName.FoldEvent) {
-    return {
-      ok: true,
-      startHand: false,
-      nextWalletBalance: params.currentBalance,
-      events: [
-        {
-          handId: hand.handId,
-          eventName,
-          payload: {
-            ...payloadBase,
-            remainingPlayers: hand.players.filter((entry) => entry.inHand)
-              .length,
-            isAuto: params.isAuto,
-          },
-        },
-      ],
-    };
+    return buildSuccessResult({
+      handId: hand.handId,
+      eventName,
+      payload: {
+        ...payloadBase,
+        remainingPlayers: hand.players.filter((entry) => entry.inHand).length,
+        isAuto: params.isAuto,
+      },
+    });
   }
 
-  return {
-    ok: true,
-    startHand: false,
-    nextWalletBalance: params.currentBalance,
-    events: [
-      {
-        handId: hand.handId,
-        eventName,
-        payload: {
-          ...payloadBase,
-          amount,
-          stackAfter: seat.stack,
-          streetBetTo: hand.streetBetTo,
-          isAllIn: seat.stack === 0,
-        },
-      },
-    ],
-  };
+  return buildSuccessResult({
+    handId: hand.handId,
+    eventName,
+    payload: {
+      ...payloadBase,
+      amount,
+      stackAfter: seat.stack,
+      streetBetTo: hand.streetBetTo,
+      isAllIn: seat.stack === 0,
+    },
+  });
 };

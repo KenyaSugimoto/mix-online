@@ -57,6 +57,7 @@ export type HandState = {
   players: HandPlayerState[];
   streetBetTo: number;
   raiseCount: number;
+  deck: CardValue[];
 };
 
 export type TableEventMessage = RealtimeTableEventMessage;
