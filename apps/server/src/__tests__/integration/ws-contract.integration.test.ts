@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+  CardVisibility,
   RealtimeErrorCode,
   RealtimeTableCommandType,
   TableEventName,
@@ -314,6 +315,120 @@ describe("Realtime契約テスト（M3-11）", () => {
         "mixIndex",
         "handsSinceRotation",
       ]);
+      const currentHand = message.payload.table.currentHand as Record<
+        string,
+        unknown
+      > | null;
+      if (currentHand !== null) {
+        expect(Object.keys(currentHand)).toContain("cards");
+      }
+    } finally {
+      socket1.terminate();
+      socket2.terminate();
+      await server.close();
+    }
+  });
+
+  it("DealCards3rdEvent は接続ユーザーごとに伏せ札をマスクする", async () => {
+    const server = startRealtimeServer({ port: 0, now: () => BASE_TIME });
+    const session1 = server.sessionStore.create(USER_1, BASE_TIME);
+    const session2 = server.sessionStore.create(USER_2, BASE_TIME);
+    const socket1 = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+      headers: {
+        Cookie: createSessionCookie(session1.sessionId),
+      },
+    });
+    const socket2 = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+      headers: {
+        Cookie: createSessionCookie(session2.sessionId),
+      },
+    });
+
+    try {
+      await waitForOpen(socket1);
+      await waitForOpen(socket2);
+
+      socket1.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111201",
+          sentAt: BASE_TIME.toISOString(),
+          payload: {
+            tableId: TABLE_ID,
+            buyIn: 1000,
+          },
+        }),
+      );
+      await waitForMessage(socket1);
+
+      socket2.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111202",
+          sentAt: BASE_TIME.toISOString(),
+          payload: {
+            tableId: TABLE_ID,
+            buyIn: 1000,
+          },
+        }),
+      );
+
+      const socket1Messages = (await waitForMessages(socket1, 4)) as Array<{
+        eventName?: string;
+        payload?: Record<string, unknown>;
+      }>;
+      const socket2Messages = (await waitForMessages(socket2, 4)) as Array<{
+        eventName?: string;
+        payload?: Record<string, unknown>;
+      }>;
+
+      const deal3rdForSocket1 = socket1Messages.find(
+        (message) => message.eventName === TableEventName.DealCards3rdEvent,
+      ) as {
+        payload: {
+          cards: Array<{
+            seatNo: number;
+            cards: Array<{ visibility: string; card: unknown }>;
+          }>;
+        };
+      };
+      const deal3rdForSocket2 = socket2Messages.find(
+        (message) => message.eventName === TableEventName.DealCards3rdEvent,
+      ) as {
+        payload: {
+          cards: Array<{
+            seatNo: number;
+            cards: Array<{ visibility: string; card: unknown }>;
+          }>;
+        };
+      };
+
+      const seat1Socket1 = deal3rdForSocket1.payload.cards.find(
+        (seat) => seat.seatNo === 1,
+      );
+      const seat1Socket2 = deal3rdForSocket2.payload.cards.find(
+        (seat) => seat.seatNo === 1,
+      );
+      const seat2Socket1 = deal3rdForSocket1.payload.cards.find(
+        (seat) => seat.seatNo === 2,
+      );
+      const seat2Socket2 = deal3rdForSocket2.payload.cards.find(
+        (seat) => seat.seatNo === 2,
+      );
+
+      expect(seat1Socket1?.cards[0]?.visibility).toBe(CardVisibility.DOWN_SELF);
+      expect(seat1Socket1?.cards[0]?.card).not.toBeNull();
+      expect(seat1Socket2?.cards[0]?.visibility).toBe(
+        CardVisibility.DOWN_HIDDEN,
+      );
+      expect(seat1Socket2?.cards[0]?.card).toBeNull();
+
+      expect(seat2Socket1?.cards[0]?.visibility).toBe(
+        CardVisibility.DOWN_HIDDEN,
+      );
+      expect(seat2Socket1?.cards[0]?.card).toBeNull();
+      expect(seat2Socket2?.cards[0]?.visibility).toBe(CardVisibility.DOWN_SELF);
+      expect(seat2Socket2?.cards[0]?.card).not.toBeNull();
     } finally {
       socket1.terminate();
       socket2.terminate();

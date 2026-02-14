@@ -357,6 +357,37 @@ components:
                   raiseCount: 1
                   toActSeatNo: 1
                   actionDeadlineAt: "2026-02-09T10:06:31.000Z"
+                  cards:
+                    - seatNo: 1
+                      cards:
+                        - slot: HOLE_1
+                          visibility: DOWN_SELF
+                          card:
+                            rank: A
+                            suit: S
+                        - slot: HOLE_2
+                          visibility: DOWN_SELF
+                          card:
+                            rank: "5"
+                            suit: D
+                        - slot: UP_3
+                          visibility: UP
+                          card:
+                            rank: "9"
+                            suit: C
+                    - seatNo: 2
+                      cards:
+                        - slot: HOLE_1
+                          visibility: DOWN_HIDDEN
+                          card: null
+                        - slot: HOLE_2
+                          visibility: DOWN_HIDDEN
+                          card: null
+                        - slot: UP_3
+                          visibility: UP
+                          card:
+                            rank: K
+                            suit: H
                 dealerSeatNo: 2
                 mixIndex: 0
                 handsSinceRotation: 2
@@ -505,6 +536,17 @@ components:
         - HOLE_2
         - UP_3
 
+    CardSlot:
+      type: string
+      enum:
+        - HOLE_1
+        - HOLE_2
+        - UP_3
+        - UP_4
+        - UP_5
+        - UP_6
+        - DOWN_7
+
     ShowdownAction:
       type: string
       enum:
@@ -613,6 +655,7 @@ components:
             - raiseCount
             - toActSeatNo
             - actionDeadlineAt
+            - cards
           properties:
             handId:
               $ref: "#/components/schemas/UUID"
@@ -641,6 +684,12 @@ components:
               oneOf:
                 - $ref: "#/components/schemas/DateTime"
                 - type: "null"
+            cards:
+              type: array
+              minItems: 0
+              maxItems: 6
+              items:
+                $ref: "#/components/schemas/SnapshotCurrentHandSeatCards"
           additionalProperties: false
         - type: "null"
 
@@ -779,6 +828,39 @@ components:
           oneOf:
             - $ref: "#/components/schemas/Card"
             - type: "null"
+      additionalProperties: false
+
+    SnapshotHandCardView:
+      type: object
+      required:
+        - slot
+        - visibility
+        - card
+      properties:
+        slot:
+          $ref: "#/components/schemas/CardSlot"
+        visibility:
+          $ref: "#/components/schemas/CardVisibility"
+        card:
+          oneOf:
+            - $ref: "#/components/schemas/Card"
+            - type: "null"
+      additionalProperties: false
+
+    SnapshotCurrentHandSeatCards:
+      type: object
+      required:
+        - seatNo
+        - cards
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        cards:
+          type: array
+          minItems: 0
+          maxItems: 7
+          items:
+            $ref: "#/components/schemas/SnapshotHandCardView"
       additionalProperties: false
 
     SeatContribution:

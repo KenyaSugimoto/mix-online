@@ -236,6 +236,18 @@ export const THIRD_STREET_CARD_POSITIONS = Object.values(
   ThirdStreetCardPosition,
 ) as ThirdStreetCardPosition[];
 
+export const CardSlot = {
+  HOLE_1: "HOLE_1",
+  HOLE_2: "HOLE_2",
+  UP_3: "UP_3",
+  UP_4: "UP_4",
+  UP_5: "UP_5",
+  UP_6: "UP_6",
+  DOWN_7: "DOWN_7",
+} as const;
+export type CardSlot = (typeof CardSlot)[keyof typeof CardSlot];
+export const CARD_SLOTS = Object.values(CardSlot) as CardSlot[];
+
 export const DealEndReason = {
   SHOWDOWN: "SHOWDOWN",
   UNCONTESTED: "UNCONTESTED",
@@ -448,9 +460,21 @@ export type DealCards3rdEventPayload = {
         | typeof ThirdStreetCardPosition.HOLE_1
         | typeof ThirdStreetCardPosition.HOLE_2
         | typeof ThirdStreetCardPosition.UP_3;
-      visibility: typeof CardVisibility.DOWN_HIDDEN | typeof CardVisibility.UP;
+      visibility:
+        | typeof CardVisibility.DOWN_HIDDEN
+        | typeof CardVisibility.DOWN_SELF
+        | typeof CardVisibility.UP;
       card: { rank: CardRank; suit: CardSuit } | null;
     }>;
+  }>;
+};
+
+export type SnapshotCurrentHandSeatCards = {
+  seatNo: number;
+  cards: Array<{
+    slot: CardSlot;
+    visibility: CardVisibility;
+    card: { rank: CardRank; suit: CardSuit } | null;
   }>;
 };
 

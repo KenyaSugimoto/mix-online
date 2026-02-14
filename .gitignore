@@ -47,3 +47,6 @@ design-system/
 # Supabase
 supabase/.gitignore
 supabase/config.toml
+
+# AI用の指示ファイル
+AI_INSTRUCTIONS.md

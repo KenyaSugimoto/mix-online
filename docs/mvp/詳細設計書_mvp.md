@@ -782,6 +782,7 @@ erDiagram
 - 自分のHole cardのみ表示
 - 他者Hole cardはショーダウンで公開された時のみ表示
 - 未公開カードはDOM上にも保持しない
+- `table.event` / `table.snapshot` の down card は接続ユーザー単位でマスクし、自分の席のみ `DOWN_SELF` で実カードを返す（他席は `DOWN_HIDDEN` + `card=null`）
 
 ---
 

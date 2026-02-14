@@ -1,13 +1,17 @@
 import {
+  CardVisibility,
   type RealtimeErrorCode,
   RealtimeErrorCode as RealtimeErrorCodeMap,
   type RealtimeTableCommand,
   RealtimeTableCommandType,
+  type RealtimeTableEventMessage,
+  TableEventName,
 } from "@mix-online/shared";
 import { type SessionUser, getSessionIdFromCookie } from "../auth-session";
 import {
   type RealtimeTableService,
   TABLE_RESUME_RESULT_KIND,
+  type TableSnapshotMessage,
   createRealtimeTableService,
 } from "./table-service";
 import {
@@ -49,6 +53,127 @@ export class WsGateway {
     this.clearTimeoutFn =
       options.clearTimeoutFn ??
       ((timeoutId) => globalThis.clearTimeout(timeoutId));
+  }
+
+  private resolveViewerSeatNos(
+    tableId: string,
+    connection: TrackedConnection,
+    fallbackUser?: SessionUser,
+  ): Set<number> {
+    const viewerUserId = fallbackUser?.userId ?? connection.currentUser?.userId;
+    if (!viewerUserId) {
+      return new Set<number>();
+    }
+    return new Set(this.tableService.getSeatNosForUser(tableId, viewerUserId));
+  }
+
+  private maskEventForViewer(params: {
+    event: RealtimeTableEventMessage;
+    viewerSeatNos: Set<number>;
+  }): RealtimeTableEventMessage {
+    const { event, viewerSeatNos } = params;
+
+    if (event.eventName === TableEventName.DealCards3rdEvent) {
+      return {
+        ...event,
+        payload: {
+          ...event.payload,
+          cards: event.payload.cards.map((seatCards) => {
+            const isSelfSeat = viewerSeatNos.has(seatCards.seatNo);
+            return {
+              ...seatCards,
+              cards: seatCards.cards.map((cardView) => {
+                if (cardView.visibility === CardVisibility.UP) {
+                  return cardView;
+                }
+                return isSelfSeat
+                  ? {
+                      ...cardView,
+                      visibility: CardVisibility.DOWN_SELF,
+                    }
+                  : {
+                      ...cardView,
+                      visibility: CardVisibility.DOWN_HIDDEN,
+                      card: null,
+                    };
+              }),
+            };
+          }),
+        },
+      };
+    }
+
+    if (event.eventName === TableEventName.DealCardEvent) {
+      return {
+        ...event,
+        payload: {
+          ...event.payload,
+          cards: event.payload.cards.map((cardView) => {
+            if (cardView.visibility === CardVisibility.UP) {
+              return cardView;
+            }
+            const isSelfSeat = viewerSeatNos.has(cardView.seatNo);
+            return isSelfSeat
+              ? {
+                  ...cardView,
+                  visibility: CardVisibility.DOWN_SELF,
+                }
+              : {
+                  ...cardView,
+                  visibility: CardVisibility.DOWN_HIDDEN,
+                  card: null,
+                };
+          }),
+        },
+      };
+    }
+
+    return event;
+  }
+
+  private maskSnapshotForViewer(params: {
+    snapshot: TableSnapshotMessage;
+    viewerSeatNos: Set<number>;
+  }): TableSnapshotMessage {
+    const { snapshot, viewerSeatNos } = params;
+    const currentHand = snapshot.payload.table.currentHand;
+    if (!currentHand) {
+      return snapshot;
+    }
+
+    return {
+      ...snapshot,
+      payload: {
+        ...snapshot.payload,
+        table: {
+          ...snapshot.payload.table,
+          currentHand: {
+            ...currentHand,
+            cards: currentHand.cards.map((seatCards) => {
+              const isSelfSeat = viewerSeatNos.has(seatCards.seatNo);
+              return {
+                ...seatCards,
+                cards: seatCards.cards.map((cardView) => {
+                  if (cardView.visibility === CardVisibility.UP) {
+                    return cardView;
+                  }
+                  return isSelfSeat
+                    ? {
+                        ...cardView,
+                        visibility: CardVisibility.DOWN_SELF,
+                      }
+                    : {
+                        ...cardView,
+                        visibility: CardVisibility.DOWN_HIDDEN,
+                        card: null,
+                      };
+                }),
+              };
+            }),
+          },
+        },
+      },
+    };
   }
 
   handleConnection(connection: GatewayConnection): void {
@@ -177,11 +302,34 @@ export class WsGateway {
         });
         trackedConnection.currentTableId = resumeTableId;
         if (resumeResult.kind === TABLE_RESUME_RESULT_KIND.EVENTS) {
+          const viewerSeatNos = this.resolveViewerSeatNos(
+            resumeTableId,
+            trackedConnection,
+            session.user,
+          );
           for (const event of resumeResult.events) {
-            trackedConnection.socket.send(JSON.stringify(event));
+            trackedConnection.socket.send(
+              JSON.stringify(
+                this.maskEventForViewer({
+                  event,
+                  viewerSeatNos,
+                }),
+              ),
+            );
           }
         } else {
-          trackedConnection.socket.send(JSON.stringify(resumeResult.snapshot));
+          trackedConnection.socket.send(
+            JSON.stringify(
+              this.maskSnapshotForViewer({
+                snapshot: resumeResult.snapshot,
+                viewerSeatNos: this.resolveViewerSeatNos(
+                  resumeTableId,
+                  trackedConnection,
+                  session.user,
+                ),
+              }),
+            ),
+          );
         }
         this.scheduleAutoAction(resumeTableId);
         return;
@@ -311,14 +459,19 @@ export class WsGateway {
 
   private broadcastToTable(
     tableId: string,
-    event: unknown,
+    event: RealtimeTableEventMessage,
     commandUser?: SessionUser,
   ): void {
-    const body = JSON.stringify(event);
-
     for (const connection of this.connections) {
       if (connection.currentTableId === tableId) {
-        connection.socket.send(body);
+        connection.socket.send(
+          JSON.stringify(
+            this.maskEventForViewer({
+              event,
+              viewerSeatNos: this.resolveViewerSeatNos(tableId, connection),
+            }),
+          ),
+        );
       }
     }
 
@@ -343,8 +496,20 @@ export class WsGateway {
 
         const session = this.sessionStore.findById(sessionId, this.now());
         if (session && session.user.userId === commandUser.userId) {
+          connection.currentUser = session.user;
           connection.currentTableId = tableId;
-          connection.socket.send(body);
+          connection.socket.send(
+            JSON.stringify(
+              this.maskEventForViewer({
+                event,
+                viewerSeatNos: this.resolveViewerSeatNos(
+                  tableId,
+                  connection,
+                  session.user,
+                ),
+              }),
+            ),
+          );
         }
       }
     }

@@ -3,6 +3,7 @@ import type {
   HandStatus,
   RealtimeTableEventMessage,
   SeatStatus,
+  SnapshotCurrentHandSeatCards,
   SnapshotReason,
   Street,
   TableStatus,
@@ -53,6 +54,7 @@ export type TableSnapshotMessage = {
         raiseCount: number;
         toActSeatNo: number | null;
         actionDeadlineAt: string | null;
+        cards: SnapshotCurrentHandSeatCards[];
       } | null;
       dealerSeatNo: number;
       mixIndex: number;
