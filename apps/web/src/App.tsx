@@ -133,56 +133,40 @@ export function App() {
 
   return (
     <div className={`app-shell ${isTableRoute ? "is-table-route" : ""}`}>
-      <header
-        className={`app-header surface ${isTableRoute ? "is-table-route" : ""}`}
-      >
-        <div>
-          <p className="eyebrow">MIX STUD ONLINE</p>
-          <h1>Web Client MVP</h1>
-          <p className="header-copy">
-            {isTableRoute
-              ? "Table UI: カード、手番、操作導線を1画面で追跡します。"
-              : "Google OAuth と Cookie セッションでロビー導線を初期化します。"}
-          </p>
-        </div>
-        <div
-          className={`header-actions ${isTableRoute ? "is-table-route" : ""}`}
-        >
-          {isTableRoute ? (
+      {isTableRoute ? null : (
+        <header className="app-header surface">
+          <div>
+            <p className="eyebrow">MIX STUD ONLINE</p>
+            <h1>Web Client MVP</h1>
+            <p className="header-copy">
+              Google OAuth と Cookie セッションでロビー導線を初期化します。
+            </p>
+          </div>
+          <div className="header-actions">
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => navigate(RoutePath.LOGIN)}
+            >
+              ログイン画面
+            </button>
             <button
               className="ghost-button"
               type="button"
               onClick={() => navigate(RoutePath.LOBBY)}
             >
-              ロビーへ戻る
+              ロビー画面
             </button>
-          ) : (
-            <>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => navigate(RoutePath.LOGIN)}
-              >
-                ログイン画面
-              </button>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => navigate(RoutePath.LOBBY)}
-              >
-                ロビー画面
-              </button>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => navigate(RoutePath.HISTORY)}
-              >
-                履歴画面
-              </button>
-            </>
-          )}
-        </div>
-      </header>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => navigate(RoutePath.HISTORY)}
+            >
+              履歴画面
+            </button>
+          </div>
+        </header>
+      )}
 
       {isProtected ? (
         <ProtectedContent

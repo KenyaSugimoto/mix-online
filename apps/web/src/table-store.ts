@@ -1404,6 +1404,10 @@ const applyEventToTable = (
       {
         street: payload.toStreet ?? payload.fromStreet,
         potTotal: payload.potTotal,
+        streetBetTo:
+          payload.toStreet === null ? (table.currentHand?.streetBetTo ?? 0) : 0,
+        raiseCount:
+          payload.toStreet === null ? (table.currentHand?.raiseCount ?? 0) : 0,
         toActSeatNo: payload.nextToActSeatNo,
       },
       event.handId,

@@ -775,4 +775,56 @@ describe("table-store", () => {
     expect(logs[0]?.kind).toBe("seat_state_changed");
     expect(logs[1]?.kind).toBe("street_advance");
   });
+
+  it("StreetAdvance で新ストリート開始時は streetBetTo/raiseCount をリセットする", () => {
+    const sockets: FakeWebSocket[] = [];
+    const initialTable = createInitialTable();
+    if (initialTable.currentHand !== null) {
+      initialTable.currentHand.streetBetTo = 20;
+      initialTable.currentHand.raiseCount = 2;
+    }
+
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable,
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 1,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 1,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.StreetAdvanceEvent,
+        payload: {
+          fromStreet: Street.THIRD,
+          toStreet: Street.FOURTH,
+          potTotal: 80,
+          activeSeatNos: [1, 2],
+          nextToActSeatNo: 1,
+          tableStatus: TableStatus.BETTING,
+          reason: StreetAdvanceReason.BETTING_ROUND_COMPLETE,
+        },
+      }),
+    );
+
+    const snapshot = store.getSnapshot();
+    expect(snapshot.table.currentHand?.street).toBe(Street.FOURTH);
+    expect(snapshot.table.currentHand?.streetBetTo).toBe(0);
+    expect(snapshot.table.currentHand?.raiseCount).toBe(0);
+  });
 });

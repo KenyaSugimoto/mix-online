@@ -183,7 +183,8 @@ export const TableScreen = (props: {
     status: LobbyStateStatus.LOADING,
     requestVersion: 0,
   });
-  const [commandPreview, setCommandPreview] = useState<string | null>(null);
+  const [joinBuyInText, setJoinBuyInText] = useState(`${DEFAULT_JOIN_BUY_IN}`);
+  const [joinErrorMessage, setJoinErrorMessage] = useState<string | null>(null);
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const [turnDurationSeconds, setTurnDurationSeconds] = useState<number | null>(
     null,
@@ -376,25 +377,44 @@ export const TableScreen = (props: {
     [realtimeState.eventLogs],
   );
 
-  const handleJoinFromEmptySeat = () => {
+  useEffect(() => {
+    if (mySeat !== null) {
+      setJoinErrorMessage(null);
+    }
+  }, [mySeat]);
+
+  const handleJoinFromModal = () => {
+    const buyIn = Number.parseInt(joinBuyInText, 10);
+    if (
+      !Number.isInteger(buyIn) ||
+      buyIn < TableBuyIn.MIN ||
+      buyIn > TableBuyIn.MAX
+    ) {
+      setJoinErrorMessage(
+        `buy-in は ${TableBuyIn.MIN}〜${TableBuyIn.MAX} の整数で入力してください。`,
+      );
+      return;
+    }
+
     const store = tableStoreRef.current;
     if (!store) {
-      setCommandPreview("WebSocket初期化前のためコマンド送信できません。");
+      setJoinErrorMessage("接続準備中のため、まだ着席できません。");
       return;
     }
 
     const sent = store.sendSeatCommand(RealtimeTableCommandType.JOIN, {
-      buyIn: DEFAULT_JOIN_BUY_IN,
+      buyIn,
     });
 
-    setCommandPreview(
-      sent
-        ? `送信: ${RealtimeTableCommandType.JOIN} (buyIn=${DEFAULT_JOIN_BUY_IN})`
-        : `送信失敗: ${
-            store.getSnapshot().lastErrorMessage ??
-            "JOIN コマンドを送信できませんでした。"
-          }`,
-    );
+    if (!sent) {
+      setJoinErrorMessage(
+        store.getSnapshot().lastErrorMessage ??
+          "着席コマンドを送信できませんでした。",
+      );
+      return;
+    }
+
+    setJoinErrorMessage(null);
   };
 
   const handleActionCommand = (action: TableActActionOption) => {
@@ -402,32 +422,15 @@ export const TableScreen = (props: {
       return;
     }
     if (!tableActActionOptions.includes(action)) {
-      setCommandPreview(
-        "送信プレビュー: 選択したアクションは現在の局面では送信できません。",
-      );
       return;
     }
 
     const store = tableStoreRef.current;
     if (!store) {
-      setCommandPreview("WebSocket初期化前のためコマンド送信できません。");
       return;
     }
 
-    const sent = store.sendActionCommand(action);
-    if (sent) {
-      setCommandPreview(
-        `送信: ${RealtimeTableCommandType.ACT} { action: ${action} }`,
-      );
-      return;
-    }
-
-    setCommandPreview(
-      `送信失敗: ${
-        store.getSnapshot().lastErrorMessage ??
-        `${RealtimeTableCommandType.ACT} を送信できませんでした。`
-      }`,
-    );
+    store.sendActionCommand(action);
   };
 
   if (state.status === LobbyStateStatus.LOADING) {
@@ -471,7 +474,7 @@ export const TableScreen = (props: {
       (left, right) => left.seatNo - right.seatNo,
     );
     const anchorSeatNo = mySeat?.seatNo ?? 1;
-    const canJoinSeat = mySeat === null;
+    const shouldShowJoinModal = mySeat === null;
 
     return (
       <section className="surface table-panel poker-table-shell">
@@ -507,6 +510,36 @@ export const TableScreen = (props: {
             className="surface inline-panel poker-stage-panel"
             aria-label="ゲームテーブル"
           >
+            <details className="event-log-flyout">
+              <summary>進行ログ</summary>
+              <div className="event-log-flyout-body">
+                {recentEventLogs.length === 0 ? (
+                  <p className="status-chip">ログ待機中です。</p>
+                ) : (
+                  <ol className="event-log-list" aria-label="イベントログ">
+                    {recentEventLogs.map((entry, index) => (
+                      <li
+                        key={`${entry.kind}-${entry.occurredAt}-${index}`}
+                        className="event-log-item"
+                      >
+                        <p className="event-log-main">
+                          {formatEventLogLabel(entry)}
+                        </p>
+                        <time
+                          className="event-log-time"
+                          dateTime={entry.occurredAt}
+                        >
+                          {new Date(entry.occurredAt).toLocaleTimeString(
+                            LocaleCode.JA_JP,
+                          )}
+                        </time>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            </details>
+
             <div className="poker-stage-grid">
               <article className="table-center-core">
                 <p className="table-center-label">Main Pot</p>
@@ -572,19 +605,7 @@ export const TableScreen = (props: {
                       ) : null}
                     </header>
 
-                    {isEmptySeat ? (
-                      <div className="empty-seat-actions">
-                        {canJoinSeat ? (
-                          <button
-                            className="ghost-button empty-seat-join"
-                            type="button"
-                            onClick={handleJoinFromEmptySeat}
-                          >
-                            着席
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : (
+                    {isEmptySeat ? null : (
                       <>
                         <p className="seat-player-name">
                           {seat.displayName ?? "Unknown"}
@@ -672,67 +693,82 @@ export const TableScreen = (props: {
             </div>
           </section>
 
-          <aside className="table-side-rail">
-            <div className="surface inline-panel table-side-card action-dock-panel">
-              <h3>アクション</h3>
-              <p>
-                {controlState.actionInputEnabled
-                  ? "手番中です。許可アクションのみ選択できます。"
-                  : "手番外のためアクションは無効です。"}
-              </p>
-              {controlState.actionInputEnabled &&
-              tableActActionOptions.length > 0 ? (
-                <div className="action-dock-buttons">
-                  {tableActActionOptions.map((action) => (
-                    <button
-                      key={action}
-                      className="primary-button action-dock-button"
-                      type="button"
-                      onClick={() => handleActionCommand(action)}
-                    >
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="status-chip">
-                  操作可能なアクションはありません。
-                </p>
-              )}
-              {commandPreview ? (
-                <p className="command-preview">{commandPreview}</p>
-              ) : null}
-            </div>
-
-            <div className="surface inline-panel table-side-card event-log-panel">
-              <h3>進行ログ</h3>
-              {recentEventLogs.length === 0 ? (
-                <p className="status-chip">ログ待機中です。</p>
-              ) : (
-                <ol className="event-log-list" aria-label="イベントログ">
-                  {recentEventLogs.map((entry, index) => (
-                    <li
-                      key={`${entry.kind}-${entry.occurredAt}-${index}`}
-                      className="event-log-item"
-                    >
-                      <p className="event-log-main">
-                        {formatEventLogLabel(entry)}
-                      </p>
-                      <time
-                        className="event-log-time"
-                        dateTime={entry.occurredAt}
-                      >
-                        {new Date(entry.occurredAt).toLocaleTimeString(
-                          LocaleCode.JA_JP,
-                        )}
-                      </time>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-          </aside>
+          <section className="surface inline-panel table-side-card action-bottom-dock">
+            <h3>アクション</h3>
+            <p>
+              {controlState.actionInputEnabled
+                ? "手番中です。許可アクションのみ選択できます。"
+                : "手番外のためアクションは無効です。"}
+            </p>
+            {controlState.actionInputEnabled &&
+            tableActActionOptions.length > 0 ? (
+              <div className="action-dock-buttons">
+                {tableActActionOptions.map((action) => (
+                  <button
+                    key={action}
+                    className="primary-button action-dock-button"
+                    type="button"
+                    onClick={() => handleActionCommand(action)}
+                  >
+                    {action}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="status-chip">操作可能なアクションはありません。</p>
+            )}
+          </section>
         </div>
+
+        {shouldShowJoinModal ? (
+          <div className="join-modal-backdrop" role="presentation">
+            <dialog
+              className="join-modal"
+              open
+              aria-labelledby="join-modal-title"
+            >
+              <h3 id="join-modal-title">着席してゲームに参加</h3>
+              <p>
+                席は自動で割り当てられます。buy-in を入力して着席してください。
+              </p>
+              <label className="join-modal-label" htmlFor="join-buyin-input">
+                buy-in ({TableBuyIn.MIN}〜{TableBuyIn.MAX})
+              </label>
+              <input
+                id="join-buyin-input"
+                className="join-modal-input"
+                inputMode="numeric"
+                min={TableBuyIn.MIN}
+                max={TableBuyIn.MAX}
+                step={1}
+                value={joinBuyInText}
+                onChange={(event) => {
+                  setJoinBuyInText(event.target.value);
+                  setJoinErrorMessage(null);
+                }}
+              />
+              {joinErrorMessage ? (
+                <p className="join-modal-error">{joinErrorMessage}</p>
+              ) : null}
+              <div className="row-actions join-modal-actions">
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={handleJoinFromModal}
+                >
+                  着席
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={onGoLobby}
+                >
+                  ロビーへ戻る
+                </button>
+              </div>
+            </dialog>
+          </div>
+        ) : null}
       </section>
     );
   }

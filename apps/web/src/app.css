@@ -45,8 +45,9 @@ body {
 }
 
 .app-shell.is-table-route {
-  width: min(1400px, 100%);
-  gap: 18px;
+  width: min(1500px, 100%);
+  padding: 10px 12px 20px;
+  gap: 10px;
 }
 
 .surface {
@@ -65,10 +66,6 @@ body {
   justify-content: space-between;
   gap: 12px;
   padding: 18px 20px;
-}
-
-.app-header.is-table-route {
-  padding: 14px 18px;
 }
 
 .eyebrow {
@@ -94,10 +91,6 @@ h1 {
   display: flex;
   align-items: start;
   gap: 8px;
-}
-
-.header-actions.is-table-route {
-  flex-wrap: wrap;
 }
 
 .state-panel {
@@ -286,12 +279,13 @@ button {
 
 .table-play-layout {
   display: grid;
-  gap: 14px;
-  grid-template-columns: minmax(0, 1fr) minmax(270px, 320px);
+  gap: 12px;
+  grid-template-columns: 1fr;
 }
 
 .poker-stage-panel {
   margin: 0;
+  position: relative;
   border: 1px solid rgb(31 41 55 / 60%);
   background: transparent;
 }
@@ -307,13 +301,14 @@ button {
     ),
     radial-gradient(circle at 50% 40%, rgb(45 212 191 / 15%), transparent 66%);
   display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
   grid-template-areas:
-    "left-far . top . right-far"
-    "left-near . self . right-near"
-    ". . center . .";
+    ". top ."
+    "left-far center right-far"
+    "left-near . right-near"
+    ". self .";
   gap: 12px;
-  padding: 18px 20px 14px;
+  padding: 34px 20px 18px;
   align-items: end;
 }
 
@@ -466,17 +461,6 @@ button {
   font-size: 0.78rem;
 }
 
-.empty-seat-actions {
-  min-height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-seat-join {
-  padding: 8px 14px;
-}
-
 .seat-player-name {
   margin: 8px 0 2px;
   font-family: var(--font-body);
@@ -563,12 +547,6 @@ button {
   color: #111827;
 }
 
-.table-side-rail {
-  display: grid;
-  gap: 10px;
-  align-content: start;
-}
-
 .table-side-card {
   margin: 0;
   border: 1px solid rgb(148 163 184 / 45%);
@@ -602,6 +580,15 @@ button {
   background: linear-gradient(180deg, #475569, #334155);
 }
 
+.action-bottom-dock {
+  border-color: rgb(148 163 184 / 45%);
+}
+
+.action-bottom-dock p {
+  margin: 0 0 8px;
+  color: #cbd5e1;
+}
+
 .command-preview {
   margin: 10px 0 0;
   border-radius: 10px;
@@ -609,6 +596,48 @@ button {
   padding: 8px 10px;
   background: rgb(15 23 42 / 46%);
   color: #e2e8f0;
+}
+
+.event-log-flyout {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  width: min(330px, calc(100% - 24px));
+}
+
+.event-log-flyout > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgb(148 163 184 / 46%);
+  background: rgb(2 6 23 / 82%);
+  color: #f8fafc;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.event-log-flyout > summary::-webkit-details-marker {
+  display: none;
+}
+
+.event-log-flyout[open] > summary {
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.event-log-flyout-body {
+  margin-top: 8px;
+  border-radius: 12px;
+  border: 1px solid rgb(148 163 184 / 42%);
+  background: rgb(2 6 23 / 92%);
+  padding: 10px;
+  max-height: 300px;
+  overflow: auto;
 }
 
 .event-log-list {
@@ -635,6 +664,63 @@ button {
 .event-log-time {
   font-size: 0.72rem;
   color: #94a3b8;
+}
+
+.join-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(2 6 23 / 62%);
+}
+
+.join-modal {
+  width: min(420px, 100%);
+  border-radius: 16px;
+  border: 1px solid rgb(148 163 184 / 44%);
+  background: linear-gradient(180deg, rgb(15 23 42 / 96%), rgb(2 6 23 / 96%));
+  box-shadow: 0 24px 40px -18px rgb(2 6 23 / 95%);
+  padding: 16px;
+}
+
+.join-modal h3 {
+  margin: 0 0 4px;
+  color: #f8fafc;
+}
+
+.join-modal p {
+  margin: 0 0 10px;
+  color: #cbd5e1;
+}
+
+.join-modal-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.join-modal-input {
+  width: 100%;
+  border: 1px solid rgb(148 163 184 / 55%);
+  border-radius: 10px;
+  background: rgb(15 23 42 / 92%);
+  color: #f8fafc;
+  padding: 10px 12px;
+}
+
+.join-modal-error {
+  margin-top: 8px;
+  color: #fca5a5;
+  font-weight: 700;
+  font-size: 0.84rem;
+}
+
+.join-modal-actions {
+  margin-top: 8px;
 }
 
 .history-header {
@@ -802,17 +888,17 @@ button {
   }
 
   .poker-stage-grid {
-    min-height: 620px;
+    min-height: 700px;
     border-width: 14px;
     border-radius: 120px;
-    padding: 14px;
+    padding: 38px 14px 14px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
       "top top"
       "left-far right-far"
+      "center center"
       "left-near right-near"
-      "self self"
-      "center center";
+      "self self";
   }
 
   .table-center-core {
@@ -838,44 +924,38 @@ button {
   .header-actions {
     flex-wrap: wrap;
   }
+
+  .event-log-flyout {
+    width: calc(100% - 24px);
+  }
 }
 
 @media (max-width: 1024px) {
   .app-shell.is-table-route {
-    width: min(1040px, 100%);
-  }
-
-  .table-play-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .table-side-rail {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .event-log-panel {
-    grid-column: 1 / -1;
+    width: min(1200px, 100%);
   }
 }
 
 @media (max-width: 560px) {
   .poker-stage-grid {
-    min-height: auto;
+    min-height: 740px;
     border-width: 12px;
     border-radius: 44px;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "top"
+      "center"
       "right-far"
       "right-near"
-      "center"
       "left-near"
       "left-far"
       "self";
   }
 
-  .table-side-rail {
-    grid-template-columns: 1fr;
+  .event-log-flyout {
+    width: calc(100% - 18px);
+    top: 9px;
+    right: 9px;
   }
 
   .action-dock-buttons {
