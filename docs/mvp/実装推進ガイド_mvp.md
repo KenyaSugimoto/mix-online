@@ -1,7 +1,7 @@
 # Mix Stud Online 実装推進ガイド（MVP）
 
-Version: v1.3  
-Last Updated: 2026-02-13  
+Version: v1.4  
+Last Updated: 2026-02-14  
 参照要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 参照設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)  
 APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md)  
@@ -201,3 +201,24 @@ APIリファレンス閲覧: [`APIリファレンス閲覧ガイド_mvp.md`](./A
 - `asyncapi.yaml` は GitHub Pages 上で AsyncAPI CLI により生成されたHTMLを参照する。
 - 生成手順は `scripts/build-api-reference-site.sh` を正とし、`main` push 時に `.github/workflows/docs-pages.yml` で自動反映する。
 - 詳細な閲覧URLとローカル確認手順は [`APIリファレンス閲覧ガイド_mvp.md`](./APIリファレンス閲覧ガイド_mvp.md) を参照する。
+
+---
+
+## 11. リリース前監査チェック（2026-02-14）
+
+M4完了時点で「実装は一通り揃っているが、リリース判定には未達」のため、次の監査項目を固定する。
+
+| ID | 監査項目 | 現状 | リリース判定条件 | 参照 |
+| --- | --- | --- | --- | --- |
+| M5-10 | 認証の実ユーザー連携 | callbackで固定ユーザーを発行している | Google code exchange後に実ユーザーを永続化し、`/api/auth/me` が実ユーザー情報を返す | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`openapi.yaml`](./openapi.yaml) |
+| M5-11 | APIの実データ化 | Lobby/Table/History が `createMvp*Repository` の固定データ依存 | PostgreSQL Repository経由で実データを返し、MVP fixture依存を除去 | [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-12 | ローカル実プレイ成立確認 | WS経路が環境依存で、手動2ユーザー確認記録がない | ローカルで2ユーザーがログイン〜1ハンド完了まで再現できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-13 | ゲーム画面UIの仕様充足 | `reason`/`appliesFrom` のUIログ保持が未反映 | 画面設計書の状態遷移追跡要件をUIとテストで満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx) |
+
+実行順（品質優先）は次で固定する。
+
+1. `M5-10`（認証実運用化）
+2. `M5-11`（実データ化）
+3. `M5-12`（ローカル実プレイ成立確認）
+4. `M5-13`（UI仕様ギャップ解消）
+5. `M5-01` / `M5-02` / `M5-03`（監視・Runbook・非機能）
