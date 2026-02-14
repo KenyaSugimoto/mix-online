@@ -11,7 +11,11 @@
     "test": "vitest run",
     "test:unit": "vitest run src/__tests__/unit",
     "test:integration": "vitest run src/__tests__/integration",
-    "test:e2e": "vitest run src/__tests__/e2e",
+    "test:e2e:foundation": "vitest run src/__tests__/e2e/m0-04-foundation.e2e.test.ts",
+    "test:e2e:hp": "vitest run src/__tests__/e2e/hp.e2e.test.ts",
+    "test:e2e:ng": "vitest run src/__tests__/e2e/ng.e2e.test.ts",
+    "test:e2e:ed": "vitest run src/__tests__/e2e/ed.e2e.test.ts",
+    "test:e2e": "pnpm test:e2e:foundation && pnpm test:e2e:hp && pnpm test:e2e:ng && pnpm test:e2e:ed",
     "test:watch": "vitest"
   },
   "dependencies": {

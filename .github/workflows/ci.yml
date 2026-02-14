@@ -31,5 +31,17 @@ jobs:
             - name: Typecheck
               run: pnpm typecheck
 
+            - name: E2E Foundation
+              run: pnpm test:e2e:foundation
+
+            - name: E2E HP
+              run: pnpm test:e2e:hp
+
+            - name: E2E NG
+              run: pnpm test:e2e:ng
+
+            - name: E2E ED
+              run: pnpm test:e2e:ed
+
             - name: Test
               run: pnpm test

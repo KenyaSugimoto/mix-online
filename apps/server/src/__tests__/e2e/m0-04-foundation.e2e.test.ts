@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { createApp } from "../../app";
 import { E2E_SCENARIO_IDS } from "../../testing/e2e-scenarios";
 
 describe("E2E基盤テスト", () => {
@@ -12,18 +11,13 @@ describe("E2E基盤テスト", () => {
     expect(uniqueIds.size).toBe(E2E_SCENARIO_IDS.length);
   });
 
-  it("HP-01 最小導線としてロビー一覧取得が成功する", async () => {
-    const app = createApp();
-    const response = await app.request("/api/lobby/tables");
-    const body = (await response.json()) as {
-      tables: unknown[];
-      serverTime: string;
-    };
+  it("シナリオIDが HP -> NG -> ED の順序で定義されている", () => {
+    const hpStart = E2E_SCENARIO_IDS.indexOf("HP-01");
+    const ngStart = E2E_SCENARIO_IDS.indexOf("NG-01");
+    const edStart = E2E_SCENARIO_IDS.indexOf("ED-01");
 
-    expect(response.status).toBe(200);
-    expect(body.tables).toHaveLength(2);
-    expect(body.serverTime).toMatch(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/,
-    );
+    expect(hpStart).toBe(0);
+    expect(ngStart).toBeGreaterThan(hpStart);
+    expect(edStart).toBeGreaterThan(ngStart);
   });
 });

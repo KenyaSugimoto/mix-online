@@ -21,7 +21,11 @@
     "uiux:link-claude": "bash ./scripts/setup-uiux-claude-compat.sh",
     "test:unit": "vitest run apps/server/src/__tests__/unit packages/shared/src/__tests__",
     "test:integration": "vitest run apps/server/src/__tests__/integration",
-    "test:e2e": "vitest run apps/server/src/__tests__/e2e"
+    "test:e2e:foundation": "vitest run apps/server/src/__tests__/e2e/m0-04-foundation.e2e.test.ts",
+    "test:e2e:hp": "vitest run apps/server/src/__tests__/e2e/hp.e2e.test.ts",
+    "test:e2e:ng": "vitest run apps/server/src/__tests__/e2e/ng.e2e.test.ts",
+    "test:e2e:ed": "vitest run apps/server/src/__tests__/e2e/ed.e2e.test.ts",
+    "test:e2e": "pnpm test:e2e:foundation && pnpm test:e2e:hp && pnpm test:e2e:ng && pnpm test:e2e:ed"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
