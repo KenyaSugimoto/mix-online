@@ -141,11 +141,16 @@ const resolveFirstToAct = (
   );
 };
 
-/
+/**
+ * テーブルの状態を元に、ハンド終了後のシートの状態遷移を適用し、発生するイベントを生成します。
+ * - スタックが0になったプレイヤーは卓から自動退席させる
+ * - 次のハンド開始待ちのプレイヤーは次のハンド開始とともにアクティブにする
+ */
 const applySeatTransitionsAfterHand = (table: TableState): PendingEvent[] => {
   const events: PendingEvent[] = [];
 
   for (const seat of table.seats) {
+    // スタックが0のプレイヤーは卓から自動退席させる
     if (seat.status !== SeatStatus.EMPTY && seat.stack === 0) {
       const previousStatus = seat.status;
       seat.status = SeatStatus.EMPTY;
@@ -172,6 +177,7 @@ const applySeatTransitionsAfterHand = (table: TableState): PendingEvent[] => {
       continue;
     }
 
+    // 次のハンド開始待ちのプレイヤーは次のハンド開始とともにアクティブにする
     if (
       seat.status === SeatStatus.SEATED_WAIT_NEXT_HAND &&
       seat.userId !== null &&
@@ -691,6 +697,12 @@ export const startThirdStreet = (table: TableState): PendingEvent[] => {
   return [dealInitEvent, postAnteEvent, dealCards3rdEvent, bringInEvent];
 };
 
+/**
+ * テーブルの状態を元に、ハンドのアクション後の状態遷移を適用し、発生するイベントを生成します。
+ * - ベッティングラウンドが完了していれば次のストリートに進行させる
+ * - 全員オールインであれば次のストリートに進行させる
+ * - ハンド終了条件を満たしていればハンドを終了させる
+ */
 export const progressHandAfterAction = (table: TableState): PendingEvent[] => {
   const events: PendingEvent[] = [];
 
