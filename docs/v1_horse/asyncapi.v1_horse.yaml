@@ -1,0 +1,940 @@
+asyncapi: 2.6.0
+id: "urn:mix-online:v1:horse:realtime"
+defaultContentType: application/json
+info:
+  title: Mix Online v1 HORSE Realtime API
+  version: 1.0.0-draft
+  description: |
+    v1 HORSE 対応の WebSocket 契約ドラフト。
+    MVP の envelope を維持しつつ、Flop 系イベントと詳細 payload を加算する。
+
+servers:
+  local:
+    url: localhost:3000
+    protocol: ws
+    description: Local websocket endpoint
+    security:
+      - sessionCookie: []
+
+channels:
+  /ws:
+    description: |
+      Table realtime channel.
+      クライアントは command を publish し、サーバーは event/snapshot/error/pong を subscribe 側へ配信する。
+    publish:
+      operationId: clientSendCommand
+      message:
+        oneOf:
+          - $ref: "#/components/messages/TableJoinCommand"
+          - $ref: "#/components/messages/TableActCommand"
+          - $ref: "#/components/messages/TableResumeCommand"
+          - $ref: "#/components/messages/PingCommand"
+    subscribe:
+      operationId: serverPushMessage
+      message:
+        oneOf:
+          - $ref: "#/components/messages/TableEventMessage"
+          - $ref: "#/components/messages/TableSnapshotMessage"
+          - $ref: "#/components/messages/TableErrorMessage"
+          - $ref: "#/components/messages/PongMessage"
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: httpApiKey
+      in: cookie
+      name: session
+
+  messages:
+    TableJoinCommand:
+      name: tableJoinCommand
+      title: table.join
+      payload:
+        $ref: "#/components/schemas/TableJoinCommandPayload"
+    TableActCommand:
+      name: tableActCommand
+      title: table.act
+      payload:
+        $ref: "#/components/schemas/TableActCommandPayload"
+    TableResumeCommand:
+      name: tableResumeCommand
+      title: table.resume
+      payload:
+        $ref: "#/components/schemas/TableResumeCommandPayload"
+    PingCommand:
+      name: pingCommand
+      title: ping
+      payload:
+        $ref: "#/components/schemas/PingCommandPayload"
+
+    TableEventMessage:
+      name: tableEventMessage
+      title: table.event
+      payload:
+        $ref: "#/components/schemas/TableEventEnvelope"
+    TableSnapshotMessage:
+      name: tableSnapshotMessage
+      title: table.snapshot
+      payload:
+        $ref: "#/components/schemas/TableSnapshotEnvelope"
+    TableErrorMessage:
+      name: tableErrorMessage
+      title: table.error
+      payload:
+        $ref: "#/components/schemas/TableErrorEnvelope"
+    PongMessage:
+      name: pongMessage
+      title: pong
+      payload:
+        $ref: "#/components/schemas/PongEnvelope"
+
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+
+    DateTime:
+      type: string
+      format: date-time
+
+    SeatNo:
+      type: integer
+      minimum: 1
+      maximum: 6
+
+    GameType:
+      type: string
+      enum:
+        - HOLD_EM
+        - OMAHA_8
+        - RAZZ
+        - STUD_HI
+        - STUD_8
+
+    TableStatus:
+      type: string
+      enum:
+        - WAITING
+        - DEALING
+        - BETTING
+        - SHOWDOWN
+        - HAND_END
+
+    SeatStatus:
+      type: string
+      enum:
+        - EMPTY
+        - SEATED_WAIT_NEXT_HAND
+        - ACTIVE
+        - SIT_OUT
+        - DISCONNECTED
+        - LEAVE_PENDING
+
+    StreetGroup:
+      type: string
+      enum:
+        - FLOP_FAMILY
+        - STUD_FAMILY
+
+    HandStreet:
+      type: string
+      enum:
+        - PRE_FLOP
+        - FLOP
+        - TURN
+        - RIVER
+        - THIRD
+        - FOURTH
+        - FIFTH
+        - SIXTH
+        - SEVENTH
+
+    ActionType:
+      type: string
+      enum:
+        - BRING_IN
+        - COMPLETE
+        - BET
+        - RAISE
+        - CALL
+        - CHECK
+        - FOLD
+
+    EventType:
+      type: string
+      enum:
+        - DealInitEvent
+        - DealHoleCardsEvent
+        - DealCards3rdEvent
+        - DealCardEvent
+        - DealBoardFlopEvent
+        - DealBoardTurnEvent
+        - DealBoardRiverEvent
+        - PostSmallBlindEvent
+        - PostBigBlindEvent
+        - PostAnteEvent
+        - BringInEvent
+        - CompleteEvent
+        - BetEvent
+        - RaiseEvent
+        - CallEvent
+        - CheckEvent
+        - FoldEvent
+        - StreetAdvanceEvent
+        - ShowdownEvent
+        - DealEndEvent
+
+    RotationIndex:
+      type: integer
+      minimum: 0
+      maximum: 4
+
+    RealtimeErrorCode:
+      type: string
+      enum:
+        - INVALID_ACTION
+        - NOT_YOUR_TURN
+        - INSUFFICIENT_CHIPS
+        - TABLE_FULL
+        - BUYIN_OUT_OF_RANGE
+        - ALREADY_SEATED
+        - AUTH_EXPIRED
+
+    CardRank:
+      type: string
+      enum: [A, K, Q, J, T, 9, 8, 7, 6, 5, 4, 3, 2]
+
+    CardSuit:
+      type: string
+      enum: [S, H, D, C]
+
+    Card:
+      type: object
+      required:
+        - rank
+        - suit
+      properties:
+        rank:
+          $ref: "#/components/schemas/CardRank"
+        suit:
+          $ref: "#/components/schemas/CardSuit"
+      additionalProperties: false
+
+    SeatUserSummary:
+      type: object
+      required:
+        - seatNo
+        - userId
+        - displayName
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+      additionalProperties: false
+
+    DealtCardView:
+      type: object
+      required:
+        - visibility
+        - card
+      properties:
+        visibility:
+          type: string
+          enum:
+            - FACE_UP
+            - FACE_DOWN
+        card:
+          oneOf:
+            - $ref: "#/components/schemas/Card"
+            - type: "null"
+      additionalProperties: false
+
+    ThirdStreetSeatCards:
+      type: object
+      required:
+        - seatNo
+        - cards
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        cards:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/DealtCardView"
+      additionalProperties: false
+
+    SnapshotSeat:
+      type: object
+      required:
+        - seatNo
+        - status
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        status:
+          $ref: "#/components/schemas/SeatStatus"
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/SeatUserSummary"
+            - type: "null"
+      additionalProperties: false
+
+    SnapshotCurrentHand:
+      type: object
+      required:
+        - handId
+        - handNo
+        - gameType
+        - streetGroup
+        - street
+        - potSize
+      properties:
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handNo:
+          type: integer
+          minimum: 1
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        streetGroup:
+          $ref: "#/components/schemas/StreetGroup"
+        street:
+          $ref: "#/components/schemas/HandStreet"
+        potSize:
+          type: integer
+          minimum: 0
+        boardCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
+          nullable: true
+          description: "Flop系のみ。現時点で公開済みのboardカード。"
+        heroHoleCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/DealtCardView"
+          nullable: true
+          description: "復帰プレイヤーの手札。Flop系ではhole card、Stud系ではdown cardを含む。"
+        toActSeatNo:
+          oneOf:
+            - $ref: "#/components/schemas/SeatNo"
+            - type: "null"
+      additionalProperties: false
+
+    BaseClientCommand:
+      type: object
+      required:
+        - type
+        - requestId
+        - sentAt
+        - payload
+      properties:
+        type:
+          type: string
+        requestId:
+          $ref: "#/components/schemas/UUID"
+        sentAt:
+          $ref: "#/components/schemas/DateTime"
+        payload:
+          type: object
+      additionalProperties: false
+
+    TableJoinCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.join
+            payload:
+              type: object
+              required:
+                - tableId
+                - buyIn
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+                buyIn:
+                  type: integer
+                  minimum: 400
+                  maximum: 2000
+              additionalProperties: false
+          additionalProperties: false
+
+    ActionRequest:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          $ref: "#/components/schemas/ActionType"
+        amount:
+          type: integer
+          nullable: true
+      additionalProperties: false
+
+    TableActCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.act
+            payload:
+              type: object
+              required:
+                - tableId
+                - handId
+                - action
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+                handId:
+                  $ref: "#/components/schemas/UUID"
+                action:
+                  $ref: "#/components/schemas/ActionRequest"
+              additionalProperties: false
+          additionalProperties: false
+
+    TableResumeCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: table.resume
+            payload:
+              type: object
+              required:
+                - tableId
+                - lastTableSeq
+              properties:
+                tableId:
+                  $ref: "#/components/schemas/UUID"
+                lastTableSeq:
+                  type: integer
+                  minimum: 0
+              additionalProperties: false
+          additionalProperties: false
+
+    PingCommandPayload:
+      allOf:
+        - $ref: "#/components/schemas/BaseClientCommand"
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ping
+            payload:
+              type: object
+              additionalProperties: false
+          additionalProperties: false
+
+    EventPayloadBase:
+      type: object
+      required:
+        - eventType
+        - gameType
+      properties:
+        eventType:
+          $ref: "#/components/schemas/EventType"
+        gameType:
+          $ref: "#/components/schemas/GameType"
+      additionalProperties: false
+
+    DealInitPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - gameType
+            - handNo
+            - dealerSeatNo
+            - participants
+          properties:
+            eventType:
+              type: string
+              const: DealInitEvent
+            handNo:
+              type: integer
+              minimum: 1
+            dealerSeatNo:
+              $ref: "#/components/schemas/SeatNo"
+            participants:
+              type: array
+              minItems: 2
+              maxItems: 6
+              items:
+                $ref: "#/components/schemas/SeatUserSummary"
+
+    DealHoleCardsPayload:
+      description: "Flop系（HOLD_EM, OMAHA_8）のPRE_FLOPでhole cardを配布するイベント。"
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - holeCards
+          properties:
+            eventType:
+              type: string
+              const: DealHoleCardsEvent
+            holeCards:
+              type: array
+              description: "HEROのhole cardのみ。HOLD_EMは2枚、OMAHA_8は4枚。"
+              items:
+                $ref: "#/components/schemas/Card"
+
+    PostSmallBlindPayload:
+      description: "Flop系でSBを投入するイベント。"
+      allOf:
+        - $ref: "#/components/schemas/ChipsPostedPayload"
+        - type: object
+          required: [eventType]
+          properties:
+            eventType:
+              type: string
+              const: PostSmallBlindEvent
+
+    PostBigBlindPayload:
+      description: "Flop系でBBを投入するイベント。"
+      allOf:
+        - $ref: "#/components/schemas/ChipsPostedPayload"
+        - type: object
+          required: [eventType]
+          properties:
+            eventType:
+              type: string
+              const: PostBigBlindEvent
+
+    DealCards3rdPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - seatCards
+            - bringInSeatNo
+          properties:
+            eventType:
+              type: string
+              const: DealCards3rdEvent
+            seatCards:
+              type: array
+              items:
+                $ref: "#/components/schemas/ThirdStreetSeatCards"
+            bringInSeatNo:
+              $ref: "#/components/schemas/SeatNo"
+              description: "Bring-in を支払う席番号。3rd配札直後にクライアントへ通知する。"
+
+    DealCardPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - seatNo
+            - street
+            - card
+          properties:
+            eventType:
+              type: string
+              const: DealCardEvent
+            seatNo:
+              $ref: "#/components/schemas/SeatNo"
+            street:
+              type: string
+              enum: [FOURTH, FIFTH, SIXTH, SEVENTH]
+            card:
+              $ref: "#/components/schemas/DealtCardView"
+
+    DealBoardFlopPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - cards
+          properties:
+            eventType:
+              type: string
+              const: DealBoardFlopEvent
+            cards:
+              type: array
+              minItems: 3
+              maxItems: 3
+              items:
+                $ref: "#/components/schemas/Card"
+
+    DealBoardTurnPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - card
+          properties:
+            eventType:
+              type: string
+              const: DealBoardTurnEvent
+            card:
+              $ref: "#/components/schemas/Card"
+
+    DealBoardRiverPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - card
+          properties:
+            eventType:
+              type: string
+              const: DealBoardRiverEvent
+            card:
+              $ref: "#/components/schemas/Card"
+
+    ChipsPostedPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - seatNo
+            - amount
+          properties:
+            seatNo:
+              $ref: "#/components/schemas/SeatNo"
+            amount:
+              type: integer
+              minimum: 0
+
+    PostAntePayload:
+      allOf:
+        - $ref: "#/components/schemas/ChipsPostedPayload"
+        - type: object
+          required: [eventType]
+          properties:
+            eventType:
+              type: string
+              const: PostAnteEvent
+
+    BringInPayload:
+      allOf:
+        - $ref: "#/components/schemas/ChipsPostedPayload"
+        - type: object
+          required: [eventType]
+          properties:
+            eventType:
+              type: string
+              const: BringInEvent
+
+    ActionAppliedPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - seatNo
+          properties:
+            seatNo:
+              $ref: "#/components/schemas/SeatNo"
+            amount:
+              type: integer
+              minimum: 0
+              nullable: true
+            isAuto:
+              type: boolean
+              nullable: true
+
+    CompletePayload:
+      allOf:
+        - $ref: "#/components/schemas/ActionAppliedPayload"
+        - type: object
+          properties:
+            eventType:
+              type: string
+              const: CompleteEvent
+
+    BetPayload:
+      allOf:
+        - $ref: "#/components/schemas/ActionAppliedPayload"
+        - type: object
+          properties:
+            eventType:
+              type: string
+              const: BetEvent
+
+    RaisePayload:
+      allOf:
+        - $ref: "#/components/schemas/ActionAppliedPayload"
+        - type: object
+          properties:
+            eventType:
+              type: string
+              const: RaiseEvent
+
+    CallPayload:
+      allOf:
+        - $ref: "#/components/schemas/ActionAppliedPayload"
+        - type: object
+          properties:
+            eventType:
+              type: string
+              const: CallEvent
+
+    CheckPayload:
+      allOf:
+        - $ref: "#/components/schemas/ActionAppliedPayload"
+        - type: object
+          properties:
+            eventType:
+              type: string
+              const: CheckEvent
+
+    FoldPayload:
+      allOf:
+        - $ref: "#/components/schemas/ActionAppliedPayload"
+        - type: object
+          properties:
+            eventType:
+              type: string
+              const: FoldEvent
+
+    StreetAdvancePayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - fromStreet
+            - toStreet
+          properties:
+            eventType:
+              type: string
+              const: StreetAdvanceEvent
+            fromStreet:
+              $ref: "#/components/schemas/HandStreet"
+            toStreet:
+              $ref: "#/components/schemas/HandStreet"
+
+    PotShare:
+      type: object
+      required:
+        - seatNo
+        - amount
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        amount:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    ShowdownPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - highShares
+          properties:
+            eventType:
+              type: string
+              const: ShowdownEvent
+            highShares:
+              type: array
+              items:
+                $ref: "#/components/schemas/PotShare"
+            lowShares:
+              type: array
+              items:
+                $ref: "#/components/schemas/PotShare"
+              nullable: true
+
+    DealEndResult:
+      type: object
+      required:
+        - seatNo
+        - delta
+        - finalStack
+      properties:
+        seatNo:
+          $ref: "#/components/schemas/SeatNo"
+        delta:
+          type: integer
+        finalStack:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    DealEndPayload:
+      allOf:
+        - $ref: "#/components/schemas/EventPayloadBase"
+        - type: object
+          required:
+            - eventType
+            - results
+          properties:
+            eventType:
+              type: string
+              const: DealEndEvent
+            results:
+              type: array
+              items:
+                $ref: "#/components/schemas/DealEndResult"
+
+    TableEventPayload:
+      oneOf:
+        - $ref: "#/components/schemas/DealInitPayload"
+        - $ref: "#/components/schemas/DealHoleCardsPayload"
+        - $ref: "#/components/schemas/DealCards3rdPayload"
+        - $ref: "#/components/schemas/DealCardPayload"
+        - $ref: "#/components/schemas/DealBoardFlopPayload"
+        - $ref: "#/components/schemas/DealBoardTurnPayload"
+        - $ref: "#/components/schemas/DealBoardRiverPayload"
+        - $ref: "#/components/schemas/PostSmallBlindPayload"
+        - $ref: "#/components/schemas/PostBigBlindPayload"
+        - $ref: "#/components/schemas/PostAntePayload"
+        - $ref: "#/components/schemas/BringInPayload"
+        - $ref: "#/components/schemas/CompletePayload"
+        - $ref: "#/components/schemas/BetPayload"
+        - $ref: "#/components/schemas/RaisePayload"
+        - $ref: "#/components/schemas/CallPayload"
+        - $ref: "#/components/schemas/CheckPayload"
+        - $ref: "#/components/schemas/FoldPayload"
+        - $ref: "#/components/schemas/StreetAdvancePayload"
+        - $ref: "#/components/schemas/ShowdownPayload"
+        - $ref: "#/components/schemas/DealEndPayload"
+
+    TableEventEnvelope:
+      type: object
+      required:
+        - type
+        - tableId
+        - handId
+        - tableSeq
+        - occurredAt
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.event
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        handId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+        tableSeq:
+          type: integer
+          minimum: 1
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        payload:
+          $ref: "#/components/schemas/TableEventPayload"
+      additionalProperties: false
+
+    SnapshotPayload:
+      type: object
+      required:
+        - status
+        - gameType
+        - mixIndex
+        - handsSinceRotation
+        - dealerSeatNo
+        - seats
+        - currentHand
+      properties:
+        status:
+          $ref: "#/components/schemas/TableStatus"
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        mixIndex:
+          $ref: "#/components/schemas/RotationIndex"
+        handsSinceRotation:
+          type: integer
+          minimum: 0
+          maximum: 5
+        dealerSeatNo:
+          $ref: "#/components/schemas/SeatNo"
+        seats:
+          type: array
+          minItems: 6
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/SnapshotSeat"
+        currentHand:
+          oneOf:
+            - $ref: "#/components/schemas/SnapshotCurrentHand"
+            - type: "null"
+      additionalProperties: false
+
+    TableSnapshotEnvelope:
+      type: object
+      required:
+        - type
+        - tableId
+        - tableSeq
+        - occurredAt
+        - payload
+      properties:
+        type:
+          type: string
+          const: table.snapshot
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableSeq:
+          type: integer
+          minimum: 0
+        occurredAt:
+          $ref: "#/components/schemas/DateTime"
+        payload:
+          $ref: "#/components/schemas/SnapshotPayload"
+      additionalProperties: false
+
+    TableErrorEnvelope:
+      type: object
+      required:
+        - type
+        - requestId
+        - code
+        - message
+      properties:
+        type:
+          type: string
+          const: table.error
+        requestId:
+          oneOf:
+            - $ref: "#/components/schemas/UUID"
+            - type: "null"
+        code:
+          $ref: "#/components/schemas/RealtimeErrorCode"
+        message:
+          type: string
+      additionalProperties: false
+
+    PongEnvelope:
+      type: object
+      required:
+        - type
+        - requestId
+        - serverTime
+      properties:
+        type:
+          type: string
+          const: pong
+        requestId:
+          $ref: "#/components/schemas/UUID"
+        serverTime:
+          $ref: "#/components/schemas/DateTime"
+      additionalProperties: false
