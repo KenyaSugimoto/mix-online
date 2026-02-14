@@ -167,6 +167,7 @@ components:
               stackAfter: 860
               potAfter: 290
               streetBetTo: 40
+              raiseCount: 1
               nextToActSeatNo: 5
               isAllIn: false
         - payload:
@@ -352,6 +353,8 @@ components:
                   status: IN_PROGRESS
                   street: THIRD
                   potTotal: 290
+                  streetBetTo: 40
+                  raiseCount: 1
                   toActSeatNo: 1
                   actionDeadlineAt: "2026-02-09T10:06:31.000Z"
                 dealerSeatNo: 2
@@ -387,13 +390,16 @@ components:
 
     TableCommandAction:
       type: string
+      description: |
+        MVP時点で `table.act` が受理するアクション。
+        `BRING_IN` は 3rd 未アクション局面（`streetBetTo=0`）でのみ受理する。
       enum:
         - FOLD
         - CHECK
         - CALL
         - BET
-        - RAISE
         - COMPLETE
+        - RAISE
         - BRING_IN
 
     TableEventName:
@@ -603,6 +609,8 @@ components:
             - status
             - street
             - potTotal
+            - streetBetTo
+            - raiseCount
             - toActSeatNo
             - actionDeadlineAt
           properties:
@@ -617,6 +625,12 @@ components:
             street:
               $ref: "#/components/schemas/Street"
             potTotal:
+              type: integer
+              minimum: 0
+            streetBetTo:
+              type: integer
+              minimum: 0
+            raiseCount:
               type: integer
               minimum: 0
             toActSeatNo:
@@ -793,6 +807,7 @@ components:
         - stackAfter
         - potAfter
         - streetBetTo
+        - raiseCount
         - nextToActSeatNo
         - isAllIn
       properties:
@@ -810,6 +825,9 @@ components:
           type: integer
           minimum: 0
         streetBetTo:
+          type: integer
+          minimum: 0
+        raiseCount:
           type: integer
           minimum: 0
         nextToActSeatNo:
@@ -1047,6 +1065,7 @@ components:
         - stackAfter
         - potAfter
         - streetBetTo
+        - raiseCount
         - nextToActSeatNo
         - isAllIn
       properties:
@@ -1065,6 +1084,9 @@ components:
           type: integer
           minimum: 0
         streetBetTo:
+          type: integer
+          minimum: 0
+        raiseCount:
           type: integer
           minimum: 0
         nextToActSeatNo:

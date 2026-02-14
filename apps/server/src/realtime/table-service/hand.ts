@@ -18,7 +18,7 @@ import {
 import { createStandardDeck } from "../../testing/fixed-deck-harness";
 import { resolveGameRule } from "../game-rule";
 import { createShowdownOutcome } from "../showdown-evaluator";
-import { canStartHand, resolveNextToAct } from "./turn";
+import { canStartHand } from "./turn";
 import type {
   CardValue,
   HandPlayerState,
@@ -643,6 +643,9 @@ export const startThirdStreet = (table: TableState): PendingEvent[] => {
 
   const bringInSeatNo = determineBringInSeat(table.gameType, hand.players);
   hand.bringInSeatNo = bringInSeatNo;
+  hand.toActSeatNo = bringInSeatNo;
+  table.status = TableStatus.BETTING;
+  table.currentHand = hand;
 
   const dealCards3rdEvent: PendingEvent = {
     handId,
@@ -654,47 +657,7 @@ export const startThirdStreet = (table: TableState): PendingEvent[] => {
     },
   };
 
-  const bringInPlayer = hand.players.find(
-    (player) => player.seatNo === bringInSeatNo,
-  );
-  const bringInSeat = table.seats.find((seat) => seat.seatNo === bringInSeatNo);
-  if (!bringInPlayer || !bringInSeat) {
-    table.currentHand = hand;
-    return [dealInitEvent, postAnteEvent, dealCards3rdEvent];
-  }
-
-  const bringInAmount = Math.min(table.bringIn, bringInSeat.stack);
-  bringInSeat.stack -= bringInAmount;
-  bringInPlayer.totalContribution += bringInAmount;
-  bringInPlayer.streetContribution += bringInAmount;
-  bringInPlayer.actedThisRound = true;
-  if (bringInSeat.stack === 0) {
-    bringInPlayer.allIn = true;
-  }
-
-  hand.potTotal += bringInAmount;
-  hand.streetBetTo = bringInAmount;
-
-  const nextToActSeatNo = resolveNextToAct(hand, bringInSeatNo);
-  hand.toActSeatNo = nextToActSeatNo;
-  table.currentHand = hand;
-  table.status = TableStatus.BETTING;
-
-  const bringInEvent: PendingEvent = {
-    handId,
-    eventName: TableEventName.BringInEvent,
-    payload: {
-      street: Street.THIRD,
-      seatNo: bringInSeatNo,
-      amount: bringInAmount,
-      stackAfter: bringInSeat.stack,
-      potAfter: hand.potTotal,
-      nextToActSeatNo,
-      isAllIn: bringInSeat.stack === 0,
-    },
-  };
-
-  return [dealInitEvent, postAnteEvent, dealCards3rdEvent, bringInEvent];
+  return [dealInitEvent, postAnteEvent, dealCards3rdEvent];
 };
 
 /**

@@ -3,6 +3,7 @@ import {
   GAME_TYPES,
   HAND_STATUSES,
   HandStatus,
+  MVP_TABLE_ACT_ACTIONS,
   REALTIME_ERROR_CODES,
   type RealtimeErrorCode,
   RealtimeTableCommandType,
@@ -11,7 +12,6 @@ import {
   STREETS,
   SeatStatus,
   Street,
-  TABLE_COMMAND_ACTIONS,
   TABLE_STATUSES,
   type TableCommandAction,
   TableEventName,
@@ -112,6 +112,8 @@ type TableSnapshotHand = {
   status: (typeof HAND_STATUSES)[number];
   street: (typeof Street)[keyof typeof Street];
   potTotal: number;
+  streetBetTo: number;
+  raiseCount: number;
   toActSeatNo: number | null;
   actionDeadlineAt: string | null;
 };
@@ -282,6 +284,8 @@ const parseJsonMessage = (raw: string): WsMessage | null => {
       !isEnumValue(snapshotTable.currentHand.status, HAND_STATUSES) ||
       !isEnumValue(snapshotTable.currentHand.street, STREETS) ||
       !isInteger(snapshotTable.currentHand.potTotal) ||
+      !isInteger(snapshotTable.currentHand.streetBetTo) ||
+      !isInteger(snapshotTable.currentHand.raiseCount) ||
       !isNullableInteger(snapshotTable.currentHand.toActSeatNo) ||
       !isNullableString(snapshotTable.currentHand.actionDeadlineAt)
     ) {
@@ -440,6 +444,8 @@ const mapSnapshotTable = (
           status: snapshot.payload.table.currentHand.status,
           street: snapshot.payload.table.currentHand.street,
           potTotal: snapshot.payload.table.currentHand.potTotal,
+          streetBetTo: snapshot.payload.table.currentHand.streetBetTo,
+          raiseCount: snapshot.payload.table.currentHand.raiseCount,
           toActSeatNo: snapshot.payload.table.currentHand.toActSeatNo,
           actionDeadlineAt: snapshot.payload.table.currentHand.actionDeadlineAt,
         }
@@ -464,6 +470,8 @@ const mergeCurrentHand = (
         status: HandStatus.IN_PROGRESS,
         street: Street.THIRD,
         potTotal: 0,
+        streetBetTo: 0,
+        raiseCount: 0,
         toActSeatNo: null,
         actionDeadlineAt: null,
         ...patch,
@@ -532,11 +540,14 @@ type ActionPayload = {
 };
 
 type BringInPayload = ActionPayload & {
+  amount: number;
   stackAfter: number;
 };
 
 type ChipActionPayload = ActionPayload & {
   stackAfter: number;
+  streetBetTo: number;
+  raiseCount: number;
 };
 
 const isSeatStateChangedPayload = (
@@ -596,6 +607,7 @@ const isBringInPayload = (
 ): payload is BringInPayload =>
   isEnumValue(payload.street, STREETS) &&
   isInteger(payload.seatNo) &&
+  isInteger(payload.amount) &&
   isInteger(payload.potAfter) &&
   isNullableInteger(payload.nextToActSeatNo) &&
   isInteger(payload.stackAfter);
@@ -612,7 +624,14 @@ const isChipActionPayload = (
   payload: Record<string, unknown>,
 ): payload is ChipActionPayload => {
   const stackAfter = payload.stackAfter;
-  return isActionPayload(payload) && isInteger(stackAfter);
+  const streetBetTo = payload.streetBetTo;
+  const raiseCount = payload.raiseCount;
+  return (
+    isActionPayload(payload) &&
+    isInteger(stackAfter) &&
+    isInteger(streetBetTo) &&
+    isInteger(raiseCount)
+  );
 };
 
 const applyEventToTable = (
@@ -702,6 +721,8 @@ const applyEventToTable = (
         status: HandStatus.IN_PROGRESS,
         street: Street.THIRD,
         potTotal: 0,
+        streetBetTo: 0,
+        raiseCount: 0,
         toActSeatNo: null,
         actionDeadlineAt: null,
       },
@@ -790,6 +811,8 @@ const applyEventToTable = (
         {
           street: payload.street,
           potTotal: payload.potAfter,
+          streetBetTo: payload.amount,
+          raiseCount: 0,
           toActSeatNo: payload.nextToActSeatNo,
         },
         event.handId,
@@ -815,6 +838,35 @@ const applyEventToTable = (
         {
           street: payload.street,
           potTotal: payload.potAfter,
+          streetBetTo: payload.streetBetTo,
+          raiseCount: payload.raiseCount,
+          toActSeatNo: payload.nextToActSeatNo,
+        },
+        event.handId,
+      ),
+      payload.seatNo,
+      (seat) => ({
+        ...seat,
+        stack: payload.stackAfter,
+      }),
+    );
+  }
+
+  if (
+    event.eventName === TableEventName.BetEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return updateSeat(
+      mergeCurrentHand(
+        {
+          ...table,
+          status: TableStatus.BETTING,
+        },
+        {
+          street: payload.street,
+          potTotal: payload.potAfter,
+          streetBetTo: payload.streetBetTo,
+          raiseCount: payload.raiseCount,
           toActSeatNo: payload.nextToActSeatNo,
         },
         event.handId,
@@ -840,6 +892,8 @@ const applyEventToTable = (
         {
           street: payload.street,
           potTotal: payload.potAfter,
+          streetBetTo: payload.streetBetTo,
+          raiseCount: payload.raiseCount,
           toActSeatNo: payload.nextToActSeatNo,
         },
         event.handId,
@@ -865,6 +919,8 @@ const applyEventToTable = (
         {
           street: payload.street,
           potTotal: payload.potAfter,
+          streetBetTo: payload.streetBetTo,
+          raiseCount: payload.raiseCount,
           toActSeatNo: payload.nextToActSeatNo,
         },
         event.handId,
@@ -1303,10 +1359,11 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
     action: TableCommandAction,
     params?: { amount?: number },
   ) => {
-    if (!isEnumValue(action, TABLE_COMMAND_ACTIONS)) {
+    if (!isEnumValue(action, MVP_TABLE_ACT_ACTIONS)) {
       patchState({
         lastErrorCode: null,
-        lastErrorMessage: "未対応のアクション種別です。",
+        lastErrorMessage:
+          "MVP未対応のアクションです。FOLD/CHECK/CALL/BET/COMPLETE/RAISE/BRING_IN を選択してください。",
       });
       return false;
     }

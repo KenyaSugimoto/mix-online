@@ -169,6 +169,8 @@ const MVP_TABLE_DETAILS: TableDetailRecord[] = [
       status: HandStatus.IN_PROGRESS,
       street: Street.FIFTH,
       potTotal: 430,
+      streetBetTo: 40,
+      raiseCount: 1,
       toActSeatNo: 2,
       actionDeadlineAt: "2026-02-11T12:40:00.000Z",
     },

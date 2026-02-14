@@ -135,6 +135,8 @@ const createInitialTable = (): TableDetail => ({
     status: HandStatus.IN_PROGRESS,
     street: Street.THIRD,
     potTotal: 10,
+    streetBetTo: 10,
+    raiseCount: 0,
     toActSeatNo: 1,
     actionDeadlineAt: null,
   },
@@ -382,6 +384,8 @@ describe("table-store", () => {
               status: HandStatus.IN_PROGRESS,
               street: Street.FOURTH,
               potTotal: 180,
+              streetBetTo: 20,
+              raiseCount: 1,
               toActSeatNo: 2,
               actionDeadlineAt: null,
             },
@@ -440,6 +444,70 @@ describe("table-store", () => {
       tableId: "22222222-2222-4222-8222-222222222222",
       action: TableCommandAction.RAISE,
       amount: 40,
+    });
+  });
+
+  it("BRING_IN はMVP受理アクションとして送信できる", () => {
+    const sockets: FakeWebSocket[] = [];
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable: createInitialTable(),
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    expect(
+      store.sendActionCommand(TableCommandAction.BRING_IN, { amount: 10 }),
+    ).toBe(true);
+
+    const bringInCommand = parseCommand(socket, 1);
+    expect(bringInCommand.type).toBe(RealtimeTableCommandType.ACT);
+    expect(bringInCommand.payload).toMatchObject({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      action: TableCommandAction.BRING_IN,
+      amount: 10,
+    });
+  });
+
+  it("BET はMVP受理アクションとして送信できる", () => {
+    const sockets: FakeWebSocket[] = [];
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable: createInitialTable(),
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    expect(
+      store.sendActionCommand(TableCommandAction.BET, { amount: 20 }),
+    ).toBe(true);
+
+    const betCommand = parseCommand(socket, 1);
+    expect(betCommand.type).toBe(RealtimeTableCommandType.ACT);
+    expect(betCommand.payload).toMatchObject({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      action: TableCommandAction.BET,
+      amount: 20,
     });
   });
 

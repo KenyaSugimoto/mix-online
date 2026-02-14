@@ -168,6 +168,8 @@ describe("supabase api repositories", () => {
                     handId: "hand-1",
                     street: Street.FOURTH,
                     potTotal: 80,
+                    streetBetTo: 20,
+                    raiseCount: 1,
                     toActSeatNo: 1,
                     actionDeadlineAt: "2026-02-14T10:05:00.000Z",
                   },
@@ -213,6 +215,8 @@ describe("supabase api repositories", () => {
       status: HandStatus.IN_PROGRESS,
       street: Street.FOURTH,
       potTotal: 80,
+      streetBetTo: 20,
+      raiseCount: 1,
       toActSeatNo: 1,
       actionDeadlineAt: "2026-02-14T10:05:00.000Z",
     });

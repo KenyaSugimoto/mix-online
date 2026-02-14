@@ -1,4 +1,5 @@
 import {
+  MVP_TABLE_ACT_ACTIONS,
   RealtimeErrorCode,
   type RealtimeTableCommand,
   type RealtimeTableCommandType,
@@ -32,6 +33,64 @@ const fail = (
       tableId,
     },
   };
+};
+
+const MAX_RAISES_PER_STREET = 4;
+
+const resolveLegalActions = (params: {
+  street: Street;
+  streetBetTo: number;
+  smallBet: number;
+  raiseCount: number;
+  toCall: number;
+}): ReadonlyArray<(typeof MVP_TABLE_ACT_ACTIONS)[number]> => {
+  if (params.street === Street.THIRD) {
+    if (params.streetBetTo === 0) {
+      return [TableCommandAction.BRING_IN, TableCommandAction.COMPLETE];
+    }
+
+    if (params.streetBetTo < params.smallBet) {
+      if (params.toCall <= 0) {
+        return [];
+      }
+      return [
+        TableCommandAction.CALL,
+        TableCommandAction.FOLD,
+        TableCommandAction.COMPLETE,
+      ];
+    }
+
+    if (params.toCall <= 0) {
+      return [];
+    }
+
+    if (params.raiseCount >= MAX_RAISES_PER_STREET) {
+      return [TableCommandAction.CALL, TableCommandAction.FOLD];
+    }
+
+    return [
+      TableCommandAction.CALL,
+      TableCommandAction.FOLD,
+      TableCommandAction.RAISE,
+    ];
+  }
+
+  if (params.toCall <= 0) {
+    if (params.streetBetTo === 0) {
+      return [TableCommandAction.CHECK, TableCommandAction.BET];
+    }
+    return [];
+  }
+
+  if (params.raiseCount >= MAX_RAISES_PER_STREET) {
+    return [TableCommandAction.CALL, TableCommandAction.FOLD];
+  }
+
+  return [
+    TableCommandAction.CALL,
+    TableCommandAction.FOLD,
+    TableCommandAction.RAISE,
+  ];
 };
 
 export const applyActCommand = (params: {
@@ -94,33 +153,95 @@ export const applyActCommand = (params: {
       params.table.tableId,
     );
   }
+  if (
+    !MVP_TABLE_ACT_ACTIONS.includes(
+      action as (typeof MVP_TABLE_ACT_ACTIONS)[number],
+    )
+  ) {
+    return fail(
+      RealtimeErrorCode.INVALID_ACTION,
+      `${action} はMVPの table.act では受け付けていません。`,
+      params.command.requestId,
+      params.table.tableId,
+    );
+  }
+  const supportedAction = action as (typeof MVP_TABLE_ACT_ACTIONS)[number];
 
   const toCall = Math.max(0, hand.streetBetTo - player.streetContribution);
+  const legalActions = resolveLegalActions({
+    street: hand.street,
+    streetBetTo: hand.streetBetTo,
+    smallBet: params.table.smallBet,
+    raiseCount: hand.raiseCount,
+    toCall,
+  });
+  if (!legalActions.includes(supportedAction)) {
+    return fail(
+      RealtimeErrorCode.INVALID_ACTION,
+      legalActions.length > 0
+        ? `現在の局面で許可されるアクション: ${legalActions.join(" / ")}`
+        : "現在の局面ではアクションできません。",
+      params.command.requestId,
+      params.table.tableId,
+    );
+  }
+
   let amount = 0;
   let eventName:
+    | typeof TableEventName.BringInEvent
+    | typeof TableEventName.BetEvent
     | typeof TableEventName.CallEvent
     | typeof TableEventName.CheckEvent
     | typeof TableEventName.FoldEvent
     | typeof TableEventName.CompleteEvent
     | typeof TableEventName.RaiseEvent;
 
-  if (action === TableCommandAction.CHECK) {
-    if (toCall > 0) {
-      return fail(
-        RealtimeErrorCode.INVALID_ACTION,
-        "toCall がある状態では CHECK できません。",
-        params.command.requestId,
-        params.table.tableId,
-      );
-    }
-
+  if (supportedAction === TableCommandAction.CHECK) {
     player.actedThisRound = true;
     eventName = TableEventName.CheckEvent;
-  } else if (action === TableCommandAction.FOLD) {
+  } else if (supportedAction === TableCommandAction.FOLD) {
     player.inHand = false;
     player.actedThisRound = true;
     eventName = TableEventName.FoldEvent;
-  } else if (action === TableCommandAction.CALL) {
+  } else if (supportedAction === TableCommandAction.BRING_IN) {
+    const targetBet = params.table.bringIn;
+    amount = Math.min(
+      Math.max(0, targetBet - player.streetContribution),
+      seat.stack,
+    );
+    seat.stack -= amount;
+    player.totalContribution += amount;
+    player.streetContribution += amount;
+    if (seat.stack === 0) {
+      player.allIn = true;
+    }
+    hand.potTotal += amount;
+    hand.streetBetTo = Math.max(hand.streetBetTo, player.streetContribution);
+    hand.raiseCount = 0;
+    for (const candidate of hand.players) {
+      candidate.actedThisRound = candidate.seatNo === player.seatNo;
+    }
+    eventName = TableEventName.BringInEvent;
+  } else if (supportedAction === TableCommandAction.BET) {
+    const targetBet = params.table.smallBet;
+    amount = Math.min(
+      Math.max(0, targetBet - player.streetContribution),
+      seat.stack,
+    );
+    seat.stack -= amount;
+    player.totalContribution += amount;
+    player.streetContribution += amount;
+    if (seat.stack === 0) {
+      player.allIn = true;
+    }
+    hand.potTotal += amount;
+    hand.streetBetTo = Math.max(hand.streetBetTo, player.streetContribution);
+    hand.raiseCount = 0;
+    for (const candidate of hand.players) {
+      candidate.actedThisRound = candidate.seatNo === player.seatNo;
+    }
+    eventName = TableEventName.BetEvent;
+  } else if (supportedAction === TableCommandAction.CALL) {
     amount = Math.min(toCall, seat.stack);
     seat.stack -= amount;
     player.totalContribution += amount;
@@ -131,19 +252,7 @@ export const applyActCommand = (params: {
     hand.potTotal += amount;
     player.actedThisRound = true;
     eventName = TableEventName.CallEvent;
-  } else if (action === TableCommandAction.COMPLETE) {
-    if (
-      hand.streetBetTo >= params.table.smallBet ||
-      hand.street !== Street.THIRD
-    ) {
-      return fail(
-        RealtimeErrorCode.INVALID_ACTION,
-        "現在の局面では COMPLETE できません。",
-        params.command.requestId,
-        params.table.tableId,
-      );
-    }
-
+  } else if (supportedAction === TableCommandAction.COMPLETE) {
     const targetBet = params.table.smallBet;
     amount = Math.min(
       Math.max(0, targetBet - player.streetContribution),
@@ -162,28 +271,7 @@ export const applyActCommand = (params: {
       candidate.actedThisRound = candidate.seatNo === player.seatNo;
     }
     eventName = TableEventName.CompleteEvent;
-  } else if (action === TableCommandAction.RAISE) {
-    if (hand.street !== Street.THIRD && hand.street !== Street.FOURTH) {
-      // M3-05 時点では third/fourth 基本ベットのみサポートし、詳細街進行はM3-06以降で拡張する。
-    }
-    if (hand.streetBetTo < params.table.smallBet) {
-      return fail(
-        RealtimeErrorCode.INVALID_ACTION,
-        "COMPLETE 前に RAISE はできません。",
-        params.command.requestId,
-        params.table.tableId,
-      );
-    }
-
-    if (hand.raiseCount >= 4) {
-      return fail(
-        RealtimeErrorCode.INVALID_ACTION,
-        "このストリートのRAISE上限に達しています。",
-        params.command.requestId,
-        params.table.tableId,
-      );
-    }
-
+  } else if (supportedAction === TableCommandAction.RAISE) {
     const raiseSize = params.table.smallBet;
     const targetBet = hand.streetBetTo + raiseSize;
     amount = Math.min(
@@ -264,6 +352,20 @@ export const applyActCommand = (params: {
     });
   }
 
+  if (eventName === TableEventName.BringInEvent) {
+    return buildSuccessResult({
+      handId: hand.handId,
+      eventName,
+      payload: {
+        ...payloadBase,
+        street: Street.THIRD,
+        amount,
+        stackAfter: seat.stack,
+        isAllIn: seat.stack === 0,
+      },
+    });
+  }
+
   return buildSuccessResult({
     handId: hand.handId,
     eventName,
@@ -272,6 +374,7 @@ export const applyActCommand = (params: {
       amount,
       stackAfter: seat.stack,
       streetBetTo: hand.streetBetTo,
+      raiseCount: hand.raiseCount,
       isAllIn: seat.stack === 0,
     },
   });

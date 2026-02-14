@@ -469,6 +469,8 @@ components:
         - status
         - street
         - potTotal
+        - streetBetTo
+        - raiseCount
       properties:
         handId:
           type: string
@@ -482,6 +484,12 @@ components:
         street:
           $ref: "#/components/schemas/Street"
         potTotal:
+          type: integer
+          minimum: 0
+        streetBetTo:
+          type: integer
+          minimum: 0
+        raiseCount:
           type: integer
           minimum: 0
         toActSeatNo:

@@ -135,6 +135,8 @@ export const createSnapshotMessage = (params: {
               status: table.currentHand.status,
               street: table.currentHand.street,
               potTotal: table.currentHand.potTotal,
+              streetBetTo: table.currentHand.streetBetTo,
+              raiseCount: table.currentHand.raiseCount,
               toActSeatNo: table.currentHand.toActSeatNo,
               actionDeadlineAt: null,
             }

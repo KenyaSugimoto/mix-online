@@ -88,6 +88,16 @@ export type TableCommandAction =
 export const TABLE_COMMAND_ACTIONS = Object.values(
   TableCommandAction,
 ) as TableCommandAction[];
+export const MVP_TABLE_ACT_ACTIONS = [
+  TableCommandAction.FOLD,
+  TableCommandAction.CHECK,
+  TableCommandAction.CALL,
+  TableCommandAction.BET,
+  TableCommandAction.COMPLETE,
+  TableCommandAction.RAISE,
+  TableCommandAction.BRING_IN,
+] as const;
+export type MvpTableActAction = (typeof MVP_TABLE_ACT_ACTIONS)[number];
 
 export const RealtimeTableCommandType = {
   JOIN: "table.join",
@@ -491,10 +501,13 @@ type ChipActionEventPayloadBase = ActionEventPayloadBase & {
   amount: number;
   stackAfter: number;
   streetBetTo: number;
+  raiseCount: number;
   isAllIn: boolean;
 };
 
 export type CallEventPayload = ChipActionEventPayloadBase;
+
+export type BetEventPayload = ChipActionEventPayloadBase;
 
 export type CompleteEventPayload = ChipActionEventPayloadBase;
 
@@ -573,6 +586,7 @@ export type RealtimeTableEventPayload =
   | DealCardEventPayload
   | BringInEventPayload
   | CallEventPayload
+  | BetEventPayload
   | CheckEventPayload
   | FoldEventPayload
   | CompleteEventPayload
@@ -626,6 +640,10 @@ export type RealtimeTableEventMessage =
   | (RealtimeTableEventBase & {
       eventName: typeof TableEventName.CallEvent;
       payload: CallEventPayload;
+    })
+  | (RealtimeTableEventBase & {
+      eventName: typeof TableEventName.BetEvent;
+      payload: BetEventPayload;
     })
   | (RealtimeTableEventBase & {
       eventName: typeof TableEventName.CheckEvent;

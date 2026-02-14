@@ -1,7 +1,10 @@
 import {
+  MVP_TABLE_ACT_ACTIONS,
   RealtimeTableCommandType,
   SeatStatus,
   type SeatStatus as SeatStatusType,
+  Street,
+  type Street as StreetType,
   TableCommandAction,
   type TableCommandAction as TableCommandActionType,
 } from "@mix-online/shared";
@@ -128,6 +131,65 @@ export const resolveTableControlState = (params: {
     actionInputEnabled: false,
     seatCommandAvailability: noSeatCommands,
   };
+};
+
+export const TABLE_ACT_ACTION_OPTIONS = MVP_TABLE_ACT_ACTIONS;
+export type TableActActionOption = (typeof TABLE_ACT_ACTION_OPTIONS)[number];
+
+export const isTableActActionOption = (
+  action: TableCommandActionType,
+): action is TableActActionOption =>
+  TABLE_ACT_ACTION_OPTIONS.includes(action as TableActActionOption);
+
+export const resolveTableActActionOptions = (params: {
+  street: StreetType | null;
+  streetBetTo: number | null;
+  smallBet: number | null;
+  raiseCount: number | null;
+}): TableActActionOption[] => {
+  const { street, streetBetTo, smallBet, raiseCount } = params;
+  if (
+    street === null ||
+    streetBetTo === null ||
+    smallBet === null ||
+    raiseCount === null
+  ) {
+    return [];
+  }
+
+  const canRaise = raiseCount < 4;
+  if (street === Street.THIRD) {
+    if (streetBetTo === 0) {
+      return [TableCommandAction.BRING_IN, TableCommandAction.COMPLETE];
+    }
+
+    if (streetBetTo < smallBet) {
+      return [
+        TableCommandAction.CALL,
+        TableCommandAction.FOLD,
+        TableCommandAction.COMPLETE,
+      ];
+    }
+    return canRaise
+      ? [
+          TableCommandAction.CALL,
+          TableCommandAction.FOLD,
+          TableCommandAction.RAISE,
+        ]
+      : [TableCommandAction.CALL, TableCommandAction.FOLD];
+  }
+
+  if (streetBetTo === 0) {
+    return [TableCommandAction.CHECK, TableCommandAction.BET];
+  }
+
+  return canRaise
+    ? [
+        TableCommandAction.CALL,
+        TableCommandAction.FOLD,
+        TableCommandAction.RAISE,
+      ]
+    : [TableCommandAction.CALL, TableCommandAction.FOLD];
 };
 
 export const actionRequiresAmount = (action: TableCommandActionType) =>

@@ -1,7 +1,6 @@
 import {
   RealtimeTableCommandType,
   SeatStatus,
-  TABLE_COMMAND_ACTIONS,
   TableBuyIn,
   TableCommandAction,
   type TableCommandAction as TableCommandActionType,
@@ -16,6 +15,8 @@ import {
   actionRequiresAmount,
   formatSeatCommandLabel,
   formatSeatStatusLabel,
+  isTableActActionOption,
+  resolveTableActActionOptions,
   resolveTableControlState,
 } from "./table-control";
 import {
@@ -261,6 +262,29 @@ export const TableScreen = (props: {
     () => resolveRemainingSeconds(actionDeadlineAt, timerNow),
     [actionDeadlineAt, timerNow],
   );
+  const tableActActionOptions = useMemo(
+    () =>
+      resolveTableActActionOptions({
+        street: table?.currentHand?.street ?? null,
+        streetBetTo: table?.currentHand?.streetBetTo ?? null,
+        smallBet: table?.stakes.smallBet ?? null,
+        raiseCount: table?.currentHand?.raiseCount ?? null,
+      }),
+    [
+      table?.currentHand?.street,
+      table?.currentHand?.streetBetTo,
+      table?.currentHand?.raiseCount,
+      table?.stakes.smallBet,
+    ],
+  );
+  useEffect(() => {
+    if (
+      !isTableActActionOption(selectedAction) ||
+      !tableActActionOptions.includes(selectedAction)
+    ) {
+      setSelectedAction(tableActActionOptions[0] ?? TableCommandAction.CHECK);
+    }
+  }, [selectedAction, tableActActionOptions]);
 
   const handleSeatCommand = (commandType: SeatCommandType) => {
     const store = tableStoreRef.current;
@@ -308,6 +332,15 @@ export const TableScreen = (props: {
   const onActionSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!controlState.actionInputEnabled) {
+      return;
+    }
+    if (
+      !isTableActActionOption(selectedAction) ||
+      !tableActActionOptions.includes(selectedAction)
+    ) {
+      setCommandPreview(
+        "送信プレビュー: 選択中アクションは現在の局面では送信できません。",
+      );
       return;
     }
 
@@ -501,6 +534,12 @@ export const TableScreen = (props: {
               ? `手番中のため ${RealtimeTableCommandType.ACT} 入力を有効化しています。`
               : `手番外または非ACTIVE状態のため ${RealtimeTableCommandType.ACT} 入力は無効です。`}
           </p>
+          <p className="status-chip">
+            送信候補:{" "}
+            {tableActActionOptions.length > 0
+              ? tableActActionOptions.join(" / ")
+              : "(算出中)"}
+          </p>
           <form className="action-form" onSubmit={onActionSubmit}>
             <label className="field-label" htmlFor="table-action-type">
               action
@@ -513,7 +552,7 @@ export const TableScreen = (props: {
                 setSelectedAction(event.target.value as TableCommandActionType)
               }
             >
-              {TABLE_COMMAND_ACTIONS.map((action) => (
+              {tableActActionOptions.map((action) => (
                 <option key={action} value={action}>
                   {action}
                 </option>

@@ -24,6 +24,8 @@ export type CurrentHandSummaryRecord = {
   status: HandStatus;
   street: Street;
   potTotal: number;
+  streetBetTo: number;
+  raiseCount: number;
   toActSeatNo: number | null;
   actionDeadlineAt: string | null;
 };
@@ -72,6 +74,8 @@ type CurrentHandSummaryView = {
   status: HandStatus;
   street: Street;
   potTotal: number;
+  streetBetTo: number;
+  raiseCount: number;
   toActSeatNo: number | null;
   actionDeadlineAt: string | null;
 };
@@ -128,6 +132,8 @@ const toCurrentHandView = (
     status: record.status,
     street: record.street,
     potTotal: record.potTotal,
+    streetBetTo: record.streetBetTo,
+    raiseCount: record.raiseCount,
     toActSeatNo: record.toActSeatNo,
     actionDeadlineAt: record.actionDeadlineAt,
   };

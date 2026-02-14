@@ -84,18 +84,41 @@ describe("E2E 境界値", () => {
     seatByUserId.set(user1.userId, joined1Seat.payload.seatNo);
     seatByUserId.set(user2.userId, joined2Seat.payload.seatNo);
 
-    const bringIn = joined2.events.find(
-      (event) => event.eventName === TableEventName.BringInEvent,
+    const dealCards3rd = joined2.events.find(
+      (event) => event.eventName === TableEventName.DealCards3rdEvent,
     );
-    expect(bringIn?.eventName).toBe(TableEventName.BringInEvent);
-    if (!bringIn || bringIn.eventName !== TableEventName.BringInEvent) {
+    expect(dealCards3rd?.eventName).toBe(TableEventName.DealCards3rdEvent);
+    if (
+      !dealCards3rd ||
+      dealCards3rd.eventName !== TableEventName.DealCards3rdEvent
+    ) {
       return;
     }
 
-    let toActSeatNo = bringIn.payload.nextToActSeatNo as number;
-
     const userBySeat = (seatNo: number): SessionUser =>
       seatByUserId.get(user1.userId) === seatNo ? user1 : user2;
+
+    const bringIn = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.BRING_IN },
+      }),
+      user: userBySeat(dealCards3rd.payload.bringInSeatNo),
+      occurredAt: NOW,
+    });
+    expect(bringIn.ok).toBe(true);
+    if (!bringIn.ok) {
+      return;
+    }
+    const bringInEvent = bringIn.events[0];
+    expect(bringInEvent?.eventName).toBe(TableEventName.BringInEvent);
+    if (
+      !bringInEvent ||
+      bringInEvent.eventName !== TableEventName.BringInEvent
+    ) {
+      return;
+    }
+    let toActSeatNo = bringInEvent.payload.nextToActSeatNo as number;
 
     const complete = await service.executeCommand({
       command: createCommand({
