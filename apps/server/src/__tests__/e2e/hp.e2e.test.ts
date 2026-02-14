@@ -64,6 +64,6 @@ describe("E2E ハッピーパス", () => {
     if (resumed.kind !== "events") {
       return;
     }
-    expect(resumed.events.map((event) => event.tableSeq)).toEqual([3, 4, 5, 6]);
+    expect(resumed.events.map((event) => event.tableSeq)).toEqual([3, 4, 5]);
   });
 });

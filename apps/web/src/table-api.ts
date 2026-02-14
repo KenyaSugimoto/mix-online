@@ -54,6 +54,8 @@ export type CurrentHandSummary = {
   status: HandStatus;
   street: Street;
   potTotal: number;
+  streetBetTo: number;
+  raiseCount: number;
   toActSeatNo: number | null;
   actionDeadlineAt: string | null;
 };
@@ -172,6 +174,8 @@ const hasValidCurrentHand = (value: unknown): value is CurrentHandSummary => {
     isHandStatus(hand.status) &&
     isStreet(hand.street) &&
     typeof hand.potTotal === "number" &&
+    typeof hand.streetBetTo === "number" &&
+    typeof hand.raiseCount === "number" &&
     (typeof hand.toActSeatNo === "number" || hand.toActSeatNo === null) &&
     (typeof hand.actionDeadlineAt === "string" ||
       hand.actionDeadlineAt === null)

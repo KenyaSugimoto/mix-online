@@ -283,7 +283,7 @@ describe("WebSocketゲートウェイ統合", () => {
           },
         }),
       );
-      await waitForMessages(socket1, 5);
+      await waitForMessages(socket1, 4);
 
       socket1.send(
         JSON.stringify({
@@ -297,7 +297,7 @@ describe("WebSocketゲートウェイ統合", () => {
         }),
       );
 
-      const resumed = (await waitForMessages(socket1, 4)) as Array<{
+      const resumed = (await waitForMessages(socket1, 3)) as Array<{
         type: string;
         tableSeq: number;
       }>;
@@ -305,9 +305,8 @@ describe("WebSocketゲートウェイ統合", () => {
         "table.event",
         "table.event",
         "table.event",
-        "table.event",
       ]);
-      expect(resumed.map((message) => message.tableSeq)).toEqual([3, 4, 5, 6]);
+      expect(resumed.map((message) => message.tableSeq)).toEqual([3, 4, 5]);
     } finally {
       socket1.terminate();
       socket2.terminate();
@@ -373,7 +372,7 @@ describe("WebSocketゲートウェイ統合", () => {
           },
         }),
       );
-      await waitForMessages(socket1, 5);
+      await waitForMessages(socket1, 4);
 
       socket1.send(
         JSON.stringify({

@@ -49,6 +49,8 @@ export type TableSnapshotMessage = {
         status: HandStatus;
         street: Street;
         potTotal: number;
+        streetBetTo: number;
+        raiseCount: number;
         toActSeatNo: number | null;
         actionDeadlineAt: string | null;
       } | null;

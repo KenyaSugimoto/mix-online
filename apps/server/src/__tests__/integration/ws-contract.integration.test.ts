@@ -273,7 +273,7 @@ describe("Realtime契約テスト（M3-11）", () => {
           },
         }),
       );
-      await waitForMessages(socket1, 5);
+      await waitForMessages(socket1, 4);
 
       socket1.send(
         JSON.stringify({

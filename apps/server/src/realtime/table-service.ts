@@ -11,6 +11,7 @@ import {
   SeatStateChangeReason,
   SeatStatus,
   SnapshotReason,
+  Street,
   TableCommandAction,
   TableEventName,
   TableStatus,
@@ -329,7 +330,11 @@ export class RealtimeTableService {
         RealtimeTableCommand,
         { type: typeof RealtimeTableCommandType.ACT }
       >["payload"]["action"] =
-        toCall > 0 ? TableCommandAction.FOLD : TableCommandAction.CHECK;
+        hand.street === Street.THIRD && hand.streetBetTo === 0
+          ? TableCommandAction.BRING_IN
+          : toCall > 0
+            ? TableCommandAction.FOLD
+            : TableCommandAction.CHECK;
       const autoCommand: Extract<
         RealtimeTableCommand,
         { type: typeof RealtimeTableCommandType.ACT }

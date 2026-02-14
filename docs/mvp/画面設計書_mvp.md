@@ -1,7 +1,7 @@
 # Mix Stud Online 画面設計書（MVP）
 
-Version: v1.0  
-Last Updated: 2026-02-10  
+Version: v1.1  
+Last Updated: 2026-02-14  
 参照要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 参照設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)  
 状態遷移補助: [`状態遷移図_mvp.md`](./状態遷移図_mvp.md)  
@@ -87,11 +87,21 @@ flowchart TD
 | 対象               | 表示/操作ルール |
 | ------------------ | --------------- |
 | 自席が `SEATED_WAIT_NEXT_HAND` | 観戦UIを表示し、アクションボタンは無効化。`SIT OUT`/`LEAVE` のみ許可。 |
-| 自席が `ACTIVE` かつ手番       | `table.act` 入力を有効化。タイマー表示を強調。 |
+| 自席が `ACTIVE` かつ手番       | `table.act` 入力を有効化。タイマー表示を強調。許可アクションのみボタン表示し、許可外ボタンは非表示。 |
 | 自席が `ACTIVE` かつ非手番     | アクションボタン無効、進行イベントのみ反映。 |
 | 自席が `SIT_OUT`               | 次ハンド不参加バッジ表示。`table.return`/`table.leave` を表示。 |
 | 自席が `LEAVE_PENDING`         | 退席予約表示。再着席操作を拒否（UIでも抑止）。 |
 | 自席が `DISCONNECTED`          | 再接続中オーバーレイ表示。復帰後は `restoredSeatStatus` に従いUI再構成。 |
+
+アクション入力UI方針（Fixed Limit）:
+
+- `BRING_IN` / `BET` / `RAISE` / `COMPLETE` の額はルールで固定されるため、`amount` 入力欄は設けない。
+- `table.act` 送信は `action` のみとし、サーバー側で対象局面の固定額を適用する。
+
+カード表示の段階導入方針:
+
+- 当面（M5-18）: `DealCards3rdEvent` / `DealCardEvent` の配札情報を `console` へ出力し、進行追跡を可能にする。
+- 次タスク（M5-22）: テーブル画面上のカード可視化UIを実装する。
 
 ---
 

@@ -1,21 +1,19 @@
 import {
   RealtimeTableCommandType,
   SeatStatus,
-  TABLE_COMMAND_ACTIONS,
   TableBuyIn,
-  TableCommandAction,
-  type TableCommandAction as TableCommandActionType,
   TableStatus,
 } from "@mix-online/shared";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatChipsToUsd } from "./auth-api";
 import { TableApiError, type TableDetail, getTableDetail } from "./table-api";
 import {
   SEAT_COMMAND_TYPES,
   type SeatCommandType,
-  actionRequiresAmount,
+  type TableActActionOption,
   formatSeatCommandLabel,
   formatSeatStatusLabel,
+  resolveTableActActionOptions,
   resolveTableControlState,
 } from "./table-control";
 import {
@@ -108,10 +106,6 @@ export const TableScreen = (props: {
     status: LobbyStateStatus.LOADING,
     requestVersion: 0,
   });
-  const [selectedAction, setSelectedAction] = useState<TableCommandActionType>(
-    TableCommandAction.CHECK,
-  );
-  const [amountText, setAmountText] = useState("0");
   const [joinBuyInText, setJoinBuyInText] = useState("1000");
   const [commandPreview, setCommandPreview] = useState<string | null>(null);
   const [timerNow, setTimerNow] = useState(() => Date.now());
@@ -261,6 +255,21 @@ export const TableScreen = (props: {
     () => resolveRemainingSeconds(actionDeadlineAt, timerNow),
     [actionDeadlineAt, timerNow],
   );
+  const tableActActionOptions = useMemo(
+    () =>
+      resolveTableActActionOptions({
+        street: table?.currentHand?.street ?? null,
+        streetBetTo: table?.currentHand?.streetBetTo ?? null,
+        smallBet: table?.stakes.smallBet ?? null,
+        raiseCount: table?.currentHand?.raiseCount ?? null,
+      }),
+    [
+      table?.currentHand?.street,
+      table?.currentHand?.streetBetTo,
+      table?.currentHand?.raiseCount,
+      table?.stakes.smallBet,
+    ],
+  );
 
   const handleSeatCommand = (commandType: SeatCommandType) => {
     const store = tableStoreRef.current;
@@ -305,17 +314,13 @@ export const TableScreen = (props: {
     );
   };
 
-  const onActionSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleActionCommand = (action: TableActActionOption) => {
     if (!controlState.actionInputEnabled) {
       return;
     }
-
-    const requiresAmount = actionRequiresAmount(selectedAction);
-    const amount = Number.parseInt(amountText, 10);
-    if (requiresAmount && (!Number.isInteger(amount) || amount <= 0)) {
+    if (!tableActActionOptions.includes(action)) {
       setCommandPreview(
-        "送信プレビュー: amount は 1 以上の整数で入力してください。",
+        "送信プレビュー: 選択したアクションは現在の局面では送信できません。",
       );
       return;
     }
@@ -326,14 +331,10 @@ export const TableScreen = (props: {
       return;
     }
 
-    const sent = store.sendActionCommand(selectedAction, {
-      amount: requiresAmount ? amount : undefined,
-    });
+    const sent = store.sendActionCommand(action);
     if (sent) {
       setCommandPreview(
-        requiresAmount
-          ? `送信: ${RealtimeTableCommandType.ACT} { action: ${selectedAction}, amount: ${amount} }`
-          : `送信: ${RealtimeTableCommandType.ACT} { action: ${selectedAction} }`,
+        `送信: ${RealtimeTableCommandType.ACT} { action: ${action} }`,
       );
       return;
     }
@@ -501,49 +502,31 @@ export const TableScreen = (props: {
               ? `手番中のため ${RealtimeTableCommandType.ACT} 入力を有効化しています。`
               : `手番外または非ACTIVE状態のため ${RealtimeTableCommandType.ACT} 入力は無効です。`}
           </p>
-          <form className="action-form" onSubmit={onActionSubmit}>
-            <label className="field-label" htmlFor="table-action-type">
-              action
-            </label>
-            <select
-              id="table-action-type"
-              value={selectedAction}
-              disabled={!controlState.actionInputEnabled}
-              onChange={(event) =>
-                setSelectedAction(event.target.value as TableCommandActionType)
-              }
-            >
-              {TABLE_COMMAND_ACTIONS.map((action) => (
-                <option key={action} value={action}>
+          <p className="status-chip">
+            送信候補:{" "}
+            {tableActActionOptions.length > 0
+              ? tableActActionOptions.join(" / ")
+              : "(算出中)"}
+          </p>
+          {controlState.actionInputEnabled &&
+          tableActActionOptions.length > 0 ? (
+            <div className="row-actions">
+              {tableActActionOptions.map((action) => (
+                <button
+                  key={action}
+                  className="primary-button table-action"
+                  type="button"
+                  onClick={() => handleActionCommand(action)}
+                >
                   {action}
-                </option>
+                </button>
               ))}
-            </select>
-
-            <label className="field-label" htmlFor="table-action-amount">
-              amount
-            </label>
-            <input
-              id="table-action-amount"
-              inputMode="numeric"
-              min={0}
-              step={1}
-              value={amountText}
-              disabled={
-                !controlState.actionInputEnabled ||
-                !actionRequiresAmount(selectedAction)
-              }
-              onChange={(event) => setAmountText(event.target.value)}
-            />
-
-            <button
-              className="primary-button"
-              type="submit"
-              disabled={!controlState.actionInputEnabled}
-            >
-              送信
-            </button>
-          </form>
+            </div>
+          ) : (
+            <p className="status-chip">
+              表示可能なアクションボタンはありません。
+            </p>
+          )}
         </div>
 
         <div className="surface inline-panel action-panel">

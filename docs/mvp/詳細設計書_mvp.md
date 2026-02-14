@@ -274,12 +274,12 @@ interface GameRule {
 
 ### 3rd Street（Bring-in局面）
 
-- Bring-in対象者に `bring_in` を強制。
-- 次手番以降の選択肢:
-  - `fold`
-  - `call`（現在不足分）
-  - `complete`（$20まで引き上げ）
-  - `raise`（complete後のみ）
+- 未アクション（`streetBetTo=0`）:
+  - Bring-in対象者は `bring_in` または `complete` を選択する。
+- Bring-in後（`0 < streetBetTo < smallBet`）:
+  - 次手番以降の選択肢は `call` / `fold` / `complete`。
+- Complete後（`streetBetTo >= smallBet`）:
+  - 選択肢は `call` / `fold` / `raise`（raise上限未到達時）。
 
 ### 4th以降
 
@@ -374,6 +374,9 @@ interface GameRule {
 | `table.act`    | `action`, `amount?`       | ゲームアクション |
 | `table.resume` | `tableId`, `lastTableSeq` | 再接続復元       |
 | `ping`         | -                         | 生存確認         |
+
+> `table.act` のMVP受理アクションは `FOLD` / `CHECK` / `CALL` / `BET` / `COMPLETE` / `RAISE` / `BRING_IN`。  
+> `BRING_IN` は 3rd 未アクション局面（`streetBetTo=0`）で、bring-in対象者の手番時のみ許可する。
 
 ## 7.3 サーバー -> クライアントイベント
 

@@ -73,6 +73,8 @@ type SnapshotCurrentHand = {
   handId: string;
   street: (typeof Street)[keyof typeof Street];
   potTotal: number;
+  streetBetTo: number;
+  raiseCount: number;
   toActSeatNo: number | null;
   actionDeadlineAt: string | null;
 };
@@ -80,6 +82,8 @@ type SnapshotCurrentHand = {
 type HandEventContext = {
   street: (typeof Street)[keyof typeof Street];
   potTotal: number;
+  streetBetTo: number;
+  raiseCount: number;
   toActSeatNo: number | null;
   actionDeadlineAt: string | null;
 };
@@ -318,12 +322,16 @@ const parseSnapshotCurrentHand = (
   const handId = currentHand.handId;
   const street = currentHand.street;
   const potTotal = currentHand.potTotal;
+  const streetBetTo = currentHand.streetBetTo;
+  const raiseCount = currentHand.raiseCount;
   const toActSeatNo = currentHand.toActSeatNo;
   const actionDeadlineAt = currentHand.actionDeadlineAt;
   if (
     typeof handId !== "string" ||
     !isStreet(street) ||
-    typeof potTotal !== "number"
+    typeof potTotal !== "number" ||
+    typeof streetBetTo !== "number" ||
+    typeof raiseCount !== "number"
   ) {
     return null;
   }
@@ -332,6 +340,8 @@ const parseSnapshotCurrentHand = (
     handId,
     street,
     potTotal,
+    streetBetTo,
+    raiseCount,
     toActSeatNo: typeof toActSeatNo === "number" ? toActSeatNo : null,
     actionDeadlineAt:
       typeof actionDeadlineAt === "string" ? actionDeadlineAt : null,
@@ -343,6 +353,8 @@ const parseEventContext = (
 ): HandEventContext => {
   let street: (typeof Street)[keyof typeof Street] | null = null;
   let potTotal: number | null = null;
+  let streetBetTo: number | null = null;
+  let raiseCount: number | null = null;
   let toActSeatNo: number | null = null;
   let actionDeadlineAt: string | null = null;
 
@@ -358,6 +370,8 @@ const parseEventContext = (
     const payloadPotTotal = payload.potTotal;
     const payloadToActSeatNo = payload.toActSeatNo;
     const payloadNextToActSeatNo = payload.nextToActSeatNo;
+    const payloadStreetBetTo = payload.streetBetTo;
+    const payloadRaiseCount = payload.raiseCount;
     const payloadActionDeadlineAt = payload.actionDeadlineAt;
 
     if (street === null) {
@@ -374,6 +388,18 @@ const parseEventContext = (
       } else if (typeof payloadPotTotal === "number") {
         potTotal = payloadPotTotal;
       }
+    }
+
+    if (streetBetTo === null) {
+      if (typeof payloadStreetBetTo === "number") {
+        streetBetTo = payloadStreetBetTo;
+      } else if (typeof payload.amount === "number") {
+        streetBetTo = payload.amount;
+      }
+    }
+
+    if (raiseCount === null && typeof payloadRaiseCount === "number") {
+      raiseCount = payloadRaiseCount;
     }
 
     if (toActSeatNo === null) {
@@ -394,6 +420,8 @@ const parseEventContext = (
     if (
       street !== null &&
       potTotal !== null &&
+      streetBetTo !== null &&
+      raiseCount !== null &&
       toActSeatNo !== null &&
       actionDeadlineAt !== null
     ) {
@@ -404,6 +432,8 @@ const parseEventContext = (
   return {
     street: street ?? Street.THIRD,
     potTotal: potTotal ?? 0,
+    streetBetTo: streetBetTo ?? 0,
+    raiseCount: raiseCount ?? 0,
     toActSeatNo,
     actionDeadlineAt,
   };
@@ -539,6 +569,8 @@ export const createSupabaseTableDetailRepository = (
       status: parseHandStatus(handRow.status),
       street: snapshotContext?.street ?? eventContext.street,
       potTotal: snapshotContext?.potTotal ?? eventContext.potTotal,
+      streetBetTo: snapshotContext?.streetBetTo ?? eventContext.streetBetTo,
+      raiseCount: snapshotContext?.raiseCount ?? eventContext.raiseCount,
       toActSeatNo: snapshotContext?.toActSeatNo ?? eventContext.toActSeatNo,
       actionDeadlineAt:
         snapshotContext?.actionDeadlineAt ?? eventContext.actionDeadlineAt,

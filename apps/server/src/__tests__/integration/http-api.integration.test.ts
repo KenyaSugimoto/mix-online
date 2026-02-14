@@ -688,6 +688,8 @@ describe("HTTP統合テスト", () => {
           status: string;
           street: string;
           potTotal: number;
+          streetBetTo: number;
+          raiseCount: number;
           toActSeatNo: number | null;
           actionDeadlineAt: string | null;
         } | null;
@@ -729,6 +731,8 @@ describe("HTTP統合テスト", () => {
       status: HandStatus.IN_PROGRESS,
       street: Street.FIFTH,
       potTotal: 430,
+      streetBetTo: 40,
+      raiseCount: 1,
       toActSeatNo: 2,
       actionDeadlineAt: "2026-02-11T12:40:00.000Z",
     });
