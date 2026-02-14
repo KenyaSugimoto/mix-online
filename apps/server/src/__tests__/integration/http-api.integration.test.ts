@@ -383,6 +383,107 @@ describe("HTTP統合テスト", () => {
     });
   });
 
+  it("認証なしで /api/auth/me/display-name を呼ぶと AUTH_EXPIRED を返す", async () => {
+    const app = createApp();
+    const response = await app.request("/api/auth/me/display-name", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        displayName: "Renamed Player",
+      }),
+    });
+    const body = (await response.json()) as {
+      error: { code: string };
+    };
+
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe(ErrorCode.AUTH_EXPIRED);
+  });
+
+  it("/api/auth/me/display-name が表示名を更新する", async () => {
+    const authUserRepository = createInMemoryAuthUserRepository();
+    const googleOAuthClient = {
+      exchangeCodeForUser: vi.fn().mockResolvedValue({
+        googleSub: "google-sub-400",
+        displayName: "OAuth User 400",
+      }),
+    };
+    const app = createApp({
+      googleOAuthConfig: TEST_GOOGLE_OAUTH_CONFIG,
+      authUserRepository,
+      googleOAuthClient,
+    });
+    const state = "44444444-4444-4444-8444-444444444444";
+    const callbackResponse = await app.request(
+      `/api/auth/google/callback?code=fake-code&state=${state}`,
+      {
+        headers: {
+          cookie: `oauth_state=${state}`,
+        },
+      },
+    );
+    const sessionId = callbackResponse.headers
+      .get("set-cookie")
+      ?.match(/session=([^;]+)/)?.[1];
+    expect(sessionId).toBeDefined();
+
+    const response = await app.request("/api/auth/me/display-name", {
+      method: "PATCH",
+      headers: {
+        cookie: `session=${sessionId}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        displayName: "Renamed Player",
+      }),
+    });
+    const body = (await response.json()) as {
+      user: {
+        userId: string;
+        displayName: string;
+        walletBalance: number;
+      };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.user.displayName).toBe("Renamed Player");
+
+    const meResponse = await app.request("/api/auth/me", {
+      headers: {
+        cookie: `session=${sessionId}`,
+      },
+    });
+    const meBody = (await meResponse.json()) as {
+      user: {
+        displayName: string;
+      };
+    };
+    expect(meResponse.status).toBe(200);
+    expect(meBody.user.displayName).toBe("Renamed Player");
+  });
+
+  it("/api/auth/me/display-name で空表示名を送ると BAD_REQUEST を返す", async () => {
+    const { app, cookie } = createAuthenticatedApp();
+    const response = await app.request("/api/auth/me/display-name", {
+      method: "PATCH",
+      headers: {
+        cookie,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        displayName: "   ",
+      }),
+    });
+    const body = (await response.json()) as {
+      error: { code: string };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe(ErrorCode.BAD_REQUEST);
+  });
+
   it("/api/auth/logout がセッションを無効化する", async () => {
     const sessionStore = createInMemorySessionStore();
     const createdSession = sessionStore.create(

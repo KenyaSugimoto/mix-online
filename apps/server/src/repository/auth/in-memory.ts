@@ -40,5 +40,17 @@ export const createInMemoryAuthUserRepository = (options?: {
       usersByGoogleSub.set(params.googleSub, created);
       return created;
     },
+    async updateDisplayName(params) {
+      const user = [...usersByGoogleSub.values()].find(
+        (candidate) => candidate.userId === params.userId,
+      );
+
+      if (!user) {
+        throw new Error(`user not found: userId=${params.userId}`);
+      }
+
+      user.displayName = params.displayName;
+      return user;
+    },
   };
 };

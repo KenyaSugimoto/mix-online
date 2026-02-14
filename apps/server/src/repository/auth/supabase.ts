@@ -98,6 +98,35 @@ const parseSupabaseWalletRow = (payload: unknown): SupabaseWalletRow => {
   };
 };
 
+const fetchWalletByUserId = async (params: {
+  fetchImpl: typeof fetch;
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  userId: string;
+}): Promise<SupabaseWalletRow> => {
+  const walletsSelectUrl = new URL(REST_WALLETS_PATH, params.supabaseUrl);
+  walletsSelectUrl.searchParams.set("user_id", `eq.${params.userId}`);
+  walletsSelectUrl.searchParams.set("select", "balance");
+  walletsSelectUrl.searchParams.set("limit", "1");
+
+  const selectWalletResponse = await params.fetchImpl(walletsSelectUrl, {
+    method: "GET",
+    headers: {
+      apikey: params.serviceRoleKey,
+      Authorization: `Bearer ${params.serviceRoleKey}`,
+    },
+  });
+
+  if (!selectWalletResponse.ok) {
+    throw await toError({
+      response: selectWalletResponse,
+      step: "Supabase wallets select",
+    });
+  }
+
+  return parseSupabaseWalletRow(await selectWalletResponse.json());
+};
+
 export const createSupabaseAuthUserRepository = (
   options: SupabaseAuthUserRepositoryOptions,
 ): AuthUserRepository => {
@@ -212,27 +241,51 @@ export const createSupabaseAuthUserRepository = (
         });
       }
 
-      const walletsSelectUrl = new URL(REST_WALLETS_PATH, options.supabaseUrl);
-      walletsSelectUrl.searchParams.set("user_id", `eq.${user.id}`);
-      walletsSelectUrl.searchParams.set("select", "balance");
-      walletsSelectUrl.searchParams.set("limit", "1");
+      const wallet = await fetchWalletByUserId({
+        fetchImpl,
+        supabaseUrl: options.supabaseUrl,
+        serviceRoleKey: options.serviceRoleKey,
+        userId: user.id,
+      });
 
-      const selectWalletResponse = await fetchImpl(walletsSelectUrl, {
-        method: "GET",
+      return {
+        userId: user.id,
+        displayName: user.display_name,
+        walletBalance: wallet.balance,
+      };
+    },
+    async updateDisplayName(params) {
+      const usersUpdateUrl = new URL(REST_USERS_PATH, options.supabaseUrl);
+      usersUpdateUrl.searchParams.set("id", `eq.${params.userId}`);
+      usersUpdateUrl.searchParams.set("select", "id,display_name");
+
+      const updateUserResponse = await fetchImpl(usersUpdateUrl, {
+        method: "PATCH",
         headers: {
           apikey: options.serviceRoleKey,
           Authorization: authorizationHeaderValue,
+          "Content-Type": "application/json",
+          Prefer: PREFER_RETURN_REPRESENTATION,
         },
+        body: JSON.stringify({
+          display_name: params.displayName,
+        }),
       });
 
-      if (!selectWalletResponse.ok) {
+      if (!updateUserResponse.ok) {
         throw await toError({
-          response: selectWalletResponse,
-          step: "Supabase wallets select",
+          response: updateUserResponse,
+          step: "Supabase users update display_name",
         });
       }
 
-      const wallet = parseSupabaseWalletRow(await selectWalletResponse.json());
+      const user = parseSupabaseUserRow(await updateUserResponse.json());
+      const wallet = await fetchWalletByUserId({
+        fetchImpl,
+        supabaseUrl: options.supabaseUrl,
+        serviceRoleKey: options.serviceRoleKey,
+        userId: user.id,
+      });
 
       return {
         userId: user.id,

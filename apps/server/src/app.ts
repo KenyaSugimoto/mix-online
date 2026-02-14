@@ -73,6 +73,8 @@ const DEFAULT_GOOGLE_OAUTH_CONFIG: GoogleOAuthConfig = {
 };
 const GOOGLE_OAUTH_RESPONSE_TYPE = "code";
 const POST_AUTH_REDIRECT_PATH = "/lobby";
+const DISPLAY_NAME_MIN_LENGTH = 1;
+const DISPLAY_NAME_MAX_LENGTH = 64;
 
 const requireSession = (params: {
   cookieHeader: string | undefined;
@@ -91,6 +93,36 @@ const requireSession = (params: {
   }
 
   return session;
+};
+
+const parseDisplayNameUpdateRequest = (body: unknown): string => {
+  if (typeof body !== "object" || body === null) {
+    throw new HttpAppError(
+      ErrorCode.BAD_REQUEST,
+      "リクエストボディはオブジェクト形式で指定してください。",
+    );
+  }
+
+  const displayName = (body as Record<string, unknown>).displayName;
+  if (typeof displayName !== "string") {
+    throw new HttpAppError(
+      ErrorCode.BAD_REQUEST,
+      "displayName は文字列で指定してください。",
+    );
+  }
+
+  const normalizedDisplayName = displayName.trim();
+  if (
+    normalizedDisplayName.length < DISPLAY_NAME_MIN_LENGTH ||
+    normalizedDisplayName.length > DISPLAY_NAME_MAX_LENGTH
+  ) {
+    throw new HttpAppError(
+      ErrorCode.BAD_REQUEST,
+      `displayName は ${DISPLAY_NAME_MIN_LENGTH} 文字以上 ${DISPLAY_NAME_MAX_LENGTH} 文字以下で指定してください。`,
+    );
+  }
+
+  return normalizedDisplayName;
 };
 
 export const createApp = (options: CreateAppOptions = {}) => {
@@ -244,6 +276,35 @@ export const createApp = (options: CreateAppOptions = {}) => {
 
     return c.json({
       user: session.user,
+    });
+  });
+
+  app.patch("/api/auth/me/display-name", async (c) => {
+    const session = requireSession({
+      cookieHeader: c.req.header("cookie"),
+      sessionStore,
+      now: now(),
+    });
+
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      throw new HttpAppError(
+        ErrorCode.BAD_REQUEST,
+        "リクエストボディは JSON 形式で指定してください。",
+      );
+    }
+
+    const displayName = parseDisplayNameUpdateRequest(body);
+    const updatedUser = await authUserRepository.updateDisplayName({
+      userId: session.user.userId,
+      displayName,
+    });
+    session.user = updatedUser;
+
+    return c.json({
+      user: updatedUser,
     });
   });
 

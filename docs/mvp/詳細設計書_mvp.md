@@ -461,6 +461,7 @@ interface GameRule {
 | `GET`  | `/api/auth/google/start`    | Google OAuth開始                 |
 | `GET`  | `/api/auth/google/callback` | コールバック受信、セッション発行 |
 | `GET`  | `/api/auth/me`              | セッション中ユーザー情報取得     |
+| `PATCH` | `/api/auth/me/display-name` | セッション中ユーザー表示名更新   |
 | `POST` | `/api/auth/logout`          | ログアウト                       |
 
 ログイン時仕様:
@@ -489,7 +490,8 @@ Google OAuth開始API設定（実装ルール）:
 - 上記 Supabase 環境変数が未設定の場合、開発用フォールバックとして in-memory のユーザーリポジトリを使用する（プロセス再起動で消える）。
 - 初回ログイン時の `users.display_name` は Google の `name` を採用せず、`Player-XXXXXX`（`google_sub` 由来の匿名ID）を採番して保存する。
 - 同一 `google_sub` で再ログインした場合、既存の `users.display_name` は上書きしない（ユーザーが後で変更した名前を維持する）。
-- ユーザー自身による表示名変更API/UIは別タスク（`M5-14` / `M5-15`）で対応する。
+- `PATCH /api/auth/me/display-name` は `displayName`（trim後 1〜64文字）を受け取り、同一ユーザーの `users.display_name` を更新した結果を返す。
+- 表示名変更の画面導線（`M5-15`）は別タスクで対応する。
 - サーバー起動時に `process.cwd()` 配下の `.env.local` → `.env` の順で環境変数を自動読込する（既存の環境変数は上書きしない）。
   - `pnpm --filter server dev` の既定起動では `apps/server/.env.local` が読込対象。
   - テンプレートは `apps/server/.env.local.example` を参照。
