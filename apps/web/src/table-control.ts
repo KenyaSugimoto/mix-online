@@ -192,12 +192,6 @@ export const resolveTableActActionOptions = (params: {
     : [TableCommandAction.CALL, TableCommandAction.FOLD];
 };
 
-export const actionRequiresAmount = (action: TableCommandActionType) =>
-  action === TableCommandAction.BET ||
-  action === TableCommandAction.RAISE ||
-  action === TableCommandAction.COMPLETE ||
-  action === TableCommandAction.BRING_IN;
-
 export const formatSeatStatusLabel = (status: SeatStatusType) => {
   if (status === SeatStatus.EMPTY) {
     return "空席";

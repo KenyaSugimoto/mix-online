@@ -212,10 +212,12 @@ M4完了時点で「実装は一通り揃っているが、リリース判定に
 | --- | --- | --- | --- | --- |
 | M5-10 | 認証の実ユーザー連携 | Google code exchange + 実ユーザー連携を実装済み（Supabase設定時は `users`/`wallets` 永続化、未設定時はin-memory fallback）。初期表示名は匿名ID（`Player-XXXXXX`）を採番し、再ログインで上書きしない | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定した環境で `/api/auth/me` が実ユーザー情報を返し、固定ユーザー依存がない | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/index.ts`](../../apps/server/src/repository/auth/index.ts), [`openapi.yaml`](./openapi.yaml) |
 | M5-11 | APIの実データ化 | Supabase環境変数設定時に Lobby/Table/History が Supabase Repository 経由で実データを返却。未設定時はMVP fallbackを維持 | PostgreSQL Repository経由で実データを返し、MVP fixture依存を除去 | [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-12 | ローカル実プレイ成立確認 | HTTP/WS接続経路と `table.act` 契約整合は成立したが、`table.event` 投影不足（M5-18）により `BLOCKED` | ローカルで2ユーザーがログイン〜1ハンド完了まで再現できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-12 | ローカル実プレイ成立確認 | HTTP/WS接続経路と `table.act` 契約整合は成立したが、操作導線更新（M5-21）と `table.event` 投影不足（M5-18）により `BLOCKED` | ローカルで2ユーザーがログイン〜1ハンド完了まで再現できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-16 | Realtimeハンド進行成立 | `table.act` 後に `toActSeatNo=null` でも `StreetAdvance/DealCard/Showdown/DealEnd` を連結し、次ハンド開始判定まで実装済み（unit追加） | 3rd〜終局まで進行停止せず遷移し、UNCONTESTED/SHOWDOWNの終局イベントが配信される | [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`asyncapi.yaml`](./asyncapi.yaml), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M5-17 | `table.act` 契約整合 | `PokerActionLogic.md` を正として、局面別（3rd未アクション / 3rd bring-in済 / 3rd complete済 / 4th+ no-bet / 4th+ bet済）で合法アクションをサーバー判定・UI提示の双方で一致させた | UI提示アクションとサーバー受理アクションを一致させ、不正操作を事前抑止できる | [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`docs/mvp/PokerActionLogic.md`](./PokerActionLogic.md), [`asyncapi.yaml`](./asyncapi.yaml) |
-| M5-18 | TableStore投影強化 | `DealCard/StreetAdvance/Showdown/DealEnd` の投影が未実装で、イベントが来ても画面状態へ反映できない | 全主要 `table.event` をクライアント状態へ反映し、手番/ストリート/カード表示が破綻しない | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
+| M5-21 | テーブルアクションUI固定額化 | Fixed Limit前提で amount入力を撤去し、局面で許可されたアクションのみをボタン表示する設計へ更新する（`table.act` は action-only送信） | アクション導線が仕様どおりに単純化され、許可外アクションをUI上で選択できない | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M5-18 | TableStore投影強化 | `DealCard/StreetAdvance/Showdown/DealEnd` の投影が未実装で、イベントが来ても画面状態へ反映できない。まずは配札イベントのconsole追跡までを実装対象とする | 全主要 `table.event` をクライアント状態へ反映し、手番/ストリート/進行追跡（console）が破綻しない | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
+| M5-22 | テーブルカード表示UI | 配札カード表示は変更影響が大きいため別タスクへ分離し、まずは配札イベントをconsoleで追跡可能にしたうえでUI可視化を実装する | テーブル画面上で配札済カードを視覚的に追跡できる | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-13 | ゲーム画面UIの仕様充足 | `reason`/`appliesFrom` のUIログ保持が未反映 | 画面設計書の状態遷移追跡要件をUIとテストで満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx) |
 | M5-19 | テーブルUI再設計 | 卓画面が情報テキスト中心で、ゲームプレイUI（カード/テーブル/行動導線）として不足 | ゲーム進行を直感的に追えるUI（カード、手番強調、操作導線）へ刷新する | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css) |
 | M5-20 | Realtime契約/E2E強化 | WS契約テストが代表ケース中心で、停止系の回帰を十分に検知できない | HP-04/06/10相当を自動化し、進行停止・契約乖離をCIで検知できる | [`apps/server/src/__tests__/e2e`](../../apps/server/src/__tests__/e2e), [`apps/server/src/__tests__/integration/ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
@@ -228,10 +230,12 @@ M4完了時点で「実装は一通り揃っているが、リリース判定に
 2. `M5-11`（実データ化）
 3. `M5-16`（Realtimeハンド進行成立）
 4. `M5-17`（`table.act` 契約整合）
-5. `M5-18`（TableStore投影強化）
-6. `M5-12`（ローカル実プレイ成立確認）
-7. `M5-13`（UI仕様ギャップ解消）
-8. `M5-19`（テーブルUI再設計）
-9. `M5-14`（表示名変更API）
-10. `M5-15`（表示名変更UI）
-11. `M5-20` / `M5-01` / `M5-02` / `M5-03`（契約/E2E強化、監視・Runbook・非機能）
+5. `M5-21`（テーブルアクションUI固定額化）
+6. `M5-18`（TableStore投影強化）
+7. `M5-12`（ローカル実プレイ成立確認）
+8. `M5-22`（テーブルカード表示UI）
+9. `M5-13`（UI仕様ギャップ解消）
+10. `M5-19`（テーブルUI再設計）
+11. `M5-14`（表示名変更API）
+12. `M5-15`（表示名変更UI）
+13. `M5-20` / `M5-01` / `M5-02` / `M5-03`（契約/E2E強化、監視・Runbook・非機能）

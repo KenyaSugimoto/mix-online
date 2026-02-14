@@ -7,7 +7,6 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   TABLE_ACT_ACTION_OPTIONS,
-  actionRequiresAmount,
   resolveTableActActionOptions,
   resolveTableControlState,
 } from "./table-control";
@@ -100,16 +99,6 @@ describe("table-control", () => {
       [RealtimeTableCommandType.RETURN]: false,
       [RealtimeTableCommandType.LEAVE]: false,
     });
-  });
-
-  it("amount 必須アクションを判定する", () => {
-    expect(actionRequiresAmount(TableCommandAction.BET)).toBe(true);
-    expect(actionRequiresAmount(TableCommandAction.RAISE)).toBe(true);
-    expect(actionRequiresAmount(TableCommandAction.COMPLETE)).toBe(true);
-    expect(actionRequiresAmount(TableCommandAction.BRING_IN)).toBe(true);
-    expect(actionRequiresAmount(TableCommandAction.CALL)).toBe(false);
-    expect(actionRequiresAmount(TableCommandAction.CHECK)).toBe(false);
-    expect(actionRequiresAmount(TableCommandAction.FOLD)).toBe(false);
   });
 
   it("MVP受理アクション候補は BET/BRING_IN を含む", () => {

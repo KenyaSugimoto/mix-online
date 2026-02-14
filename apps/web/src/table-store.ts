@@ -994,12 +994,11 @@ export type TableStore = {
     commandType: SeatCommandType,
     params?: { buyIn?: number },
   ) => boolean;
-  sendActionCommand: (
-    action: TableCommandAction,
-    params?: { amount?: number },
-  ) => boolean;
+  sendActionCommand: (action: TableCommandAction) => boolean;
   requestResume: () => boolean;
 };
+
+const shouldLogDealEvents = import.meta.env.MODE === "development";
 
 export const createTableStore = (options: TableStoreOptions): TableStore => {
   const reconnectDelayMs =
@@ -1160,6 +1159,21 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
     }
 
     clearResumeInFlight();
+
+    if (
+      shouldLogDealEvents &&
+      (message.eventName === TableEventName.DealCards3rdEvent ||
+        message.eventName === TableEventName.DealCardEvent)
+    ) {
+      console.info("[table-store] deal-event", {
+        tableId: message.tableId,
+        tableSeq: message.tableSeq,
+        handId: message.handId,
+        handSeq: message.handSeq,
+        eventName: message.eventName,
+        payload: message.payload,
+      });
+    }
 
     patchState({
       table: applyEventToTable(state.table, message, inferredCurrentUserId),
@@ -1355,10 +1369,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
     });
   };
 
-  const sendActionCommand = (
-    action: TableCommandAction,
-    params?: { amount?: number },
-  ) => {
+  const sendActionCommand = (action: TableCommandAction) => {
     if (!isEnumValue(action, MVP_TABLE_ACT_ACTIONS)) {
       patchState({
         lastErrorCode: null,
@@ -1368,23 +1379,10 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       return false;
     }
 
-    const payload: Record<string, unknown> = {
+    return sendCommand(RealtimeTableCommandType.ACT, {
       tableId: options.tableId,
       action,
-    };
-
-    if (params?.amount !== undefined) {
-      if (!isInteger(params.amount) || params.amount < 0) {
-        patchState({
-          lastErrorCode: null,
-          lastErrorMessage: "amount は 0 以上の整数で指定してください。",
-        });
-        return false;
-      }
-      payload.amount = params.amount;
-    }
-
-    return sendCommand(RealtimeTableCommandType.ACT, payload);
+    });
   };
 
   const getSnapshot = () => cloneSnapshot(state);

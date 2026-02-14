@@ -427,9 +427,7 @@ describe("table-store", () => {
     expect(
       store.sendSeatCommand(RealtimeTableCommandType.JOIN, { buyIn: 1000 }),
     ).toBe(true);
-    expect(
-      store.sendActionCommand(TableCommandAction.RAISE, { amount: 40 }),
-    ).toBe(true);
+    expect(store.sendActionCommand(TableCommandAction.RAISE)).toBe(true);
 
     const joinCommand = parseCommand(socket, 1);
     expect(joinCommand.type).toBe(RealtimeTableCommandType.JOIN);
@@ -443,7 +441,6 @@ describe("table-store", () => {
     expect(actCommand.payload).toMatchObject({
       tableId: "22222222-2222-4222-8222-222222222222",
       action: TableCommandAction.RAISE,
-      amount: 40,
     });
   });
 
@@ -466,16 +463,13 @@ describe("table-store", () => {
     const socket = sockets[0] as FakeWebSocket;
     socket.emitOpen();
 
-    expect(
-      store.sendActionCommand(TableCommandAction.BRING_IN, { amount: 10 }),
-    ).toBe(true);
+    expect(store.sendActionCommand(TableCommandAction.BRING_IN)).toBe(true);
 
     const bringInCommand = parseCommand(socket, 1);
     expect(bringInCommand.type).toBe(RealtimeTableCommandType.ACT);
     expect(bringInCommand.payload).toMatchObject({
       tableId: "22222222-2222-4222-8222-222222222222",
       action: TableCommandAction.BRING_IN,
-      amount: 10,
     });
   });
 
@@ -498,16 +492,13 @@ describe("table-store", () => {
     const socket = sockets[0] as FakeWebSocket;
     socket.emitOpen();
 
-    expect(
-      store.sendActionCommand(TableCommandAction.BET, { amount: 20 }),
-    ).toBe(true);
+    expect(store.sendActionCommand(TableCommandAction.BET)).toBe(true);
 
     const betCommand = parseCommand(socket, 1);
     expect(betCommand.type).toBe(RealtimeTableCommandType.ACT);
     expect(betCommand.payload).toMatchObject({
       tableId: "22222222-2222-4222-8222-222222222222",
       action: TableCommandAction.BET,
-      amount: 20,
     });
   });
 
