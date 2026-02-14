@@ -771,6 +771,8 @@ erDiagram
 - HTTPキャッシュ: TanStack Query
 - リアルタイム状態: クライアント内 `TableStore`
 - Storeは `tableSeq` を持ち、欠番検知で `resume` 実行
+- ローカル開発時の接続経路は `http://localhost:5173`（Web）→ Vite proxy（`/api`, `/ws`）→ `http://localhost:3000`（API/WS）に固定する
+- `TableStore` のWebSocket接続先は `VITE_WS_URL` を優先し、未設定時は同一Originの `/ws` を使用する
 
 ## 11.3 情報表示制御
 
