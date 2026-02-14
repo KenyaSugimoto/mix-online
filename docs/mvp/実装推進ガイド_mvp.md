@@ -210,10 +210,12 @@ M4完了時点で「実装は一通り揃っているが、リリース判定に
 
 | ID | 監査項目 | 現状 | リリース判定条件 | 参照 |
 | --- | --- | --- | --- | --- |
-| M5-10 | 認証の実ユーザー連携 | Google code exchange + 実ユーザー連携を実装済み（Supabase設定時は `users`/`wallets` 永続化、未設定時はin-memory fallback） | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定した環境で `/api/auth/me` が実ユーザー情報を返し、固定ユーザー依存がない | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`openapi.yaml`](./openapi.yaml) |
+| M5-10 | 認証の実ユーザー連携 | Google code exchange + 実ユーザー連携を実装済み（Supabase設定時は `users`/`wallets` 永続化、未設定時はin-memory fallback）。初期表示名は匿名ID（`Player-XXXXXX`）を採番し、再ログインで上書きしない | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定した環境で `/api/auth/me` が実ユーザー情報を返し、固定ユーザー依存がない | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`openapi.yaml`](./openapi.yaml) |
 | M5-11 | APIの実データ化 | Lobby/Table/History が `createMvp*Repository` の固定データ依存 | PostgreSQL Repository経由で実データを返し、MVP fixture依存を除去 | [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-12 | ローカル実プレイ成立確認 | WS経路が環境依存で、手動2ユーザー確認記録がない | ローカルで2ユーザーがログイン〜1ハンド完了まで再現できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-13 | ゲーム画面UIの仕様充足 | `reason`/`appliesFrom` のUIログ保持が未反映 | 画面設計書の状態遷移追跡要件をUIとテストで満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx) |
+| M5-14 | 表示名変更API追加 | ユーザー自身で表示名を変更するHTTP APIがない | `PATCH /api/auth/me/display-name` で表示名を更新できる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-15 | 表示名変更UI追加 | 表示名変更の操作導線がWeb UIにない | ログイン後に表示名変更をUIから完結できる | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
 
 実行順（品質優先）は次で固定する。
 
@@ -221,4 +223,6 @@ M4完了時点で「実装は一通り揃っているが、リリース判定に
 2. `M5-11`（実データ化）
 3. `M5-12`（ローカル実プレイ成立確認）
 4. `M5-13`（UI仕様ギャップ解消）
-5. `M5-01` / `M5-02` / `M5-03`（監視・Runbook・非機能）
+5. `M5-14`（表示名変更API）
+6. `M5-15`（表示名変更UI）
+7. `M5-01` / `M5-02` / `M5-03`（監視・Runbook・非機能）

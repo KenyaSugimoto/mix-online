@@ -222,7 +222,6 @@ export const createApp = (options: CreateAppOptions = {}) => {
     const issuedAt = now();
     const authenticatedUser = await authUserRepository.findOrCreateByGoogleSub({
       googleSub: oauthUser.googleSub,
-      displayName: oauthUser.displayName,
       now: issuedAt,
     });
 

@@ -56,6 +56,8 @@ Last Updated: 2026-02-14
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
 | M5-13 | テーブルUIギャップ解消（`reason`/`appliesFrom` 表示、状態不整合検知ログ） | P1 | NOT_STARTED | M5-12 完了 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx) |
+| M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | NOT_STARTED | M5-10 完了 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | NOT_STARTED | M5-14 完了 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
 | M5-02 | 運用Runbook整備（デプロイ手順、ローリング更新、障害復旧） | P1 | NOT_STARTED | M5-01 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) |
 
 ## Backlog
@@ -71,6 +73,8 @@ Last Updated: 2026-02-14
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | 監視最小セットと閾値を運用可能化 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-02 | 運用Runbook整備（デプロイ手順、ローリング更新、障害復旧） | P1 | NOT_STARTED | 第三者が復旧手順を再現できる | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) |
 | M5-03 | 非機能検証（レイテンシp95、5xx率、再接続品質） | P1 | NOT_STARTED | 非機能目標の測定結果が取得可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | NOT_STARTED | ユーザーが任意の表示名へ変更できる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | NOT_STARTED | 表示名変更を画面から完結できる | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
 | DEC-01 | 未決事項の合意（プレイヤー名変更、最低バイイン、オッドチップ詳細） | P1 | NOT_STARTED | 仕様合意をADR化し関連仕様へ反映 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Done
@@ -120,7 +124,7 @@ Last Updated: 2026-02-14
 
 | 領域 | できること（確認済み） | まだできないこと / 制約 | リリース判定 |
 | --- | --- | --- | --- |
-| 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える） | P0主要対応完了 |
+| 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる。初期表示名は匿名ID（`Player-XXXXXX`）で採番し、再ログインで上書きしない | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える）。ユーザー自身の表示名変更API/UIは未実装 | P0主要対応完了 |
 | Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立 | `createMvp*Repository` に依存し、実データ経路の確認ができない | P0対応が必要 |
 | Realtimeプレイ | Game Engine + WS契約テスト（HP/NG/ED）と `TableStore` の再同期（resume/snapshot）は成立 | ローカルWeb起動時の `/ws` 経路が未固定で、手動2ユーザーの実プレイ確認をまだ記録していない | P0対応が必要 |
 | ゲーム画面UI | 席状態に応じた操作可否、手番タイマー、履歴表示が実装済み | `SeatStateChangedEvent.reason` / `appliesFrom` のUIログ保持など、画面設計書の一部要件が未反映 | P1対応が必要 |
@@ -133,6 +137,7 @@ Last Updated: 2026-02-14
 | Date | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- | --- |
 | 2026-02-14 | OAuth callbackが固定ユーザーを発行しており、実ユーザー識別ができない | 高 | `M5-10` で code exchange + user永続化 + セッション統合テストを実施 | CLOSED |
+| 2026-02-14 | 表示名変更API/UIが未実装のため、匿名IDのまま変更できない | 中 | `M5-14`（API）→ `M5-15`（UI）の順で対応する | OPEN |
 | 2026-02-14 | Lobby/Table/History がMVP固定データ依存で本番データ経路を検証できない | 高 | `M5-11` でPostgreSQL Repositoryへ切替し、MVP fixtureはテスト用途へ限定 | OPEN |
 | 2026-02-14 | Webクライアントの `/ws` 接続経路がローカル起動構成と不整合になる可能性 | 中 | `M5-12` でWS接続経路を固定し、2ユーザー手動試験を最小受け入れ条件に追加 | OPEN |
 | 2026-02-14 | 画面設計書のUIログ要件（`reason`/`appliesFrom`保持）が未充足 | 中 | `M5-13` でUI反映 + 画面仕様テストケースを追加 | OPEN |
@@ -144,6 +149,7 @@ Last Updated: 2026-02-14
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-14 | 認証表示名の初期値・更新方針（M5-10追補） | 初回ログイン時の `display_name` は Google `name` を使わず匿名ID（`Player-XXXXXX`）を採番し、同一 `google_sub` 再ログイン時は上書きしない。表示名変更機能は `M5-14`（API）と `M5-15`（UI）に分離 | 本名表示を避けるプライバシー要件を満たしつつ、表示名変更機能を段階的に導入するため | [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md) |
 | 2026-02-14 | M5-10 認証実運用化方針 | callbackで固定ユーザー発行を廃止し、Google code exchange結果（`sub`/`name`）を `users`/`wallets` へ永続化したユーザーをセッション化する。Supabase未設定時はin-memory fallbackを使用 | リリース阻害P0だった「固定ユーザー依存」を解消し、`/api/auth/me` を実ユーザー基準へ移行するため | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/google-oauth-client.ts`](../../apps/server/src/google-oauth-client.ts), [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-14 | M5着手順（リリース阻害P0の先行解消） | M5は `M5-10(認証実運用化) -> M5-11(実データ化) -> M5-12(ローカル統合プレイ確認)` をP0優先で実施し、完了後に `M5-13/M5-01/M5-02/M5-03` へ進む | 「ローカルで実際にプレイ可能か」と「本番運用前提のデータ経路成立」を先に確定しないと、UI/運用整備の評価が不安定になるため | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts) |
 | 2026-02-14 | M4-06 E2E段階導入のCI組み込み方針 | E2Eを `foundation -> HP -> NG -> ED` の順にテストファイル分割し、CIジョブを段階実行へ更新する方針を採用 | 回帰検知を維持しながら、失敗時にカテゴリ単位で原因を切り分けやすくするため | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`apps/server/src/__tests__/e2e/hp.e2e.test.ts`](../../apps/server/src/__tests__/e2e/hp.e2e.test.ts), [`apps/server/src/__tests__/e2e/ng.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ng.e2e.test.ts), [`apps/server/src/__tests__/e2e/ed.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ed.e2e.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |

@@ -12,7 +12,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../../app";
 import { createInMemorySessionStore } from "../../auth-session";
-import { createInMemoryAuthUserRepository } from "../../repository/auth-user-repository";
+import {
+  createInMemoryAuthUserRepository,
+  toDefaultDisplayName,
+} from "../../repository/auth-user-repository";
 
 describe("HTTP統合テスト", () => {
   const TEST_GOOGLE_OAUTH_CONFIG = {
@@ -194,9 +197,90 @@ describe("HTTP統合テスト", () => {
     };
 
     expect(meResponse.status).toBe(200);
-    expect(meBody.user.displayName).toBe("OAuth User 100");
+    expect(meBody.user.displayName).toBe(
+      toDefaultDisplayName("google-sub-100"),
+    );
     expect(meBody.user.userId).not.toBe("f1b2c3d4-9999-4999-8999-999999999999");
     expect(meBody.user.walletBalance).toBe(4000);
+  });
+
+  it("Google callbackで同一sub再ログインしても表示名を上書きしない", async () => {
+    const authUserRepository = createInMemoryAuthUserRepository();
+    const googleOAuthClient = {
+      exchangeCodeForUser: vi
+        .fn()
+        .mockResolvedValueOnce({
+          googleSub: "google-sub-300",
+          displayName: "Real Name 300",
+        })
+        .mockResolvedValueOnce({
+          googleSub: "google-sub-300",
+          displayName: "Changed Real Name 300",
+        }),
+    };
+    const app = createApp({
+      googleOAuthConfig: TEST_GOOGLE_OAUTH_CONFIG,
+      authUserRepository,
+      googleOAuthClient,
+    });
+
+    const firstState = "11111111-1111-4111-8111-111111111111";
+    const firstCallbackResponse = await app.request(
+      `/api/auth/google/callback?code=first-code&state=${firstState}`,
+      {
+        headers: {
+          cookie: `oauth_state=${firstState}`,
+        },
+      },
+    );
+    const firstSessionId =
+      firstCallbackResponse.headers
+        .get("set-cookie")
+        ?.match(/session=([^;]+)/)?.[1] ?? null;
+    expect(firstSessionId).toBeTruthy();
+
+    const firstMeResponse = await app.request("/api/auth/me", {
+      headers: {
+        cookie: `session=${firstSessionId}`,
+      },
+    });
+    const firstMeBody = (await firstMeResponse.json()) as {
+      user: {
+        displayName: string;
+      };
+    };
+    expect(firstMeBody.user.displayName).toBe(
+      toDefaultDisplayName("google-sub-300"),
+    );
+
+    const secondState = "22222222-2222-4222-8222-222222222222";
+    const secondCallbackResponse = await app.request(
+      `/api/auth/google/callback?code=second-code&state=${secondState}`,
+      {
+        headers: {
+          cookie: `oauth_state=${secondState}`,
+        },
+      },
+    );
+    const secondSessionId =
+      secondCallbackResponse.headers
+        .get("set-cookie")
+        ?.match(/session=([^;]+)/)?.[1] ?? null;
+    expect(secondSessionId).toBeTruthy();
+
+    const secondMeResponse = await app.request("/api/auth/me", {
+      headers: {
+        cookie: `session=${secondSessionId}`,
+      },
+    });
+    const secondMeBody = (await secondMeResponse.json()) as {
+      user: {
+        displayName: string;
+      };
+    };
+    expect(secondMeBody.user.displayName).toBe(
+      toDefaultDisplayName("google-sub-300"),
+    );
   });
 
   it("Google callbackで webClientOrigin 指定時はフロントURLへリダイレクトする", async () => {

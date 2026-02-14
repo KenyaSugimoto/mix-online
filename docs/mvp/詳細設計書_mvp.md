@@ -483,6 +483,9 @@ Google OAuth開始API設定（実装ルール）:
 - `WEB_CLIENT_ORIGIN` は任意。`GET /api/auth/google/callback` 成功時のリダイレクト先生成に使用し、未設定時のローカル既定値は `http://localhost:5173`（`/lobby` へ遷移）。
 - callback 後のユーザー永続化は `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` が設定されている場合に Supabase REST（`users` / `wallets`）を使用する。
 - 上記 Supabase 環境変数が未設定の場合、開発用フォールバックとして in-memory のユーザーリポジトリを使用する（プロセス再起動で消える）。
+- 初回ログイン時の `users.display_name` は Google の `name` を採用せず、`Player-XXXXXX`（`google_sub` 由来の匿名ID）を採番して保存する。
+- 同一 `google_sub` で再ログインした場合、既存の `users.display_name` は上書きしない（ユーザーが後で変更した名前を維持する）。
+- ユーザー自身による表示名変更API/UIは別タスク（`M5-14` / `M5-15`）で対応する。
 - サーバー起動時に `process.cwd()` 配下の `.env.local` → `.env` の順で環境変数を自動読込する（既存の環境変数は上書きしない）。
   - `pnpm --filter server dev` の既定起動では `apps/server/.env.local` が読込対象。
   - テンプレートは `apps/server/.env.local.example` を参照。
