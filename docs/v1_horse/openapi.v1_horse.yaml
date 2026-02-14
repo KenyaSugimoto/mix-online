@@ -1,0 +1,830 @@
+openapi: 3.1.0
+info:
+  title: Mix Online v1 HORSE HTTP API
+  version: 1.0.0-draft
+  description: |
+    v1 HORSE 対応の HTTP API ドラフト。
+    MVP 契約との互換を維持しつつ、HOLD_EM / OMAHA_8 を加算拡張する。
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+tags:
+  - name: tables
+  - name: histories
+
+paths:
+  /v1/tables:
+    get:
+      tags:
+        - tables
+      summary: テーブル一覧取得
+      parameters:
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/GameType"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/TableStatus"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TableListResponse"
+
+  /v1/tables/{tableId}:
+    get:
+      tags:
+        - tables
+      summary: テーブル詳細取得
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TableDetailResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /v1/hand-histories:
+    get:
+      tags:
+        - histories
+      summary: ハンド履歴一覧取得
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
+        - name: gameType
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/GameType"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandHistoryListResponse"
+        "400":
+          description: Invalid cursor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /v1/hand-histories/{handId}:
+    get:
+      tags:
+        - histories
+      summary: ハンド履歴詳細取得
+      parameters:
+        - name: handId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandHistoryDetailResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+components:
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+
+    DateTime:
+      type: string
+      format: date-time
+
+    ApiErrorCode:
+      type: string
+      enum:
+        - INVALID_ACTION
+        - INVALID_CURSOR
+        - NOT_YOUR_TURN
+        - INSUFFICIENT_CHIPS
+        - TABLE_FULL
+        - BUYIN_OUT_OF_RANGE
+        - ALREADY_SEATED
+        - AUTH_EXPIRED
+        - BAD_REQUEST
+        - NOT_FOUND
+        - INTERNAL_SERVER_ERROR
+
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: "#/components/schemas/ApiErrorCode"
+        message:
+          type: string
+        requestId:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+      additionalProperties: false
+
+    GameType:
+      type: string
+      description: HORSE 順序は HOLD_EM -> OMAHA_8 -> RAZZ -> STUD_HI -> STUD_8
+      enum:
+        - HOLD_EM
+        - OMAHA_8
+        - RAZZ
+        - STUD_HI
+        - STUD_8
+
+    TableStatus:
+      type: string
+      enum:
+        - WAITING
+        - DEALING
+        - BETTING
+        - SHOWDOWN
+        - HAND_END
+
+    SeatStatus:
+      type: string
+      enum:
+        - EMPTY
+        - SEATED_WAIT_NEXT_HAND
+        - ACTIVE
+        - SIT_OUT
+        - DISCONNECTED
+        - LEAVE_PENDING
+
+    StreetGroup:
+      type: string
+      enum:
+        - FLOP_FAMILY
+        - STUD_FAMILY
+
+    FlopStreet:
+      type: string
+      enum:
+        - PRE_FLOP
+        - FLOP
+        - TURN
+        - RIVER
+
+    StudStreet:
+      type: string
+      enum:
+        - THIRD
+        - FOURTH
+        - FIFTH
+        - SIXTH
+        - SEVENTH
+
+    HandStreet:
+      type: string
+      enum:
+        - PRE_FLOP
+        - FLOP
+        - TURN
+        - RIVER
+        - THIRD
+        - FOURTH
+        - FIFTH
+        - SIXTH
+        - SEVENTH
+
+    ActionType:
+      type: string
+      enum:
+        - SMALL_BLIND
+        - BIG_BLIND
+        - ANTE
+        - BRING_IN
+        - COMPLETE
+        - BET
+        - RAISE
+        - CALL
+        - CHECK
+        - FOLD
+        - AUTO_CHECK
+        - AUTO_FOLD
+        - SHOW
+        - MUCK
+
+    BettingStructure:
+      type: string
+      enum: [FIXED_LIMIT]
+
+    RotationIndex:
+      type: integer
+      minimum: 0
+      maximum: 4
+      description: 0=HOLD_EM,1=OMAHA_8,2=RAZZ,3=STUD_HI,4=STUD_8
+
+    CardRank:
+      type: string
+      enum: [A, K, Q, J, T, 9, 8, 7, 6, 5, 4, 3, 2]
+
+    CardSuit:
+      type: string
+      enum: [S, H, D, C]
+
+    Card:
+      type: object
+      required:
+        - rank
+        - suit
+      properties:
+        rank:
+          $ref: "#/components/schemas/CardRank"
+        suit:
+          $ref: "#/components/schemas/CardSuit"
+      additionalProperties: false
+
+    TableStakes:
+      type: object
+      required:
+        - smallBet
+        - bigBet
+        - bettingStructure
+        - display
+      properties:
+        smallBet:
+          type: integer
+          minimum: 1
+        bigBet:
+          type: integer
+          minimum: 1
+        ante:
+          type: integer
+          minimum: 0
+          description: "Stud系のみ使用。Flop系では0または省略。"
+        bringIn:
+          type: integer
+          minimum: 0
+          description: "Stud系のみ使用。Flop系では0または省略。"
+        smallBlind:
+          type: integer
+          minimum: 0
+          description: "Flop系のみ使用（= smallBet / 2）。Stud系では0または省略。"
+        bigBlind:
+          type: integer
+          minimum: 0
+          description: "Flop系のみ使用（= smallBet）。Stud系では0または省略。"
+        bettingStructure:
+          $ref: "#/components/schemas/BettingStructure"
+        display:
+          type: string
+      additionalProperties: false
+
+    SeatUserSummary:
+      type: object
+      required:
+        - userId
+        - displayName
+      properties:
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+      additionalProperties: false
+
+    SeatView:
+      type: object
+      required:
+        - seatNo
+        - status
+      properties:
+        seatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        status:
+          $ref: "#/components/schemas/SeatStatus"
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/SeatUserSummary"
+            - type: "null"
+      additionalProperties: false
+
+    CurrentHandSummary:
+      type: object
+      required:
+        - handId
+        - handNo
+        - gameType
+        - streetGroup
+        - street
+        - potSize
+        - toActSeatNo
+      properties:
+        handId:
+          $ref: "#/components/schemas/UUID"
+        handNo:
+          type: integer
+          minimum: 1
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        streetGroup:
+          $ref: "#/components/schemas/StreetGroup"
+        street:
+          $ref: "#/components/schemas/HandStreet"
+        potSize:
+          type: integer
+          minimum: 0
+        toActSeatNo:
+          oneOf:
+            - type: integer
+              minimum: 1
+              maximum: 6
+            - type: "null"
+        actionDeadlineAt:
+          oneOf:
+            - $ref: "#/components/schemas/DateTime"
+            - type: "null"
+      additionalProperties: false
+
+    TableSummary:
+      type: object
+      required:
+        - tableId
+        - tableName
+        - status
+        - gameType
+        - mixIndex
+        - handsSinceRotation
+        - players
+        - maxPlayers
+        - stakes
+      properties:
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableName:
+          type: string
+        status:
+          $ref: "#/components/schemas/TableStatus"
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        mixIndex:
+          $ref: "#/components/schemas/RotationIndex"
+        handsSinceRotation:
+          type: integer
+          minimum: 0
+          maximum: 5
+        players:
+          type: integer
+          minimum: 0
+          maximum: 6
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 6
+        stakes:
+          $ref: "#/components/schemas/TableStakes"
+      additionalProperties: false
+
+    TableListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TableSummary"
+      additionalProperties: false
+
+    TableDetail:
+      type: object
+      required:
+        - tableId
+        - tableName
+        - status
+        - gameType
+        - mixIndex
+        - handsSinceRotation
+        - dealerSeatNo
+        - stakes
+        - minPlayers
+        - maxPlayers
+        - seats
+      properties:
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableName:
+          type: string
+        status:
+          $ref: "#/components/schemas/TableStatus"
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        mixIndex:
+          $ref: "#/components/schemas/RotationIndex"
+        handsSinceRotation:
+          type: integer
+          minimum: 0
+          maximum: 5
+        dealerSeatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        stakes:
+          $ref: "#/components/schemas/TableStakes"
+        minPlayers:
+          type: integer
+          minimum: 2
+          maximum: 6
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 6
+        seats:
+          type: array
+          description: "常に6要素。maxPlayersに関わらず全席を返却し、空席はstatus=EMPTYで表現する。"
+          minItems: 6
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/SeatView"
+        currentHand:
+          oneOf:
+            - $ref: "#/components/schemas/CurrentHandSummary"
+            - type: "null"
+      additionalProperties: false
+
+    TableDetailResponse:
+      type: object
+      required:
+        - table
+      properties:
+        table:
+          $ref: "#/components/schemas/TableDetail"
+      additionalProperties: false
+
+    HandParticipant:
+      type: object
+      required:
+        - userId
+        - displayName
+        - seatNo
+      properties:
+        userId:
+          $ref: "#/components/schemas/UUID"
+        displayName:
+          type: string
+        seatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        resultDelta:
+          type: integer
+          nullable: true
+      additionalProperties: false
+
+    HandHistoryListItem:
+      type: object
+      required:
+        - handId
+        - tableId
+        - handNo
+        - gameType
+        - participants
+        - startedAt
+        - endedAt
+        - profitLoss
+      properties:
+        handId:
+          $ref: "#/components/schemas/UUID"
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableName:
+          type: string
+        handNo:
+          type: integer
+          minimum: 1
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandParticipant"
+        startedAt:
+          $ref: "#/components/schemas/DateTime"
+        endedAt:
+          $ref: "#/components/schemas/DateTime"
+        profitLoss:
+          type: integer
+      additionalProperties: false
+
+    HandHistoryListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandHistoryListItem"
+        nextCursor:
+          type: string
+          nullable: true
+      additionalProperties: false
+
+    ActionRecord:
+      type: object
+      required:
+        - order
+        - seatNo
+        - type
+      properties:
+        order:
+          type: integer
+          minimum: 1
+        seatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        type:
+          $ref: "#/components/schemas/ActionType"
+        amount:
+          type: integer
+          nullable: true
+        isAuto:
+          type: boolean
+      additionalProperties: false
+
+    StreetActionGroup:
+      type: object
+      required:
+        - street
+        - actions
+      properties:
+        street:
+          $ref: "#/components/schemas/HandStreet"
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionRecord"
+      additionalProperties: false
+
+    PotShare:
+      type: object
+      required:
+        - seatNo
+        - amount
+      properties:
+        seatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        amount:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    ShowdownSummary:
+      type: object
+      required:
+        - highShares
+      properties:
+        highShares:
+          type: array
+          items:
+            $ref: "#/components/schemas/PotShare"
+        lowShares:
+          type: array
+          items:
+            $ref: "#/components/schemas/PotShare"
+          nullable: true
+        note:
+          type: string
+          nullable: true
+      additionalProperties: false
+
+    HoldemDetail:
+      type: object
+      required:
+        - gameType
+        - boardCards
+        - streetActions
+        - showdown
+      properties:
+        gameType:
+          type: string
+          const: HOLD_EM
+        boardCards:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/Card"
+        heroHoleCards:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: "#/components/schemas/Card"
+          nullable: true
+        streetActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreetActionGroup"
+        showdown:
+          $ref: "#/components/schemas/ShowdownSummary"
+      additionalProperties: false
+
+    Omaha8Detail:
+      type: object
+      required:
+        - gameType
+        - boardCards
+        - streetActions
+        - showdown
+        - lowQualified
+      properties:
+        gameType:
+          type: string
+          const: OMAHA_8
+        boardCards:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/Card"
+        heroHoleCards:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/Card"
+          nullable: true
+        streetActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreetActionGroup"
+        showdown:
+          $ref: "#/components/schemas/ShowdownSummary"
+        lowQualified:
+          type: boolean
+      additionalProperties: false
+
+    DealtCardView:
+      type: object
+      required:
+        - visibility
+        - card
+      properties:
+        visibility:
+          type: string
+          enum:
+            - FACE_UP
+            - FACE_DOWN
+        card:
+          oneOf:
+            - $ref: "#/components/schemas/Card"
+            - type: "null"
+      additionalProperties: false
+
+    StudSeatCards:
+      type: object
+      required:
+        - seatNo
+        - cards
+      properties:
+        seatNo:
+          type: integer
+          minimum: 1
+          maximum: 6
+        cards:
+          type: array
+          minItems: 3
+          maxItems: 7
+          items:
+            $ref: "#/components/schemas/DealtCardView"
+      additionalProperties: false
+
+    StudDetail:
+      type: object
+      required:
+        - gameType
+        - seats
+        - streetActions
+        - showdown
+      properties:
+        gameType:
+          type: string
+          enum:
+            - RAZZ
+            - STUD_HI
+            - STUD_8
+        seats:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudSeatCards"
+        streetActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreetActionGroup"
+        showdown:
+          $ref: "#/components/schemas/ShowdownSummary"
+        lowQualified:
+          type: boolean
+          nullable: true
+          description: "STUD_8の場合のみ使用。Lo成立時true、不成立時false。RAZZ/STUD_HIではnull。"
+      additionalProperties: false
+
+    HandHistoryDetailResponse:
+      type: object
+      required:
+        - handId
+        - tableId
+        - tableName
+        - handNo
+        - gameType
+        - participants
+        - profitLoss
+        - startedAt
+        - endedAt
+        - detail
+      properties:
+        handId:
+          $ref: "#/components/schemas/UUID"
+        tableId:
+          $ref: "#/components/schemas/UUID"
+        tableName:
+          type: string
+        handNo:
+          type: integer
+          minimum: 1
+        gameType:
+          $ref: "#/components/schemas/GameType"
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandParticipant"
+        profitLoss:
+          type: integer
+        startedAt:
+          $ref: "#/components/schemas/DateTime"
+        endedAt:
+          $ref: "#/components/schemas/DateTime"
+        detail:
+          oneOf:
+            - $ref: "#/components/schemas/HoldemDetail"
+            - $ref: "#/components/schemas/Omaha8Detail"
+            - $ref: "#/components/schemas/StudDetail"
+          discriminator:
+            propertyName: gameType
+            mapping:
+              HOLD_EM: "#/components/schemas/HoldemDetail"
+              OMAHA_8: "#/components/schemas/Omaha8Detail"
+              RAZZ: "#/components/schemas/StudDetail"
+              STUD_HI: "#/components/schemas/StudDetail"
+              STUD_8: "#/components/schemas/StudDetail"
+      additionalProperties: false
