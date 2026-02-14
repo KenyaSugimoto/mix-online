@@ -46,6 +46,7 @@ export function App() {
   const [authCheckVersion, setAuthCheckVersion] = useState(0);
   const route = useMemo(() => resolveRoute(pathname), [pathname]);
   const isProtected = isProtectedRoute(pathname);
+  const isTableRoute = route.kind === AppRouteKind.TABLE;
 
   useEffect(() => {
     const handlePopstate = () => {
@@ -131,39 +132,41 @@ export function App() {
   };
 
   return (
-    <div className="app-shell">
-      <header className="app-header surface">
-        <div>
-          <p className="eyebrow">MIX STUD ONLINE</p>
-          <h1>Web Client MVP</h1>
-          <p className="header-copy">
-            Google OAuth と Cookie セッションでロビー導線を初期化します。
-          </p>
-        </div>
-        <div className="header-actions">
-          <button
-            className="ghost-button"
-            type="button"
-            onClick={() => navigate(RoutePath.LOGIN)}
-          >
-            ログイン画面
-          </button>
-          <button
-            className="ghost-button"
-            type="button"
-            onClick={() => navigate(RoutePath.LOBBY)}
-          >
-            ロビー画面
-          </button>
-          <button
-            className="ghost-button"
-            type="button"
-            onClick={() => navigate(RoutePath.HISTORY)}
-          >
-            履歴画面
-          </button>
-        </div>
-      </header>
+    <div className={`app-shell ${isTableRoute ? "is-table-route" : ""}`}>
+      {isTableRoute ? null : (
+        <header className="app-header surface">
+          <div>
+            <p className="eyebrow">MIX STUD ONLINE</p>
+            <h1>Web Client MVP</h1>
+            <p className="header-copy">
+              Google OAuth と Cookie セッションでロビー導線を初期化します。
+            </p>
+          </div>
+          <div className="header-actions">
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => navigate(RoutePath.LOGIN)}
+            >
+              ログイン画面
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => navigate(RoutePath.LOBBY)}
+            >
+              ロビー画面
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => navigate(RoutePath.HISTORY)}
+            >
+              履歴画面
+            </button>
+          </div>
+        </header>
+      )}
 
       {isProtected ? (
         <ProtectedContent
@@ -264,7 +267,6 @@ const ProtectedContent = (props: {
         tableId={route.tableId}
         currentUserId={authState.user.userId}
         onGoLobby={onGoLobby}
-        onLogout={onLogout}
       />
     );
   }
