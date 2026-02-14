@@ -482,7 +482,13 @@
 
 1. シナリオIDをそのままE2Eテスト名（`describe/it`）に採用する。
 2. `HP -> NG -> ED` の順で段階的にCIへ導入し、失敗時の切り分けを容易にする。
-3. 配当検証シナリオ（ED-04〜ED-08）は、`potResults` と最終スタックの両方を必ず照合する。
+3. CIでは以下の順で実行する:
+  - `pnpm test:e2e:foundation`
+  - `pnpm test:e2e:hp`
+  - `pnpm test:e2e:ng`
+  - `pnpm test:e2e:ed`
+  - ワークフロー定義: `.github/workflows/ci.yml`
+4. 配当検証シナリオ（ED-04〜ED-08）は、`potResults` と最終スタックの両方を必ず照合する。
 
 ## 7. テスト基盤（M0-04）
 
@@ -492,6 +498,10 @@
   - `apps/server/src/__tests__/integration/`
 - e2e テスト:
   - `apps/server/src/__tests__/e2e/`
+  - `apps/server/src/__tests__/e2e/m0-04-foundation.e2e.test.ts`
+  - `apps/server/src/__tests__/e2e/hp.e2e.test.ts`
+  - `apps/server/src/__tests__/e2e/ng.e2e.test.ts`
+  - `apps/server/src/__tests__/e2e/ed.e2e.test.ts`
 - 固定デッキハーネス:
   - `apps/server/src/testing/fixed-deck-harness.ts`
 - テストデータ初期化:
