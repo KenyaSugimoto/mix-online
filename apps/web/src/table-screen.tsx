@@ -1,26 +1,24 @@
 import {
+  CardRank,
+  CardSlot,
+  CardSuit,
+  CardVisibility,
   RealtimeTableCommandType,
   SeatStatus,
+  Street,
   TableBuyIn,
-  TableStatus,
 } from "@mix-online/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatChipsToUsd } from "./auth-api";
 import { TableApiError, type TableDetail, getTableDetail } from "./table-api";
 import {
-  SEAT_COMMAND_TYPES,
-  type SeatCommandType,
   type TableActActionOption,
-  formatSeatCommandLabel,
-  formatSeatStatusLabel,
   resolveTableActActionOptions,
   resolveTableControlState,
 } from "./table-control";
 import {
   type TableStore,
-  TableStoreConnectionStatus,
   type TableStoreSnapshot,
-  TableStoreSyncStatus,
   createTableStore,
 } from "./table-store";
 import { LobbyStateStatus, LocaleCode } from "./web-constants";
@@ -32,6 +30,46 @@ type TableScreenState =
     }
   | { status: typeof LobbyStateStatus.LOADED; table: TableDetail }
   | { status: typeof LobbyStateStatus.ERROR; message: string };
+
+const CARD_SLOT_ORDER = [
+  CardSlot.HOLE_1,
+  CardSlot.HOLE_2,
+  CardSlot.UP_3,
+  CardSlot.UP_4,
+  CardSlot.UP_5,
+  CardSlot.UP_6,
+  CardSlot.DOWN_7,
+] as const;
+
+const SEAT_POSITION_BY_OFFSET = [
+  "self",
+  "right-near",
+  "right-far",
+  "top",
+  "left-far",
+  "left-near",
+] as const;
+
+const CARD_SLOT_ORDER_INDEX = CARD_SLOT_ORDER.reduce(
+  (acc, slot, index) => {
+    acc[slot] = index;
+    return acc;
+  },
+  {
+    [CardSlot.HOLE_1]: 0,
+    [CardSlot.HOLE_2]: 0,
+    [CardSlot.UP_3]: 0,
+    [CardSlot.UP_4]: 0,
+    [CardSlot.UP_5]: 0,
+    [CardSlot.UP_6]: 0,
+    [CardSlot.DOWN_7]: 0,
+  } as Record<CardSlot, number>,
+);
+
+const DEFAULT_JOIN_BUY_IN = Math.min(
+  TableBuyIn.MAX,
+  Math.max(TableBuyIn.MIN, 1000),
+);
 
 const resolveRemainingSeconds = (deadlineAt: string | null, now: number) => {
   if (!deadlineAt) {
@@ -46,59 +84,98 @@ const resolveRemainingSeconds = (deadlineAt: string | null, now: number) => {
   return Math.max(0, Math.ceil((deadline - now) / 1000));
 };
 
-const formatTableStatusLabel = (status: TableStatus) => {
-  if (status === TableStatus.WAITING) {
-    return "待機中";
+const resolveTimerFillPercent = (
+  remainingSeconds: number | null,
+  totalSeconds: number | null,
+) => {
+  if (remainingSeconds === null || totalSeconds === null || totalSeconds <= 0) {
+    return 0;
   }
-  if (status === TableStatus.DEALING) {
-    return "配札中";
-  }
-  if (status === TableStatus.BETTING) {
-    return "ベッティング中";
-  }
-  if (status === TableStatus.SHOWDOWN) {
-    return "ショーダウン";
-  }
-  return "ハンド終了";
+
+  return Math.max(
+    0,
+    Math.min(100, Math.round((remainingSeconds / totalSeconds) * 100)),
+  );
 };
 
-const formatConnectionStatusLabel = (
-  status: (typeof TableStoreConnectionStatus)[keyof typeof TableStoreConnectionStatus],
-) => {
-  if (status === TableStoreConnectionStatus.CONNECTING) {
-    return "接続中";
+const formatStreetLabel = (street: string | null) => {
+  if (street === null) {
+    return "-";
   }
-  if (status === TableStoreConnectionStatus.OPEN) {
-    return "接続済み";
+  if (street === Street.THIRD) {
+    return "3rd";
   }
-  if (status === TableStoreConnectionStatus.RECONNECTING) {
-    return "再接続中";
+  if (street === Street.FOURTH) {
+    return "4th";
   }
-  if (status === TableStoreConnectionStatus.CLOSED) {
-    return "切断";
+  if (street === Street.FIFTH) {
+    return "5th";
   }
-  return "未開始";
+  if (street === Street.SIXTH) {
+    return "6th";
+  }
+  if (street === Street.SEVENTH) {
+    return "7th";
+  }
+  return street;
 };
 
-const formatSyncStatusLabel = (
-  status: (typeof TableStoreSyncStatus)[keyof typeof TableStoreSyncStatus],
+const formatCardRank = (rank: string) => {
+  if (rank === CardRank.T) {
+    return "10";
+  }
+  return rank;
+};
+
+const formatSuitSymbol = (suit: CardSuit) => {
+  if (suit === CardSuit.S) {
+    return "♠";
+  }
+  if (suit === CardSuit.H) {
+    return "♥";
+  }
+  if (suit === CardSuit.D) {
+    return "♦";
+  }
+  return "♣";
+};
+
+const resolveSeatCards = (
+  cardsBySeatNo: TableStoreSnapshot["cardsBySeatNo"],
+  seatNo: number,
 ) => {
-  if (status === TableStoreSyncStatus.RESYNCING) {
-    return "再同期中";
+  const seatCards = cardsBySeatNo[seatNo] ?? [];
+  return [...seatCards].sort(
+    (left, right) =>
+      CARD_SLOT_ORDER_INDEX[left.slot] - CARD_SLOT_ORDER_INDEX[right.slot],
+  );
+};
+
+const resolveSeatPositionClass = (
+  seatNo: number,
+  anchorSeatNo: number,
+  maxSeats: number,
+) => {
+  const offset = (seatNo - anchorSeatNo + maxSeats) % maxSeats;
+  return SEAT_POSITION_BY_OFFSET[offset] ?? "top";
+};
+
+const formatEventLogLabel = (
+  entry: TableStoreSnapshot["eventLogs"][number],
+) => {
+  if (entry.kind === "seat_state_changed") {
+    return `Seat ${entry.seatNo}: ${entry.previousStatus} -> ${entry.currentStatus} (reason=${entry.reason}, appliesFrom=${entry.appliesFrom})`;
   }
-  if (status === TableStoreSyncStatus.IN_SYNC) {
-    return "同期済み";
-  }
-  return "未同期";
+
+  return `Street: ${formatStreetLabel(entry.fromStreet)} -> ${formatStreetLabel(entry.toStreet)} (reason=${entry.reason})`;
 };
 
 export const TableScreen = (props: {
   tableId: string;
   currentUserId: string;
   onGoLobby: () => void;
-  onLogout: () => void;
 }) => {
-  const { tableId, currentUserId, onGoLobby, onLogout } = props;
+  const { tableId, currentUserId, onGoLobby } = props;
   const tableStoreRef = useRef<TableStore | null>(null);
   const tableStoreUnsubscribeRef = useRef<(() => void) | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
@@ -106,19 +183,19 @@ export const TableScreen = (props: {
     status: LobbyStateStatus.LOADING,
     requestVersion: 0,
   });
-  const [joinBuyInText, setJoinBuyInText] = useState("1000");
   const [commandPreview, setCommandPreview] = useState<string | null>(null);
   const [timerNow, setTimerNow] = useState(() => Date.now());
+  const [turnDurationSeconds, setTurnDurationSeconds] = useState<number | null>(
+    null,
+  );
   const [realtimeState, setRealtimeState] = useState<{
-    connectionStatus: TableStoreSnapshot["connectionStatus"];
-    syncStatus: TableStoreSnapshot["syncStatus"];
-    tableSeq: number;
     lastErrorMessage: string | null;
+    cardsBySeatNo: TableStoreSnapshot["cardsBySeatNo"];
+    eventLogs: TableStoreSnapshot["eventLogs"];
   }>({
-    connectionStatus: TableStoreConnectionStatus.IDLE,
-    syncStatus: TableStoreSyncStatus.IDLE,
-    tableSeq: 0,
     lastErrorMessage: null,
+    cardsBySeatNo: {},
+    eventLogs: [],
   });
 
   useEffect(() => {
@@ -143,10 +220,9 @@ export const TableScreen = (props: {
     setState({ status: LobbyStateStatus.LOADING, requestVersion });
     if (tableStoreRef.current === null) {
       setRealtimeState({
-        connectionStatus: TableStoreConnectionStatus.IDLE,
-        syncStatus: TableStoreSyncStatus.IDLE,
-        tableSeq: 0,
         lastErrorMessage: null,
+        cardsBySeatNo: {},
+        eventLogs: [],
       });
     }
 
@@ -199,10 +275,9 @@ export const TableScreen = (props: {
 
     const applyRealtimeSnapshot = (snapshot: TableStoreSnapshot) => {
       setRealtimeState({
-        connectionStatus: snapshot.connectionStatus,
-        syncStatus: snapshot.syncStatus,
-        tableSeq: snapshot.tableSeq,
         lastErrorMessage: snapshot.lastErrorMessage,
+        cardsBySeatNo: snapshot.cardsBySeatNo,
+        eventLogs: snapshot.eventLogs,
       });
       setState((previousState) => {
         if (previousState.status !== LobbyStateStatus.LOADED) {
@@ -224,6 +299,7 @@ export const TableScreen = (props: {
     state.status === LobbyStateStatus.LOADED
       ? (state.table.currentHand?.actionDeadlineAt ?? null)
       : null;
+
   useEffect(() => {
     if (actionDeadlineAt === null) {
       return;
@@ -241,20 +317,44 @@ export const TableScreen = (props: {
 
   const table = state.status === LobbyStateStatus.LOADED ? state.table : null;
   const mySeat = table?.seats.find((seat) => seat.isYou) ?? null;
+  const toActSeatNo = table?.currentHand?.toActSeatNo ?? null;
+  const toActSeat =
+    table?.seats.find((seat) => seat.seatNo === toActSeatNo) ?? null;
+
+  useEffect(() => {
+    if (toActSeatNo === null || actionDeadlineAt === null) {
+      setTurnDurationSeconds(null);
+      return;
+    }
+
+    const nextTurnDuration = resolveRemainingSeconds(
+      actionDeadlineAt,
+      Date.now(),
+    );
+    setTurnDurationSeconds(nextTurnDuration);
+  }, [toActSeatNo, actionDeadlineAt]);
+
   const isYourTurn =
     !!table &&
     !!mySeat &&
     mySeat.status === SeatStatus.ACTIVE &&
-    table.currentHand?.toActSeatNo === mySeat.seatNo;
+    toActSeatNo === mySeat.seatNo;
 
   const controlState = resolveTableControlState({
     seatStatus: mySeat?.status ?? null,
     isYourTurn,
   });
+
   const remainingSeconds = useMemo(
     () => resolveRemainingSeconds(actionDeadlineAt, timerNow),
     [actionDeadlineAt, timerNow],
   );
+
+  const remainingPercent = useMemo(
+    () => resolveTimerFillPercent(remainingSeconds, turnDurationSeconds),
+    [remainingSeconds, turnDurationSeconds],
+  );
+
   const tableActActionOptions = useMemo(
     () =>
       resolveTableActActionOptions({
@@ -271,45 +371,28 @@ export const TableScreen = (props: {
     ],
   );
 
-  const handleSeatCommand = (commandType: SeatCommandType) => {
+  const recentEventLogs = useMemo(
+    () => [...realtimeState.eventLogs].reverse().slice(0, 14),
+    [realtimeState.eventLogs],
+  );
+
+  const handleJoinFromEmptySeat = () => {
     const store = tableStoreRef.current;
     if (!store) {
       setCommandPreview("WebSocket初期化前のためコマンド送信できません。");
       return;
     }
 
-    if (commandType === RealtimeTableCommandType.JOIN) {
-      const buyIn = Number.parseInt(joinBuyInText, 10);
-      if (
-        !Number.isInteger(buyIn) ||
-        buyIn < TableBuyIn.MIN ||
-        buyIn > TableBuyIn.MAX
-      ) {
-        setCommandPreview(
-          `buyIn は ${TableBuyIn.MIN}〜${TableBuyIn.MAX} の整数で入力してください。`,
-        );
-        return;
-      }
+    const sent = store.sendSeatCommand(RealtimeTableCommandType.JOIN, {
+      buyIn: DEFAULT_JOIN_BUY_IN,
+    });
 
-      const sent = store.sendSeatCommand(commandType, { buyIn });
-      setCommandPreview(
-        sent
-          ? `送信: ${commandType} (buyIn=${buyIn})`
-          : `送信失敗: ${
-              store.getSnapshot().lastErrorMessage ??
-              "JOIN コマンドを送信できませんでした。"
-            }`,
-      );
-      return;
-    }
-
-    const sent = store.sendSeatCommand(commandType);
     setCommandPreview(
       sent
-        ? `送信: ${commandType}`
+        ? `送信: ${RealtimeTableCommandType.JOIN} (buyIn=${DEFAULT_JOIN_BUY_IN})`
         : `送信失敗: ${
             store.getSnapshot().lastErrorMessage ??
-            `${commandType} コマンドを送信できませんでした。`
+            "JOIN コマンドを送信できませんでした。"
           }`,
     );
   };
@@ -384,34 +467,27 @@ export const TableScreen = (props: {
   }
 
   if (state.status === LobbyStateStatus.LOADED) {
+    const seats = [...state.table.seats].sort(
+      (left, right) => left.seatNo - right.seatNo,
+    );
+    const anchorSeatNo = mySeat?.seatNo ?? 1;
+    const canJoinSeat = mySeat === null;
+
     return (
-      <section className="surface table-panel">
-        <header className="table-panel-header">
+      <section className="surface table-panel poker-table-shell">
+        <header className="table-panel-header table-header-bar">
           <div>
-            <h2>{state.table.tableName}</h2>
+            <p className="eyebrow table-eyebrow">Mix Stud Online</p>
+            <h2 className="table-title">{state.table.tableName}</h2>
             <p className="table-summary-line">
-              卓ID: <code>{state.table.tableId}</code>
+              {state.table.gameType} / {state.table.stakes.display}
             </p>
             <p className="table-summary-line">
-              ステータス:{" "}
-              <span className="status-chip">
-                {formatTableStatusLabel(state.table.status)}
-              </span>
-            </p>
-            <p className="table-summary-line">
-              ゲーム: <strong>{state.table.gameType}</strong> / ステークス:{" "}
-              <strong>{state.table.stakes.display}</strong>
-            </p>
-            <p className="table-summary-line">
-              Realtime接続:{" "}
-              <span className="status-chip">
-                {formatConnectionStatusLabel(realtimeState.connectionStatus)}
-              </span>{" "}
-              / 同期:{" "}
-              <span className="status-chip">
-                {formatSyncStatusLabel(realtimeState.syncStatus)}
-              </span>{" "}
-              / tableSeq: <strong>{realtimeState.tableSeq}</strong>
+              プレイヤー{" "}
+              {state.table.seats.filter((seat) => seat.userId !== null).length}/{" "}
+              {state.table.maxPlayers}
+              {" / "}あなたのスタック:{" "}
+              {mySeat ? formatChipsToUsd(mySeat.stack) : "未着席"}
             </p>
             {realtimeState.lastErrorMessage ? (
               <output className="command-preview">
@@ -419,189 +495,244 @@ export const TableScreen = (props: {
               </output>
             ) : null}
           </div>
-          <div className="row-actions">
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => setRequestVersion((version) => version + 1)}
-            >
-              更新
-            </button>
+          <div className="row-actions table-nav-actions">
             <button className="ghost-button" type="button" onClick={onGoLobby}>
               ロビーへ戻る
-            </button>
-            <button className="ghost-button" type="button" onClick={onLogout}>
-              ログアウト
             </button>
           </div>
         </header>
 
-        {state.table.currentHand ? (
-          <div className="surface inline-panel hand-panel">
-            <h3>進行中ハンド</h3>
-            <p>
-              handNo: <strong>{state.table.currentHand.handNo}</strong> /
-              street: <strong>{state.table.currentHand.street}</strong>
-            </p>
-            <p>
-              pot:{" "}
-              <strong>
-                {formatChipsToUsd(state.table.currentHand.potTotal)}
-              </strong>
-              {" / "}
-              toActSeatNo:{" "}
-              <strong>
-                {state.table.currentHand.toActSeatNo === null
-                  ? "-"
-                  : state.table.currentHand.toActSeatNo}
-              </strong>
-            </p>
-            <p
-              className={`timer-chip ${isYourTurn ? "is-active" : ""} ${
-                remainingSeconds !== null && remainingSeconds <= 10
-                  ? "is-warning"
-                  : ""
-              }`}
-            >
-              手番タイマー:{" "}
-              {remainingSeconds === null ? "-" : `${remainingSeconds} 秒`}
-            </p>
-          </div>
-        ) : (
-          <p className="status-chip">現在ハンドは進行していません。</p>
-        )}
+        <div className="table-play-layout">
+          <section
+            className="surface inline-panel poker-stage-panel"
+            aria-label="ゲームテーブル"
+          >
+            <div className="poker-stage-grid">
+              <article className="table-center-core">
+                <p className="table-center-label">Main Pot</p>
+                <p className="table-center-pot">
+                  {state.table.currentHand
+                    ? formatChipsToUsd(state.table.currentHand.potTotal)
+                    : "-"}
+                </p>
+                <p className="table-center-street">
+                  Street:{" "}
+                  {formatStreetLabel(state.table.currentHand?.street ?? null)}
+                </p>
+                <p className="table-center-to-act">
+                  現在手番:{" "}
+                  {toActSeat
+                    ? `${toActSeat.displayName ?? "Unknown"} (Seat ${toActSeat.seatNo})`
+                    : "-"}
+                </p>
+                <div className="turn-timer-track" aria-label="持ち時間バー">
+                  <div
+                    className={`turn-timer-fill ${remainingPercent <= 25 ? "is-warning" : ""}`}
+                    style={{ width: `${remainingPercent}%` }}
+                  />
+                </div>
+                <p className="turn-timer-text">
+                  持ち時間:{" "}
+                  {remainingSeconds === null ? "-" : `${remainingSeconds} 秒`}
+                </p>
+              </article>
 
-        <div
-          className={`surface inline-panel self-seat-panel ${
-            mySeat?.status === SeatStatus.DISCONNECTED ? "is-disconnected" : ""
-          }`}
-        >
-          <h3>自席ステータス</h3>
-          {mySeat ? (
-            <p>
-              seatNo: <strong>{mySeat.seatNo}</strong> / status:{" "}
-              <strong>{formatSeatStatusLabel(mySeat.status)}</strong> / stack:{" "}
-              <strong>{formatChipsToUsd(mySeat.stack)}</strong>
-            </p>
-          ) : (
-            <p>この卓にはまだ着席していません。</p>
-          )}
-          <p className="status-chip">{controlState.modeLabel}</p>
-          <p>{controlState.note}</p>
-          {mySeat?.status === SeatStatus.DISCONNECTED ? (
-            <output className="disconnect-overlay">
-              再接続中: 復帰後に restoredSeatStatus で表示を再構成します。
-            </output>
-          ) : null}
-        </div>
+              {seats.map((seat) => {
+                const isEmptySeat = seat.status === SeatStatus.EMPTY;
+                const isToAct = toActSeatNo === seat.seatNo;
+                const seatCards = resolveSeatCards(
+                  realtimeState.cardsBySeatNo,
+                  seat.seatNo,
+                );
+                const seatPositionClass = resolveSeatPositionClass(
+                  seat.seatNo,
+                  anchorSeatNo,
+                  state.table.maxPlayers,
+                );
 
-        <div className="surface inline-panel action-panel">
-          <h3>アクション入力</h3>
-          <p>
-            {controlState.actionInputEnabled
-              ? `手番中のため ${RealtimeTableCommandType.ACT} 入力を有効化しています。`
-              : `手番外または非ACTIVE状態のため ${RealtimeTableCommandType.ACT} 入力は無効です。`}
-          </p>
-          <p className="status-chip">
-            送信候補:{" "}
-            {tableActActionOptions.length > 0
-              ? tableActActionOptions.join(" / ")
-              : "(算出中)"}
-          </p>
-          {controlState.actionInputEnabled &&
-          tableActActionOptions.length > 0 ? (
-            <div className="row-actions">
-              {tableActActionOptions.map((action) => (
-                <button
-                  key={action}
-                  className="primary-button table-action"
-                  type="button"
-                  onClick={() => handleActionCommand(action)}
-                >
-                  {action}
-                </button>
-              ))}
+                return (
+                  <article
+                    key={seat.seatNo}
+                    className={`seat-pod seat-pos-${seatPositionClass} ${
+                      seat.isYou ? "is-you" : ""
+                    } ${isToAct ? "is-to-act" : ""} ${
+                      isEmptySeat ? "is-empty" : ""
+                    }`}
+                    data-seat-no={seat.seatNo}
+                  >
+                    <header className="seat-pod-header">
+                      <span className="seat-badge">Seat {seat.seatNo}</span>
+                      {state.table.dealerSeatNo === seat.seatNo ? (
+                        <span
+                          className="dealer-marker"
+                          aria-label="ディーラーボタン"
+                        >
+                          D
+                        </span>
+                      ) : null}
+                    </header>
+
+                    {isEmptySeat ? (
+                      <div className="empty-seat-actions">
+                        {canJoinSeat ? (
+                          <button
+                            className="ghost-button empty-seat-join"
+                            type="button"
+                            onClick={handleJoinFromEmptySeat}
+                          >
+                            着席
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="seat-player-name">
+                          {seat.displayName ?? "Unknown"}
+                          {seat.isYou ? " (You)" : ""}
+                        </p>
+                        <p className="seat-stack">
+                          {formatChipsToUsd(seat.stack)}
+                        </p>
+                        <div
+                          className="seat-time-wrapper"
+                          aria-label="席の持ち時間"
+                        >
+                          <div className="seat-time-track">
+                            <div
+                              className={`seat-time-fill ${
+                                isToAct && remainingPercent <= 25
+                                  ? "is-warning"
+                                  : ""
+                              }`}
+                              style={{
+                                width: `${isToAct ? remainingPercent : 0}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="seat-time-text">
+                            {isToAct && remainingSeconds !== null
+                              ? `${remainingSeconds} 秒`
+                              : "-"}
+                          </p>
+                        </div>
+                        <div
+                          className="seat-cards"
+                          aria-label={`Seat ${seat.seatNo} cards`}
+                        >
+                          {seatCards.length > 0
+                            ? seatCards.map((card, index) => {
+                                const isHidden =
+                                  card.visibility ===
+                                    CardVisibility.DOWN_HIDDEN ||
+                                  card.card === null;
+                                const suitClass = card.card
+                                  ? `is-suit-${card.card.suit.toLowerCase()}`
+                                  : "";
+
+                                return (
+                                  <div
+                                    key={`${card.slot}-${index}`}
+                                    className={`playing-card ${
+                                      isHidden ? "is-hidden" : ""
+                                    } ${suitClass}`}
+                                    aria-label={
+                                      isHidden
+                                        ? "裏向きカード"
+                                        : `${formatCardRank(card.card?.rank ?? "")}${formatSuitSymbol(card.card?.suit ?? CardSuit.S)}`
+                                    }
+                                  >
+                                    {isHidden ? (
+                                      <span className="playing-card-back">
+                                        ◆
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <span className="playing-card-rank">
+                                          {formatCardRank(
+                                            card.card?.rank ?? "",
+                                          )}
+                                        </span>
+                                        <span className="playing-card-suit">
+                                          {formatSuitSymbol(
+                                            card.card?.suit ?? CardSuit.S,
+                                          )}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            : null}
+                        </div>
+                      </>
+                    )}
+                  </article>
+                );
+              })}
             </div>
-          ) : (
-            <p className="status-chip">
-              表示可能なアクションボタンはありません。
-            </p>
-          )}
-        </div>
+          </section>
 
-        <div className="surface inline-panel action-panel">
-          <h3>席操作</h3>
-          {controlState.seatCommandAvailability[
-            RealtimeTableCommandType.JOIN
-          ] ? (
-            <div className="action-form">
-              <label className="field-label" htmlFor="table-seat-buyin">
-                buyIn ({TableBuyIn.MIN}〜{TableBuyIn.MAX})
-              </label>
-              <input
-                id="table-seat-buyin"
-                inputMode="numeric"
-                min={TableBuyIn.MIN}
-                max={TableBuyIn.MAX}
-                step={1}
-                value={joinBuyInText}
-                onChange={(event) => setJoinBuyInText(event.target.value)}
-              />
-            </div>
-          ) : null}
-          <div className="row-actions">
-            {SEAT_COMMAND_TYPES.map((commandType) => (
-              <button
-                key={commandType}
-                className="ghost-button"
-                type="button"
-                disabled={!controlState.seatCommandAvailability[commandType]}
-                onClick={() => handleSeatCommand(commandType)}
-              >
-                {formatSeatCommandLabel(commandType)}
-              </button>
-            ))}
-          </div>
-          {commandPreview ? (
-            <p className="command-preview">{commandPreview}</p>
-          ) : null}
-        </div>
-
-        <h3>席一覧</h3>
-        <ul className="seat-grid" aria-label="席一覧">
-          {state.table.seats.map((seat) => (
-            <li
-              key={seat.seatNo}
-              className={`seat-card ${
-                seat.isYou ? "is-you" : ""
-              } ${state.table.currentHand?.toActSeatNo === seat.seatNo ? "is-to-act" : ""}`}
-            >
-              <header className="seat-card-header">
-                <strong>Seat {seat.seatNo}</strong>
-                <span className="status-chip">
-                  {formatSeatStatusLabel(seat.status)}
-                </span>
-              </header>
-              {seat.userId ? (
-                <>
-                  <p>
-                    {seat.displayName ?? "Unknown"} {seat.isYou ? "(You)" : ""}
-                  </p>
-                  <p>stack: {formatChipsToUsd(seat.stack)}</p>
-                  <p>
-                    joinedAt:{" "}
-                    {seat.joinedAt
-                      ? new Date(seat.joinedAt).toLocaleString(LocaleCode.JA_JP)
-                      : "-"}
-                  </p>
-                  <p>disconnectStreak: {seat.disconnectStreak ?? "-"}</p>
-                </>
+          <aside className="table-side-rail">
+            <div className="surface inline-panel table-side-card action-dock-panel">
+              <h3>アクション</h3>
+              <p>
+                {controlState.actionInputEnabled
+                  ? "手番中です。許可アクションのみ選択できます。"
+                  : "手番外のためアクションは無効です。"}
+              </p>
+              {controlState.actionInputEnabled &&
+              tableActActionOptions.length > 0 ? (
+                <div className="action-dock-buttons">
+                  {tableActActionOptions.map((action) => (
+                    <button
+                      key={action}
+                      className="primary-button action-dock-button"
+                      type="button"
+                      onClick={() => handleActionCommand(action)}
+                    >
+                      {action}
+                    </button>
+                  ))}
+                </div>
               ) : (
-                <p>空席</p>
+                <p className="status-chip">
+                  操作可能なアクションはありません。
+                </p>
               )}
-            </li>
-          ))}
-        </ul>
+              {commandPreview ? (
+                <p className="command-preview">{commandPreview}</p>
+              ) : null}
+            </div>
+
+            <div className="surface inline-panel table-side-card event-log-panel">
+              <h3>進行ログ</h3>
+              {recentEventLogs.length === 0 ? (
+                <p className="status-chip">ログ待機中です。</p>
+              ) : (
+                <ol className="event-log-list" aria-label="イベントログ">
+                  {recentEventLogs.map((entry, index) => (
+                    <li
+                      key={`${entry.kind}-${entry.occurredAt}-${index}`}
+                      className="event-log-item"
+                    >
+                      <p className="event-log-main">
+                        {formatEventLogLabel(entry)}
+                      </p>
+                      <time
+                        className="event-log-time"
+                        dateTime={entry.occurredAt}
+                      >
+                        {new Date(entry.occurredAt).toLocaleTimeString(
+                          LocaleCode.JA_JP,
+                        )}
+                      </time>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          </aside>
+        </div>
       </section>
     );
   }
