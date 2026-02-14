@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.27  
+Version: v1.28  
 Last Updated: 2026-02-14  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -34,7 +34,7 @@ Last Updated: 2026-02-14
 | M1 | DB/マイグレーション運用確立 | DONE | 100% | Codex | 2026-02-11 | M1-01〜M1-04完了 |
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
-| M4 | Web統合（ロビー〜プレイ） | IN_PROGRESS | 83% | Codex | 2026-02-20 | M4-01〜M4-05完了 |
+| M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
 | M5 | リリース準備完了 | NOT_STARTED | 0% | TBA | TBA | Phase 5 |
 
 ---
@@ -45,13 +45,13 @@ Last Updated: 2026-02-14
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | NOT_STARTED | M4-05 完了 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | M4-06 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | M4-06 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-02 | 運用Runbook整備（デプロイ手順、ローリング更新、障害復旧） | P1 | NOT_STARTED | M5-01 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) |
 
 ## Backlog
 
@@ -62,7 +62,7 @@ Last Updated: 2026-02-14
 | M4-03 | テーブル画面実装（席状態別UI、手番タイマー、アクション入力） | P0 | DONE | 状態別UI制御と操作可否が仕様一致 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | DONE | 欠番検知→resume→再収束の動作確認 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | DONE | HP-08 のUI要件を満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
-| M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | NOT_STARTED | 主要シナリオを段階導入し回帰検知可能 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | DONE | 主要シナリオを段階導入し回帰検知可能 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | 監視最小セットと閾値を運用可能化 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-02 | 運用Runbook整備（デプロイ手順、ローリング更新、障害復旧） | P1 | NOT_STARTED | 第三者が復旧手順を再現できる | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) |
 | M5-03 | 非機能検証（レイテンシp95、5xx率、再接続品質） | P1 | NOT_STARTED | 非機能目標の測定結果が取得可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -102,6 +102,7 @@ Last Updated: 2026-02-14
 | M4-03 | テーブル画面実装（席状態別UI、手番タイマー、アクション入力） | P0 | DONE | 2026-02-14 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-api.ts`](../../apps/web/src/table-api.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | DONE | 2026-02-13 | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | DONE | 2026-02-14 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/routes.ts`](../../apps/web/src/routes.ts), [`apps/web/src/history-api.ts`](../../apps/web/src/history-api.ts), [`apps/web/src/history-api.test.ts`](../../apps/web/src/history-api.test.ts), [`apps/web/src/history-screen.tsx`](../../apps/web/src/history-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`openapi.yaml`](./openapi.yaml) |
+| M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | DONE | 2026-02-14 | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`apps/server/src/__tests__/e2e/hp.e2e.test.ts`](../../apps/server/src/__tests__/e2e/hp.e2e.test.ts), [`apps/server/src/__tests__/e2e/ng.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ng.e2e.test.ts), [`apps/server/src/__tests__/e2e/ed.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ed.e2e.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 
 ## Blocked
 
@@ -123,6 +124,7 @@ Last Updated: 2026-02-14
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-14 | M4-06 E2E段階導入のCI組み込み方針 | E2Eを `foundation -> HP -> NG -> ED` の順にテストファイル分割し、CIジョブを段階実行へ更新する方針を採用 | 回帰検知を維持しながら、失敗時にカテゴリ単位で原因を切り分けやすくするため | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`apps/server/src/__tests__/e2e/hp.e2e.test.ts`](../../apps/server/src/__tests__/e2e/hp.e2e.test.ts), [`apps/server/src/__tests__/e2e/ng.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ng.e2e.test.ts), [`apps/server/src/__tests__/e2e/ed.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ed.e2e.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-13 | M4-04 TableStore同期方式 | `TableStore` を導入し、`tableSeq` 連番管理・欠番検知時の `table.resume(lastTableSeq)`・`table.snapshot` 反映による再収束をクライアント側で実装する方針を採用 | Cloud Run接続断・一時的な受信欠落があっても、AsyncAPI契約に沿って最終整合へ収束させるため | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 | 2026-02-14 | M4-03 テーブル画面の状態別UI制御方針 | `/api/tables/:tableId` の取得結果をもとに、自席 `SeatStatus` ごとに `table.act` 入力可否と `JOIN/SIT_OUT/RETURN/LEAVE` の操作可否を切り替えるUIを実装し、手番タイマー（`actionDeadlineAt`）を表示する方針を採用 | 画面設計書で定義された表示制御（`SEATED_WAIT_NEXT_HAND` / `ACTIVE` / `SIT_OUT` / `LEAVE_PENDING` / `DISCONNECTED`）を、M4-04 の WebSocket 同期実装前にフロント単体で担保するため | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-api.ts`](../../apps/web/src/table-api.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | 2026-02-14 | M4-05 履歴画面の一覧/詳細統合方針 | `GET /api/history/hands` と `GET /api/history/hands/:handId` を同一画面で統合し、一覧選択で詳細を切替、`nextCursor` で追記ページングするUI方針を採用 | HP-08 の「一覧/詳細/損益表示」を1画面で満たしつつ、履歴詳細の再読込やページ追加を局所的に再試行できる構成にするため | [`apps/web/src/history-api.ts`](../../apps/web/src/history-api.ts), [`apps/web/src/history-screen.tsx`](../../apps/web/src/history-screen.tsx), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`openapi.yaml`](./openapi.yaml) |
@@ -197,4 +199,4 @@ Last Updated: 2026-02-14
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-05完了 | M4-06（E2E導入） | 仕様未決事項（DEC-01）が残存 | M4-06（E2E導入）着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了 | なし | 仕様未決事項（DEC-01）が残存 | M5-01（構造化ログ/メトリクス/アラート導入）着手 |
