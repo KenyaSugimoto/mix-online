@@ -7,6 +7,7 @@ import {
   getAuthMe,
   postAuthLogout,
 } from "./auth-api";
+import { HistoryScreen } from "./history-screen";
 import {
   LobbyApiError,
   type LobbyTableSummary,
@@ -32,7 +33,10 @@ type AuthState =
   | { status: typeof AuthStateStatus.ERROR; message: string };
 
 const isProtectedRoute = (pathname: string) =>
-  pathname === RoutePath.LOBBY || pathname.startsWith(RoutePath.TABLES_PREFIX);
+  pathname === RoutePath.LOBBY ||
+  pathname === RoutePath.HISTORY ||
+  pathname.startsWith(`${RoutePath.HISTORY}/`) ||
+  pathname.startsWith(RoutePath.TABLES_PREFIX);
 
 export function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
@@ -151,6 +155,13 @@ export function App() {
           >
             ロビー画面
           </button>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => navigate(RoutePath.HISTORY)}
+          >
+            履歴画面
+          </button>
         </div>
       </header>
 
@@ -266,6 +277,10 @@ const ProtectedContent = (props: {
         onOpenTable={onOpenTable}
       />
     );
+  }
+
+  if (route.kind === AppRouteKind.HISTORY) {
+    return <HistoryScreen onGoLobby={onGoLobby} onLogout={onLogout} />;
   }
 
   return (

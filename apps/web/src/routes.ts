@@ -3,6 +3,7 @@ import { RoutePath } from "./web-constants";
 export const AppRouteKind = {
   LOGIN: "login",
   LOBBY: "lobby",
+  HISTORY: "history",
   TABLE: "table",
   NOT_FOUND: "not-found",
 } as const;
@@ -10,6 +11,7 @@ export const AppRouteKind = {
 export type AppRoute =
   | { kind: typeof AppRouteKind.LOGIN }
   | { kind: typeof AppRouteKind.LOBBY }
+  | { kind: typeof AppRouteKind.HISTORY }
   | { kind: typeof AppRouteKind.TABLE; tableId: string }
   | { kind: typeof AppRouteKind.NOT_FOUND; pathname: string };
 
@@ -34,6 +36,10 @@ export const resolveRoute = (pathname: string): AppRoute => {
 
   if (normalizedPathname === RoutePath.LOBBY) {
     return { kind: AppRouteKind.LOBBY };
+  }
+
+  if (normalizedPathname === RoutePath.HISTORY) {
+    return { kind: AppRouteKind.HISTORY };
   }
 
   const tableMatch = tablePathPattern.exec(normalizedPathname);
