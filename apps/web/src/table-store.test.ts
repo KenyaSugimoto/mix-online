@@ -827,4 +827,116 @@ describe("table-store", () => {
     expect(snapshot.table.currentHand?.streetBetTo).toBe(0);
     expect(snapshot.table.currentHand?.raiseCount).toBe(0);
   });
+
+  it("アクションイベントで seat別の lastActionBySeatNo を更新し、DealInit でクリアする", () => {
+    const sockets: FakeWebSocket[] = [];
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable: createInitialTable(),
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 1,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 1,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.CheckEvent,
+        payload: {
+          street: Street.THIRD,
+          seatNo: 2,
+          potAfter: 10,
+          nextToActSeatNo: 1,
+          isAuto: false,
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().lastActionBySeatNo).toMatchObject({
+      2: {
+        occurredAt: BASE_TIME.toISOString(),
+        seatNo: 2,
+        action: TableCommandAction.CHECK,
+      },
+    });
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 2,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 2,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.CallEvent,
+        payload: {
+          street: Street.THIRD,
+          seatNo: 1,
+          potAfter: 30,
+          nextToActSeatNo: 2,
+          stackAfter: 980,
+          streetBetTo: 10,
+          raiseCount: 0,
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().lastActionBySeatNo).toMatchObject({
+      1: {
+        occurredAt: BASE_TIME.toISOString(),
+        seatNo: 1,
+        action: TableCommandAction.CALL,
+      },
+      2: {
+        occurredAt: BASE_TIME.toISOString(),
+        seatNo: 2,
+        action: TableCommandAction.CHECK,
+      },
+    });
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 3,
+        handId: "44444444-4444-4444-8444-444444444444",
+        handSeq: null,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.DealInitEvent,
+        payload: {
+          handNo: 43,
+          gameType: GameType.STUD_HI,
+          dealerSeatNo: 2,
+          mixIndex: 0,
+          handsSinceRotation: 1,
+          stakes: {
+            smallBet: 20,
+            bigBet: 40,
+            ante: 5,
+            bringIn: 10,
+          },
+          participants: [
+            { seatNo: 1, startStack: 990 },
+            { seatNo: 2, startStack: 1010 },
+          ],
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().lastActionBySeatNo).toEqual({});
+  });
 });

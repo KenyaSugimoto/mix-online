@@ -41,6 +41,13 @@ const CARD_SLOT_ORDER = [
   CardSlot.DOWN_7,
 ] as const;
 
+const RAISED_UP_CARD_SLOTS: ReadonlySet<CardSlot> = new Set<CardSlot>([
+  CardSlot.UP_3,
+  CardSlot.UP_4,
+  CardSlot.UP_5,
+  CardSlot.UP_6,
+]);
+
 const SEAT_POSITION_BY_OFFSET = [
   "self",
   "right-near",
@@ -140,6 +147,8 @@ const formatSuitSymbol = (suit: CardSuit) => {
   return "♣";
 };
 
+const formatActionLabel = (action: string) => action.replaceAll("_", " ");
+
 const resolveSeatCards = (
   cardsBySeatNo: TableStoreSnapshot["cardsBySeatNo"],
   seatNo: number,
@@ -193,10 +202,12 @@ export const TableScreen = (props: {
     lastErrorMessage: string | null;
     cardsBySeatNo: TableStoreSnapshot["cardsBySeatNo"];
     eventLogs: TableStoreSnapshot["eventLogs"];
+    lastActionBySeatNo: TableStoreSnapshot["lastActionBySeatNo"];
   }>({
     lastErrorMessage: null,
     cardsBySeatNo: {},
     eventLogs: [],
+    lastActionBySeatNo: {},
   });
 
   useEffect(() => {
@@ -224,6 +235,7 @@ export const TableScreen = (props: {
         lastErrorMessage: null,
         cardsBySeatNo: {},
         eventLogs: [],
+        lastActionBySeatNo: {},
       });
     }
 
@@ -279,6 +291,7 @@ export const TableScreen = (props: {
         lastErrorMessage: snapshot.lastErrorMessage,
         cardsBySeatNo: snapshot.cardsBySeatNo,
         eventLogs: snapshot.eventLogs,
+        lastActionBySeatNo: snapshot.lastActionBySeatNo,
       });
       setState((previousState) => {
         if (previousState.status !== LobbyStateStatus.LOADED) {
@@ -319,8 +332,6 @@ export const TableScreen = (props: {
   const table = state.status === LobbyStateStatus.LOADED ? state.table : null;
   const mySeat = table?.seats.find((seat) => seat.isYou) ?? null;
   const toActSeatNo = table?.currentHand?.toActSeatNo ?? null;
-  const toActSeat =
-    table?.seats.find((seat) => seat.seatNo === toActSeatNo) ?? null;
 
   useEffect(() => {
     if (toActSeatNo === null || actionDeadlineAt === null) {
@@ -552,22 +563,6 @@ export const TableScreen = (props: {
                   Street:{" "}
                   {formatStreetLabel(state.table.currentHand?.street ?? null)}
                 </p>
-                <p className="table-center-to-act">
-                  現在手番:{" "}
-                  {toActSeat
-                    ? `${toActSeat.displayName ?? "Unknown"} (Seat ${toActSeat.seatNo})`
-                    : "-"}
-                </p>
-                <div className="turn-timer-track" aria-label="持ち時間バー">
-                  <div
-                    className={`turn-timer-fill ${remainingPercent <= 25 ? "is-warning" : ""}`}
-                    style={{ width: `${remainingPercent}%` }}
-                  />
-                </div>
-                <p className="turn-timer-text">
-                  持ち時間:{" "}
-                  {remainingSeconds === null ? "-" : `${remainingSeconds} 秒`}
-                </p>
               </article>
 
               {seats.map((seat) => {
@@ -577,6 +572,8 @@ export const TableScreen = (props: {
                   realtimeState.cardsBySeatNo,
                   seat.seatNo,
                 );
+                const seatLastAction =
+                  realtimeState.lastActionBySeatNo[seat.seatNo] ?? null;
                 const seatPositionClass = resolveSeatPositionClass(
                   seat.seatNo,
                   anchorSeatNo,
@@ -587,10 +584,8 @@ export const TableScreen = (props: {
                   <article
                     key={seat.seatNo}
                     className={`seat-pod seat-pos-${seatPositionClass} ${
-                      seat.isYou ? "is-you" : ""
-                    } ${isToAct ? "is-to-act" : ""} ${
-                      isEmptySeat ? "is-empty" : ""
-                    }`}
+                      isToAct ? "is-to-act" : ""
+                    } ${isEmptySeat ? "is-empty" : ""}`}
                     data-seat-no={seat.seatNo}
                   >
                     <header className="seat-pod-header">
@@ -614,6 +609,11 @@ export const TableScreen = (props: {
                         <p className="seat-stack">
                           {formatChipsToUsd(seat.stack)}
                         </p>
+                        {seatLastAction ? (
+                          <p className="seat-last-action">
+                            {formatActionLabel(seatLastAction.action)}
+                          </p>
+                        ) : null}
                         <div
                           className="seat-time-wrapper"
                           aria-label="席の持ち時間"
@@ -646,6 +646,9 @@ export const TableScreen = (props: {
                                   card.visibility ===
                                     CardVisibility.DOWN_HIDDEN ||
                                   card.card === null;
+                                const isRaisedUpCard =
+                                  !isHidden &&
+                                  RAISED_UP_CARD_SLOTS.has(card.slot);
                                 const suitClass = card.card
                                   ? `is-suit-${card.card.suit.toLowerCase()}`
                                   : "";
@@ -655,7 +658,7 @@ export const TableScreen = (props: {
                                     key={`${card.slot}-${index}`}
                                     className={`playing-card ${
                                       isHidden ? "is-hidden" : ""
-                                    } ${suitClass}`}
+                                    } ${isRaisedUpCard ? "is-up-card" : ""} ${suitClass}`}
                                     aria-label={
                                       isHidden
                                         ? "裏向きカード"

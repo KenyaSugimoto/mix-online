@@ -23,7 +23,7 @@ import {
   Street,
   TABLE_STATUSES,
   THIRD_STREET_CARD_POSITIONS,
-  type TableCommandAction,
+  TableCommandAction,
   TableEventName,
   TableStatus,
   type ThirdStreetCardPosition,
@@ -82,11 +82,22 @@ export type TableStoreEventLogEntry =
       reason: (typeof STREET_ADVANCE_REASONS)[number];
     };
 
+export type TableStoreLastAction = {
+  occurredAt: string;
+  seatNo: number;
+  action: TableCommandAction;
+};
+
+export type TableStoreLastActionBySeatNo = Partial<
+  Record<number, TableStoreLastAction>
+>;
+
 export type TableStoreState = {
   table: TableDetail;
   tableSeq: number;
   cardsBySeatNo: TableStoreCardsBySeatNo;
   eventLogs: TableStoreEventLogEntry[];
+  lastActionBySeatNo: TableStoreLastActionBySeatNo;
   connectionStatus: TableStoreConnectionStatus;
   syncStatus: TableStoreSyncStatus;
   lastErrorCode: RealtimeErrorCode | null;
@@ -561,6 +572,91 @@ const buildEventLog = (
   return null;
 };
 
+const resolveLastAction = (
+  event: TableEventMessage,
+): TableStoreLastAction | null => {
+  const payload = event.payload;
+
+  if (
+    event.eventName === TableEventName.BringInEvent &&
+    isBringInPayload(payload)
+  ) {
+    return {
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.BRING_IN,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.CompleteEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return {
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.COMPLETE,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.BetEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return {
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.BET,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.RaiseEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return {
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.RAISE,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.CallEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return {
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.CALL,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.CheckEvent &&
+    isActionPayload(payload)
+  ) {
+    return {
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.CHECK,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.FoldEvent &&
+    isActionPayload(payload)
+  ) {
+    return {
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.FOLD,
+    };
+  }
+
+  return null;
+};
+
 const mapStreetToSlot = (street: (typeof STREETS)[number]): CardSlot | null => {
   if (street === Street.FOURTH) {
     return CardSlot.UP_4;
@@ -972,6 +1068,16 @@ const cloneCardsBySeatNo = (
             }
           : null,
       })),
+    ]),
+  );
+
+const cloneLastActionBySeatNo = (
+  lastActionBySeatNo: TableStoreLastActionBySeatNo,
+): TableStoreLastActionBySeatNo =>
+  Object.fromEntries(
+    Object.entries(lastActionBySeatNo).map(([seatNo, action]) => [
+      Number(seatNo),
+      action ? { ...action } : action,
     ]),
   );
 
@@ -1470,6 +1576,7 @@ const cloneSnapshot = (state: TableStoreState): TableStoreSnapshot => ({
   },
   cardsBySeatNo: cloneCardsBySeatNo(state.cardsBySeatNo),
   eventLogs: state.eventLogs.map((entry) => ({ ...entry })),
+  lastActionBySeatNo: cloneLastActionBySeatNo(state.lastActionBySeatNo),
 });
 
 export type TableStore = {
@@ -1513,6 +1620,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
     tableSeq: 0,
     cardsBySeatNo: {},
     eventLogs: [],
+    lastActionBySeatNo: {},
     connectionStatus: TableStoreConnectionStatus.IDLE,
     syncStatus: TableStoreSyncStatus.IDLE,
     lastErrorCode: null,
@@ -1674,12 +1782,23 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       state.cardsBySeatNo,
       message,
     );
+    const action = resolveLastAction(message);
+    const nextLastActionBySeatNo =
+      message.eventName === TableEventName.DealInitEvent
+        ? {}
+        : action === null
+          ? state.lastActionBySeatNo
+          : {
+              ...state.lastActionBySeatNo,
+              [action.seatNo]: action,
+            };
 
     patchState({
       table: nextTable,
       tableSeq: message.tableSeq,
       cardsBySeatNo: nextCardsBySeatNo,
       eventLogs: pushEventLog(state.eventLogs, buildEventLog(message)),
+      lastActionBySeatNo: nextLastActionBySeatNo,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,
       lastErrorMessage: null,
@@ -1697,6 +1816,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       cardsBySeatNo: mapSnapshotCardsBySeatNo(
         message.payload.table.currentHand,
       ),
+      lastActionBySeatNo: {},
       tableSeq: message.tableSeq,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,
