@@ -15,7 +15,7 @@ import { createInMemorySessionStore } from "../../auth-session";
 import {
   createInMemoryAuthUserRepository,
   toDefaultDisplayName,
-} from "../../repository/auth-user-repository";
+} from "../../repository/auth";
 
 describe("HTTP統合テスト", () => {
   const TEST_GOOGLE_OAUTH_CONFIG = {

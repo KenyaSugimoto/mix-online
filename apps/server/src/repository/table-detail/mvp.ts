@@ -5,11 +5,8 @@ import {
   Street,
   TableStatus,
 } from "@mix-online/shared";
-import type { TableDetailRecord } from "../table-detail";
-
-export interface TableDetailRepository {
-  getById(tableId: string): Promise<TableDetailRecord | null>;
-}
+import type { TableDetailRecord } from "../../table-detail";
+import type { TableDetailRepository } from "./contract";
 
 const MVP_TABLE_DETAILS: TableDetailRecord[] = [
   {

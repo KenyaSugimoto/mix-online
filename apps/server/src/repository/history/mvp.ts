@@ -1,19 +1,9 @@
 import type {
   HandHistoryDetailRecord,
   HandHistoryListItemRecord,
-} from "../history-hand";
-import {
-  MVP_AUTH_USER_ID,
-  MVP_HAND_DETAILS_FOR_AUTH_USER,
-} from "./history-repository.mvp-data";
-
-export interface HistoryRepository {
-  listHands(userId: string): Promise<HandHistoryListItemRecord[]>;
-  getHandDetail(
-    userId: string,
-    handId: string,
-  ): Promise<HandHistoryDetailRecord | null>;
-}
+} from "../../history-hand";
+import type { HistoryRepository } from "./contract";
+import { MVP_AUTH_USER_ID, MVP_HAND_DETAILS_FOR_AUTH_USER } from "./mvp-data";
 
 const toHistoryListItem = (
   detail: HandHistoryDetailRecord,

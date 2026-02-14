@@ -12,8 +12,8 @@ import type {
   CommandTransactionRepository,
   HandEventInsert,
   TableEventPublisher,
-} from "../../repository/command-repository";
-import { persistCommandAndPublish } from "../../repository/persist-command";
+} from "../../repository/command";
+import { persistCommandAndPublish } from "../../repository/command";
 
 class RecordingRepository implements CommandRepository {
   public readonly operations: string[] = [];

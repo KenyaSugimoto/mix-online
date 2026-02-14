@@ -11,7 +11,19 @@ import {
   type AuthUserRepository,
   createInMemoryAuthUserRepository,
   createSupabaseAuthUserRepository,
-} from "../repository/auth-user-repository";
+} from "../repository/auth";
+import {
+  type HistoryRepository,
+  createSupabaseHistoryRepository,
+} from "../repository/history";
+import {
+  type LobbyTableRepository,
+  createSupabaseLobbyTableRepository,
+} from "../repository/lobby";
+import {
+  type TableDetailRepository,
+  createSupabaseTableDetailRepository,
+} from "../repository/table-detail";
 import {
   type RealtimeTableService,
   type RealtimeTableServiceRuntimeState,
@@ -38,7 +50,15 @@ type StartRealtimeServerOptions = {
   googleOAuthConfig?: Partial<GoogleOAuthConfig>;
   googleOAuthClient?: GoogleOAuthClient;
   authUserRepository?: AuthUserRepository;
+  lobbyTableRepository?: LobbyTableRepository;
+  tableDetailRepository?: TableDetailRepository;
+  historyRepository?: HistoryRepository;
   webClientOrigin?: string;
+};
+
+type SupabaseConfig = {
+  supabaseUrl: string;
+  serviceRoleKey: string;
 };
 
 const DEFAULT_GOOGLE_OAUTH_AUTH_ENDPOINT =
@@ -85,23 +105,89 @@ const resolveGoogleOAuthConfig = (
   };
 };
 
-const resolveAuthUserRepository = (
-  repositoryFromOptions?: AuthUserRepository,
-): AuthUserRepository => {
-  if (repositoryFromOptions) {
-    return repositoryFromOptions;
-  }
-
+const resolveSupabaseConfig = (): SupabaseConfig | null => {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (supabaseUrl && supabaseServiceRoleKey) {
-    return createSupabaseAuthUserRepository({
+    return {
       supabaseUrl,
       serviceRoleKey: supabaseServiceRoleKey,
+    };
+  }
+
+  return null;
+};
+
+const resolveAuthUserRepository = (params: {
+  repositoryFromOptions?: AuthUserRepository;
+  supabaseConfig: SupabaseConfig | null;
+}): AuthUserRepository => {
+  if (params.repositoryFromOptions) {
+    return params.repositoryFromOptions;
+  }
+
+  if (params.supabaseConfig) {
+    return createSupabaseAuthUserRepository({
+      supabaseUrl: params.supabaseConfig.supabaseUrl,
+      serviceRoleKey: params.supabaseConfig.serviceRoleKey,
     });
   }
 
   return createInMemoryAuthUserRepository();
+};
+
+const resolveLobbyTableRepository = (params: {
+  repositoryFromOptions?: LobbyTableRepository;
+  supabaseConfig: SupabaseConfig | null;
+}) => {
+  if (params.repositoryFromOptions) {
+    return params.repositoryFromOptions;
+  }
+
+  if (params.supabaseConfig) {
+    return createSupabaseLobbyTableRepository({
+      supabaseUrl: params.supabaseConfig.supabaseUrl,
+      serviceRoleKey: params.supabaseConfig.serviceRoleKey,
+    });
+  }
+
+  return undefined;
+};
+
+const resolveTableDetailRepository = (params: {
+  repositoryFromOptions?: TableDetailRepository;
+  supabaseConfig: SupabaseConfig | null;
+}) => {
+  if (params.repositoryFromOptions) {
+    return params.repositoryFromOptions;
+  }
+
+  if (params.supabaseConfig) {
+    return createSupabaseTableDetailRepository({
+      supabaseUrl: params.supabaseConfig.supabaseUrl,
+      serviceRoleKey: params.supabaseConfig.serviceRoleKey,
+    });
+  }
+
+  return undefined;
+};
+
+const resolveHistoryRepository = (params: {
+  repositoryFromOptions?: HistoryRepository;
+  supabaseConfig: SupabaseConfig | null;
+}) => {
+  if (params.repositoryFromOptions) {
+    return params.repositoryFromOptions;
+  }
+
+  if (params.supabaseConfig) {
+    return createSupabaseHistoryRepository({
+      supabaseUrl: params.supabaseConfig.supabaseUrl,
+      serviceRoleKey: params.supabaseConfig.serviceRoleKey,
+    });
+  }
+
+  return undefined;
 };
 
 export const startRealtimeServer = (
@@ -116,9 +202,23 @@ export const startRealtimeServer = (
   const googleOAuthConfig = resolveGoogleOAuthConfig(options.googleOAuthConfig);
   const googleOAuthClient =
     options.googleOAuthClient ?? createGoogleOAuthClient();
-  const authUserRepository = resolveAuthUserRepository(
-    options.authUserRepository,
-  );
+  const supabaseConfig = resolveSupabaseConfig();
+  const authUserRepository = resolveAuthUserRepository({
+    repositoryFromOptions: options.authUserRepository,
+    supabaseConfig,
+  });
+  const lobbyTableRepository = resolveLobbyTableRepository({
+    repositoryFromOptions: options.lobbyTableRepository,
+    supabaseConfig,
+  });
+  const tableDetailRepository = resolveTableDetailRepository({
+    repositoryFromOptions: options.tableDetailRepository,
+    supabaseConfig,
+  });
+  const historyRepository = resolveHistoryRepository({
+    repositoryFromOptions: options.historyRepository,
+    supabaseConfig,
+  });
   const webClientOrigin =
     options.webClientOrigin ??
     process.env.WEB_CLIENT_ORIGIN ??
@@ -129,6 +229,9 @@ export const startRealtimeServer = (
     googleOAuthConfig,
     googleOAuthClient,
     authUserRepository,
+    lobbyTableRepository,
+    tableDetailRepository,
+    historyRepository,
     webClientOrigin,
   });
   const wsGateway = createWsGateway({
