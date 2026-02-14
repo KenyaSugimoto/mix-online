@@ -104,6 +104,65 @@ h1 {
   margin-bottom: 12px;
 }
 
+.profile-edit-panel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #a5f3fc;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.profile-edit-label {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-500);
+}
+
+.profile-edit-row {
+  margin-top: 6px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.profile-edit-form {
+  margin-top: 6px;
+}
+
+.profile-edit-form input {
+  width: min(320px, 100%);
+  border: 1px solid #a5f3fc;
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #ffffff;
+  color: var(--ink-900);
+}
+
+.profile-edit-form input:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.profile-edit-actions {
+  margin-top: 8px;
+}
+
+.profile-edit-message {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.profile-edit-message.is-success {
+  color: #166534;
+}
+
+.profile-edit-message.is-error {
+  color: #b91c1c;
+}
+
 h2 {
   margin-top: 0;
 }

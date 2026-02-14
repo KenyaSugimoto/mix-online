@@ -1,6 +1,7 @@
 export const ApiPath = {
   AUTH_GOOGLE_START: "/api/auth/google/start",
   AUTH_ME: "/api/auth/me",
+  AUTH_ME_DISPLAY_NAME: "/api/auth/me/display-name",
   AUTH_LOGOUT: "/api/auth/logout",
   LOBBY_TABLES: "/api/lobby/tables",
   TABLES_PREFIX: "/api/tables/",
@@ -20,6 +21,7 @@ export const RoutePath = {
 export const HttpMethod = {
   GET: "GET",
   POST: "POST",
+  PATCH: "PATCH",
 } as const;
 
 export const HttpStatusCode = {

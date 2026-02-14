@@ -20,6 +20,10 @@ type AuthMeResponse = {
   user: UserProfile;
 };
 
+type AuthUpdateDisplayNameRequest = {
+  displayName: string;
+};
+
 type ErrorResponse = {
   error?: {
     code?: string;
@@ -122,12 +126,36 @@ export const createAuthApi = (fetchImpl: FetchLike) => ({
       throw await parseApiError(response);
     }
   },
+
+  async updateDisplayName(displayName: string): Promise<UserProfile> {
+    const request: AuthUpdateDisplayNameRequest = {
+      displayName,
+    };
+    const response = await fetchImpl(ApiPath.AUTH_ME_DISPLAY_NAME, {
+      method: HttpMethod.PATCH,
+      credentials: "include",
+      headers: {
+        [HttpHeaderName.ACCEPT]: MediaType.APPLICATION_JSON,
+        [HttpHeaderName.CONTENT_TYPE]: MediaType.APPLICATION_JSON,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw await parseApiError(response);
+    }
+
+    const body = await parseJsonSafely<AuthMeResponse>(response);
+    return validateAuthMeResponse(body);
+  },
 });
 
 const authApi = createAuthApi(fetch as FetchLike);
 
 export const getAuthMe = () => authApi.getMe();
 export const postAuthLogout = () => authApi.logout();
+export const patchAuthDisplayName = (displayName: string) =>
+  authApi.updateDisplayName(displayName);
 
 export const formatChipsToUsd = (chips: number) =>
   new Intl.NumberFormat(LocaleCode.EN_US, {
