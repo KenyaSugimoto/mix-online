@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.29  
+Version: v1.30  
 Last Updated: 2026-02-14  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -35,7 +35,7 @@ Last Updated: 2026-02-14
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
-| M5 | リリース準備完了 | IN_PROGRESS | 25% | Codex | TBA | M5-10完了、M5-11待ち |
+| M5 | リリース準備完了 | IN_PROGRESS | 50% | Codex | TBA | M5-10/11完了、M5-12待ち |
 
 ---
 
@@ -47,7 +47,7 @@ Last Updated: 2026-02-14
 | --- | --- | --- | --- | --- | --- |
 | M5-00 | M4完了時点のリリース監査（できること/未対応の棚卸し） | P0 | DONE | 監査結果を進捗管理シートと実装推進ガイドへ反映済み | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | DONE | `/api/auth/me` が固定ユーザー以外を返せる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-11 | Lobby/Table/History のMVP固定データ撤廃（DB Repositoryへ切替） | P0 | NOT_STARTED | APIが実データを返し、fixture前提が不要 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-11 | Lobby/Table/History のMVP固定データ撤廃（DB Repositoryへ切替） | P0 | DONE | Supabase環境変数設定時に実データ返却、未設定時はMVP fallbackを維持 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-12 | ローカル統合プレイ確認（HTTP+WS接続経路固定、手動2ユーザー検証） | P0 | NOT_STARTED | ローカルで2人1ハンド完了を再現可能 | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | M5-12 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
@@ -113,6 +113,7 @@ Last Updated: 2026-02-14
 | M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | DONE | 2026-02-14 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/routes.ts`](../../apps/web/src/routes.ts), [`apps/web/src/history-api.ts`](../../apps/web/src/history-api.ts), [`apps/web/src/history-api.test.ts`](../../apps/web/src/history-api.test.ts), [`apps/web/src/history-screen.tsx`](../../apps/web/src/history-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`openapi.yaml`](./openapi.yaml) |
 | M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | DONE | 2026-02-14 | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`apps/server/src/__tests__/e2e/hp.e2e.test.ts`](../../apps/server/src/__tests__/e2e/hp.e2e.test.ts), [`apps/server/src/__tests__/e2e/ng.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ng.e2e.test.ts), [`apps/server/src/__tests__/e2e/ed.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ed.e2e.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | DONE | 2026-02-14 | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/google-oauth-client.ts`](../../apps/server/src/google-oauth-client.ts), [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`apps/server/src/__tests__/integration/http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-11 | Lobby/Table/History のMVP固定データ撤廃（DB Repositoryへ切替） | P0 | DONE | 2026-02-14 | [`apps/server/src/repository/lobby-table-repository.supabase.ts`](../../apps/server/src/repository/lobby-table-repository.supabase.ts), [`apps/server/src/repository/table-detail-repository.supabase.ts`](../../apps/server/src/repository/table-detail-repository.supabase.ts), [`apps/server/src/repository/history-repository.supabase.ts`](../../apps/server/src/repository/history-repository.supabase.ts), [`apps/server/src/realtime/server.ts`](../../apps/server/src/realtime/server.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Blocked
 
@@ -125,7 +126,7 @@ Last Updated: 2026-02-14
 | 領域 | できること（確認済み） | まだできないこと / 制約 | リリース判定 |
 | --- | --- | --- | --- |
 | 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる。初期表示名は匿名ID（`Player-XXXXXX`）で採番し、再ログインで上書きしない | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える）。ユーザー自身の表示名変更API/UIは未実装 | P0主要対応完了 |
-| Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立 | `createMvp*Repository` に依存し、実データ経路の確認ができない | P0対応が必要 |
+| Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立。Supabase環境変数設定時はRepository経由で実データを返却できる | Realtimeの永続化は未接続のため、実プレイ後の履歴反映は `M5-12` で再確認が必要 | P0主要対応完了 |
 | Realtimeプレイ | Game Engine + WS契約テスト（HP/NG/ED）と `TableStore` の再同期（resume/snapshot）は成立 | ローカルWeb起動時の `/ws` 経路が未固定で、手動2ユーザーの実プレイ確認をまだ記録していない | P0対応が必要 |
 | ゲーム画面UI | 席状態に応じた操作可否、手番タイマー、履歴表示が実装済み | `SeatStateChangedEvent.reason` / `appliesFrom` のUIログ保持など、画面設計書の一部要件が未反映 | P1対応が必要 |
 | 運用/リリース準備 | 品質ゲート（lint/contract-literals/typecheck/test）とCIの段階E2Eは稼働 | 監視・Runbook・非機能検証が未着手 | P1対応が必要 |
@@ -138,7 +139,7 @@ Last Updated: 2026-02-14
 | --- | --- | --- | --- | --- |
 | 2026-02-14 | OAuth callbackが固定ユーザーを発行しており、実ユーザー識別ができない | 高 | `M5-10` で code exchange + user永続化 + セッション統合テストを実施 | CLOSED |
 | 2026-02-14 | 表示名変更API/UIが未実装のため、匿名IDのまま変更できない | 中 | `M5-14`（API）→ `M5-15`（UI）の順で対応する | OPEN |
-| 2026-02-14 | Lobby/Table/History がMVP固定データ依存で本番データ経路を検証できない | 高 | `M5-11` でPostgreSQL Repositoryへ切替し、MVP fixtureはテスト用途へ限定 | OPEN |
+| 2026-02-14 | Lobby/Table/History がMVP固定データ依存で本番データ経路を検証できない | 高 | `M5-11` でSupabase Repositoryへ切替。環境変数未設定時のみMVP fallbackを許容 | CLOSED |
 | 2026-02-14 | Webクライアントの `/ws` 接続経路がローカル起動構成と不整合になる可能性 | 中 | `M5-12` でWS接続経路を固定し、2ユーザー手動試験を最小受け入れ条件に追加 | OPEN |
 | 2026-02-14 | 画面設計書のUIログ要件（`reason`/`appliesFrom`保持）が未充足 | 中 | `M5-13` でUI反映 + 画面仕様テストケースを追加 | OPEN |
 | 2026-02-11 | テーブル進行ロジックの複雑化で回帰が起きやすい | 高 | GameRule単体テストを先行整備 | OPEN |
@@ -149,6 +150,7 @@ Last Updated: 2026-02-14
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-14 | M5-11 API実データ化方針 | `startRealtimeServer` で Supabase 環境変数を検出した場合に `Lobby/Table/History` のRepositoryを Supabase 実装へ注入し、未設定時は既存MVP fallbackを維持する | ローカル検証・既存テストの互換を保ちながら、本番相当の実データ経路へ段階移行するため | [`apps/server/src/realtime/server.ts`](../../apps/server/src/realtime/server.ts), [`apps/server/src/repository/lobby-table-repository.supabase.ts`](../../apps/server/src/repository/lobby-table-repository.supabase.ts), [`apps/server/src/repository/table-detail-repository.supabase.ts`](../../apps/server/src/repository/table-detail-repository.supabase.ts), [`apps/server/src/repository/history-repository.supabase.ts`](../../apps/server/src/repository/history-repository.supabase.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-14 | Colima向けSupabase起動手順の更新（LOCAL-DB-START-01） | `pnpm db:start` は Colima 失敗時に `edge-runtime/logflare/vector` 除外構成を先に試し、最終的にDB-onlyへフォールバックする。認証/REST確認用に `pnpm db:start:api` を追加 | OAuth連携やSupabase REST検証に必要な `SERVICE_ROLE_KEY` をローカルで取得しやすくし、DB-only前提との使い分けを明確化するため | [`scripts/db-start.sh`](../../scripts/db-start.sh), [`scripts/db-start-api.sh`](../../scripts/db-start-api.sh), [`package.json`](../../package.json), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`README.md`](../../supabase/migrations/README.md) |
 | 2026-02-14 | 認証表示名の初期値・更新方針（M5-10追補） | 初回ログイン時の `display_name` は Google `name` を使わず匿名ID（`Player-XXXXXX`）を採番し、同一 `google_sub` 再ログイン時は上書きしない。表示名変更機能は `M5-14`（API）と `M5-15`（UI）に分離 | 本名表示を避けるプライバシー要件を満たしつつ、表示名変更機能を段階的に導入するため | [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md) |
 | 2026-02-14 | M5-10 認証実運用化方針 | callbackで固定ユーザー発行を廃止し、Google code exchange結果（`sub`/`name`）を `users`/`wallets` へ永続化したユーザーをセッション化する。Supabase未設定時はin-memory fallbackを使用 | リリース阻害P0だった「固定ユーザー依存」を解消し、`/api/auth/me` を実ユーザー基準へ移行するため | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/google-oauth-client.ts`](../../apps/server/src/google-oauth-client.ts), [`apps/server/src/repository/auth-user-repository.ts`](../../apps/server/src/repository/auth-user-repository.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -228,4 +230,4 @@ Last Updated: 2026-02-14
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了 | なし | MVP固定データ依存、ローカルWS経路未固定、DEC-01 が残存 | M5-11 -> M5-12 の順にP0解消 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了 | なし | ローカルWS経路未固定、DEC-01 が残存 | M5-12 のP0解消を最優先 |

@@ -508,6 +508,11 @@ Google OAuth開始API設定（実装ルール）:
 - `gameType`
 - `emptySeats`
 
+実装ルール（M5-11）:
+
+- `SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が設定されている場合、`/api/lobby/tables` と `/api/tables/:tableId` は Supabase REST の Repository 実装を使用して実データを返す。
+- 上記環境変数が未設定の場合は、開発用フォールバックとして `createMvp*Repository` を使用する。
+
 ## 8.3 履歴
 
 | Method | Path                         | 説明                                     |
@@ -530,6 +535,12 @@ Google OAuth開始API設定（実装ルール）:
 - `streetActions`（3rd〜7th）
 - `showdown`
 - `profitLoss`
+
+実装ルール（M5-11）:
+
+- `SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が設定されている場合、履歴APIは Supabase REST の Repository 実装を使用する。
+- 履歴詳細の `streetActions` は `hand_events`、`showdown` は `hand_results` を正として再構成する。
+- 上記環境変数が未設定の場合は、開発用フォールバックとして `createMvpHistoryRepository` を使用する。
 
 ---
 
