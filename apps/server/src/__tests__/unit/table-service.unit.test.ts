@@ -1,4 +1,5 @@
 import {
+  DealEndReason,
   RealtimeErrorCode,
   type RealtimeTableCommand,
   RealtimeTableCommandType,
@@ -7,9 +8,11 @@ import {
   SeatStatus,
   SnapshotReason,
   Street,
+  StreetAdvanceReason,
   TableBuyIn,
   TableCommandAction,
   TableEventName,
+  TableStatus,
 } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import type { SessionUser } from "../../auth-session";
@@ -381,6 +384,702 @@ describe("RealtimeTableService 席管理", () => {
     }
   });
 
+  it("ベッティングラウンド完了で StreetAdvance/DealCard を発行し 4th に進む", async () => {
+    const service = createRealtimeTableService();
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const joined1Seat = expectEvent(
+      joined1.events[0],
+      TableEventName.SeatStateChangedEvent,
+    ).payload.seatNo;
+    const joined2Seat = expectEvent(
+      joined2.events[0],
+      TableEventName.SeatStateChangedEvent,
+    ).payload.seatNo;
+    const seatByUserId = new Map<string, number>();
+    seatByUserId.set(user1.userId, joined1Seat);
+    seatByUserId.set(user2.userId, joined2Seat);
+
+    const userBySeatNo = (seatNo: number): SessionUser =>
+      seatByUserId.get(user1.userId) === seatNo ? user1 : user2;
+
+    const bringIn = expectEvent(
+      joined2.events.find(
+        (event) => event.eventName === TableEventName.BringInEvent,
+      ),
+      TableEventName.BringInEvent,
+    );
+    const completeSeatNo = bringIn.payload.nextToActSeatNo as number;
+
+    const complete = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.COMPLETE },
+      }),
+      user: userBySeatNo(completeSeatNo),
+      occurredAt: NOW,
+    });
+    expect(complete.ok).toBe(true);
+    if (!complete.ok) {
+      return;
+    }
+
+    const callSeatNo = expectEvent(
+      complete.events[0],
+      TableEventName.CompleteEvent,
+    ).payload.nextToActSeatNo as number;
+    const call = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.CALL },
+      }),
+      user: userBySeatNo(callSeatNo),
+      occurredAt: NOW,
+    });
+    expect(call.ok).toBe(true);
+    if (!call.ok) {
+      return;
+    }
+
+    expect(call.events[0]?.eventName).toBe(TableEventName.CallEvent);
+    const streetAdvance = expectEvent(
+      call.events.find(
+        (event) => event.eventName === TableEventName.StreetAdvanceEvent,
+      ),
+      TableEventName.StreetAdvanceEvent,
+    );
+    expect(streetAdvance.payload.fromStreet).toBe(Street.THIRD);
+    expect(streetAdvance.payload.toStreet).toBe(Street.FOURTH);
+    expect(streetAdvance.payload.reason).toBe(
+      StreetAdvanceReason.BETTING_ROUND_COMPLETE,
+    );
+    expect(streetAdvance.payload.tableStatus).toBe(TableStatus.BETTING);
+
+    const dealCard = expectEvent(
+      call.events.find(
+        (event) => event.eventName === TableEventName.DealCardEvent,
+      ),
+      TableEventName.DealCardEvent,
+    );
+    expect(dealCard.payload.street).toBe(Street.FOURTH);
+    expect(typeof dealCard.payload.toActSeatNo).toBe("number");
+    expect(Array.isArray(dealCard.payload.cards)).toBe(true);
+    expect(dealCard.payload.cards.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("残り1人で StreetAdvance(HAND_CLOSED) と DealEnd(UNCONTESTED) へ遷移する", async () => {
+    const service = createRealtimeTableService();
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const joined1Seat = expectEvent(
+      joined1.events[0],
+      TableEventName.SeatStateChangedEvent,
+    ).payload.seatNo;
+    const joined2Seat = expectEvent(
+      joined2.events[0],
+      TableEventName.SeatStateChangedEvent,
+    ).payload.seatNo;
+    const seatByUserId = new Map<string, number>();
+    seatByUserId.set(user1.userId, joined1Seat);
+    seatByUserId.set(user2.userId, joined2Seat);
+
+    const bringIn = expectEvent(
+      joined2.events.find(
+        (event) => event.eventName === TableEventName.BringInEvent,
+      ),
+      TableEventName.BringInEvent,
+    );
+    const foldSeatNo = bringIn.payload.nextToActSeatNo as number;
+    const foldUser =
+      seatByUserId.get(user1.userId) === foldSeatNo ? user1 : user2;
+
+    const folded = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.FOLD },
+      }),
+      user: foldUser,
+      occurredAt: NOW,
+    });
+    expect(folded.ok).toBe(true);
+    if (!folded.ok) {
+      return;
+    }
+
+    expect(folded.events[0]?.eventName).toBe(TableEventName.FoldEvent);
+    const streetAdvance = expectEvent(
+      folded.events.find(
+        (event) => event.eventName === TableEventName.StreetAdvanceEvent,
+      ),
+      TableEventName.StreetAdvanceEvent,
+    );
+    expect(streetAdvance.payload.reason).toBe(StreetAdvanceReason.HAND_CLOSED);
+    expect(streetAdvance.payload.tableStatus).toBe(TableStatus.HAND_END);
+    expect(streetAdvance.payload.toStreet).toBeNull();
+
+    const dealEnd = expectEvent(
+      folded.events.find(
+        (event) => event.eventName === TableEventName.DealEndEvent,
+      ),
+      TableEventName.DealEndEvent,
+    );
+    expect(dealEnd.payload.endReason).toBe(DealEndReason.UNCONTESTED);
+    expect(dealEnd.payload.finalPot).toBeGreaterThan(0);
+  });
+
+  it("7th完了時に Showdown と DealEnd(SHOWDOWN) を発行する", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      tables: Map<
+        string,
+        {
+          seats: Array<{
+            seatNo: number;
+            userId: string | null;
+            stack: number;
+          }>;
+          currentHand: {
+            street: string;
+            toActSeatNo: number | null;
+            streetBetTo: number;
+            raiseCount: number;
+            players: Array<{
+              seatNo: number;
+              streetContribution: number;
+              inHand: boolean;
+              allIn: boolean;
+              actedThisRound: boolean;
+            }>;
+          } | null;
+        }
+      >;
+    };
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+
+    const table = service.tables.get(TABLE_ID);
+    if (!table?.currentHand) {
+      throw new Error("進行中ハンドが見つかりません。");
+    }
+
+    const firstSeat = table.currentHand.players[0];
+    const secondSeat = table.currentHand.players[1];
+    if (!firstSeat || !secondSeat) {
+      throw new Error("ショーダウン検証用プレイヤーが不足しています。");
+    }
+
+    table.currentHand.street = Street.SEVENTH;
+    table.currentHand.toActSeatNo = firstSeat.seatNo;
+    table.currentHand.streetBetTo = 0;
+    table.currentHand.raiseCount = 0;
+    firstSeat.streetContribution = 0;
+    secondSeat.streetContribution = 0;
+    firstSeat.inHand = true;
+    secondSeat.inHand = true;
+    firstSeat.allIn = false;
+    secondSeat.allIn = false;
+    firstSeat.actedThisRound = false;
+    secondSeat.actedThisRound = true;
+
+    const check = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.CHECK },
+      }),
+      user:
+        table.seats.find((seat) => seat.seatNo === firstSeat.seatNo)?.userId ===
+        user1.userId
+          ? user1
+          : user2,
+      occurredAt: NOW,
+    });
+    expect(check.ok).toBe(true);
+    if (!check.ok) {
+      return;
+    }
+
+    expect(check.events[0]?.eventName).toBe(TableEventName.CheckEvent);
+    expect(check.events[1]?.eventName).toBe(TableEventName.StreetAdvanceEvent);
+    expect(check.events[2]?.eventName).toBe(TableEventName.ShowdownEvent);
+    expect(check.events[3]?.eventName).toBe(TableEventName.DealEndEvent);
+
+    const streetAdvance = expectEvent(
+      check.events[1],
+      TableEventName.StreetAdvanceEvent,
+    );
+    expect(streetAdvance.payload.toStreet).toBeNull();
+    expect(streetAdvance.payload.tableStatus).toBe(TableStatus.SHOWDOWN);
+
+    const showdown = expectEvent(check.events[2], TableEventName.ShowdownEvent);
+    expect(showdown.payload.hasShowdown).toBe(true);
+    expect(showdown.payload.players.length).toBeGreaterThanOrEqual(2);
+    expect(showdown.payload.potResults.length).toBeGreaterThanOrEqual(1);
+
+    const dealEnd = expectEvent(check.events[3], TableEventName.DealEndEvent);
+    expect(dealEnd.payload.endReason).toBe(DealEndReason.SHOWDOWN);
+    expect(dealEnd.payload.finalPot).toBeGreaterThan(0);
+  });
+
+  it("ALL_IN_RUNOUT では 5th-7th を自動進行して Showdown/DealEnd する", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      tables: Map<
+        string,
+        {
+          seats: Array<{
+            seatNo: number;
+            status: string;
+            userId: string | null;
+            stack: number;
+          }>;
+          currentHand: {
+            street: string;
+            toActSeatNo: number | null;
+            streetBetTo: number;
+            raiseCount: number;
+            players: Array<{
+              seatNo: number;
+              inHand: boolean;
+              allIn: boolean;
+              actedThisRound: boolean;
+              streetContribution: number;
+            }>;
+          } | null;
+        }
+      >;
+    };
+
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+
+    const table = service.tables.get(TABLE_ID);
+    if (!table?.currentHand) {
+      throw new Error("進行中ハンドが見つかりません。");
+    }
+
+    const actingPlayer = table.currentHand.players[0];
+    const waitingPlayer = table.currentHand.players[1];
+    if (!actingPlayer || !waitingPlayer) {
+      throw new Error("ALL_IN_RUNOUT 検証用プレイヤーが不足しています。");
+    }
+
+    const actingSeat = table.seats.find(
+      (seat) => seat.seatNo === actingPlayer.seatNo,
+    );
+    const waitingSeat = table.seats.find(
+      (seat) => seat.seatNo === waitingPlayer.seatNo,
+    );
+    if (!actingSeat || !waitingSeat) {
+      throw new Error("対象シートが見つかりません。");
+    }
+
+    // 次ハンド自動開始を避け、今回ハンドの進行イベントだけを検証しやすくする。
+    waitingSeat.status = SeatStatus.SIT_OUT;
+
+    table.currentHand.street = Street.FOURTH;
+    table.currentHand.toActSeatNo = actingPlayer.seatNo;
+    table.currentHand.streetBetTo = 20;
+    table.currentHand.raiseCount = 0;
+
+    actingPlayer.inHand = true;
+    actingPlayer.allIn = false;
+    actingPlayer.actedThisRound = false;
+    actingPlayer.streetContribution = 0;
+    actingSeat.stack = 20;
+
+    waitingPlayer.inHand = true;
+    waitingPlayer.allIn = true;
+    waitingPlayer.actedThisRound = true;
+    waitingPlayer.streetContribution = 20;
+    waitingSeat.stack = 0;
+
+    const call = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.CALL },
+      }),
+      user: actingSeat.userId === user1.userId ? user1 : user2,
+      occurredAt: NOW,
+    });
+    expect(call.ok).toBe(true);
+    if (!call.ok) {
+      return;
+    }
+
+    expect(call.events[0]?.eventName).toBe(TableEventName.CallEvent);
+
+    const streetAdvances = call.events.filter(
+      (
+        event,
+      ): event is Extract<
+        RealtimeTableEventMessage,
+        { eventName: typeof TableEventName.StreetAdvanceEvent }
+      > => event.eventName === TableEventName.StreetAdvanceEvent,
+    );
+    expect(streetAdvances).toHaveLength(4);
+    expect(streetAdvances[0]?.payload.toStreet).toBe(Street.FIFTH);
+    expect(streetAdvances[1]?.payload.toStreet).toBe(Street.SIXTH);
+    expect(streetAdvances[2]?.payload.toStreet).toBe(Street.SEVENTH);
+    expect(streetAdvances[3]?.payload.toStreet).toBeNull();
+    expect(streetAdvances[3]?.payload.tableStatus).toBe(TableStatus.SHOWDOWN);
+    for (const streetAdvance of streetAdvances) {
+      expect(streetAdvance.payload.reason).toBe(
+        StreetAdvanceReason.ALL_IN_RUNOUT,
+      );
+    }
+
+    const dealCards = call.events.filter(
+      (
+        event,
+      ): event is Extract<
+        RealtimeTableEventMessage,
+        { eventName: typeof TableEventName.DealCardEvent }
+      > => event.eventName === TableEventName.DealCardEvent,
+    );
+    expect(dealCards.map((event) => event.payload.street)).toEqual([
+      Street.FIFTH,
+      Street.SIXTH,
+      Street.SEVENTH,
+    ]);
+    expect(dealCards.every((event) => event.payload.toActSeatNo === null)).toBe(
+      true,
+    );
+
+    const showdownIndex = call.events.findIndex(
+      (event) => event.eventName === TableEventName.ShowdownEvent,
+    );
+    const dealEndIndex = call.events.findIndex(
+      (event) => event.eventName === TableEventName.DealEndEvent,
+    );
+    expect(showdownIndex).toBeGreaterThan(0);
+    expect(dealEndIndex).toBeGreaterThan(showdownIndex);
+
+    const dealEnd = expectEvent(
+      call.events[dealEndIndex],
+      TableEventName.DealEndEvent,
+    );
+    expect(dealEnd.payload.endReason).toBe(DealEndReason.SHOWDOWN);
+  });
+
+  it("SEATED_WAIT_NEXT_HAND の席はハンド終了時に ACTIVE 化され次ハンドへ参加できる", async () => {
+    const service = createRealtimeTableService();
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+    const user3 = createUser(3);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const user1SeatNo = expectEvent(
+      joined1.events[0],
+      TableEventName.SeatStateChangedEvent,
+    ).payload.seatNo;
+
+    const joined3 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user3,
+      occurredAt: NOW,
+    });
+    expect(joined3.ok).toBe(true);
+    if (!joined3.ok) {
+      return;
+    }
+    const joined3SeatEvent = expectEvent(
+      joined3.events[0],
+      TableEventName.SeatStateChangedEvent,
+    );
+    expect(joined3SeatEvent.payload.currentStatus).toBe(
+      SeatStatus.SEATED_WAIT_NEXT_HAND,
+    );
+    const joined3SeatNo = joined3SeatEvent.payload.seatNo;
+
+    const bringIn = expectEvent(
+      joined2.events.find(
+        (event) => event.eventName === TableEventName.BringInEvent,
+      ),
+      TableEventName.BringInEvent,
+    );
+    const foldSeatNo = bringIn.payload.nextToActSeatNo as number;
+
+    const folded = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.FOLD },
+      }),
+      user: foldSeatNo === user1SeatNo ? user1 : user2,
+      occurredAt: NOW,
+    });
+    expect(folded.ok).toBe(true);
+    if (!folded.ok) {
+      return;
+    }
+
+    const activatedEvent = folded.events.find(
+      (
+        event,
+      ): event is Extract<
+        RealtimeTableEventMessage,
+        { eventName: typeof TableEventName.SeatStateChangedEvent }
+      > =>
+        event.eventName === TableEventName.SeatStateChangedEvent &&
+        event.payload.reason === SeatStateChangeReason.NEXT_HAND_ACTIVATE &&
+        event.payload.seatNo === joined3SeatNo,
+    );
+    expect(activatedEvent).toBeDefined();
+    if (!activatedEvent) {
+      return;
+    }
+    expect(activatedEvent.payload.currentStatus).toBe(SeatStatus.ACTIVE);
+
+    const activatedEventIndex = folded.events.findIndex(
+      (event) => event === activatedEvent,
+    );
+    const nextDealInitIndex = folded.events.findIndex(
+      (event, index) =>
+        index > activatedEventIndex &&
+        event.eventName === TableEventName.DealInitEvent,
+    );
+    expect(nextDealInitIndex).toBeGreaterThan(activatedEventIndex);
+
+    const nextDealInit = expectEvent(
+      folded.events[nextDealInitIndex],
+      TableEventName.DealInitEvent,
+    );
+    expect(
+      nextDealInit.payload.participants.some(
+        (participant) => participant.seatNo === joined3SeatNo,
+      ),
+    ).toBe(true);
+  });
+
+  it("ハンド終了時に stack=0 の席は AUTO_LEAVE_ZERO_STACK で退席する", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      tables: Map<
+        string,
+        {
+          seats: Array<{
+            seatNo: number;
+            stack: number;
+          }>;
+          currentHand: {
+            toActSeatNo: number | null;
+            players: Array<{
+              seatNo: number;
+              inHand: boolean;
+              allIn: boolean;
+              actedThisRound: boolean;
+            }>;
+          } | null;
+        }
+      >;
+    };
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const user1SeatNo = expectEvent(
+      joined1.events[0],
+      TableEventName.SeatStateChangedEvent,
+    ).payload.seatNo;
+    const bringIn = expectEvent(
+      joined2.events.find(
+        (event) => event.eventName === TableEventName.BringInEvent,
+      ),
+      TableEventName.BringInEvent,
+    );
+    const foldSeatNo = bringIn.payload.nextToActSeatNo as number;
+    const foldUser = foldSeatNo === user1SeatNo ? user1 : user2;
+
+    const table = service.tables.get(TABLE_ID);
+    if (!table?.currentHand) {
+      throw new Error("進行中ハンドが見つかりません。");
+    }
+    const foldSeat = table.seats.find((seat) => seat.seatNo === foldSeatNo);
+    const foldPlayer = table.currentHand.players.find(
+      (player) => player.seatNo === foldSeatNo,
+    );
+    if (!foldSeat || !foldPlayer) {
+      throw new Error("対象プレイヤーが見つかりません。");
+    }
+
+    foldSeat.stack = 0;
+    foldPlayer.inHand = true;
+    foldPlayer.allIn = false;
+    foldPlayer.actedThisRound = false;
+    table.currentHand.toActSeatNo = foldSeatNo;
+
+    const folded = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.ACT,
+        payload: { action: TableCommandAction.FOLD },
+      }),
+      user: foldUser,
+      occurredAt: NOW,
+    });
+    expect(folded.ok).toBe(true);
+    if (!folded.ok) {
+      return;
+    }
+
+    const autoLeaveEvent = folded.events.find(
+      (
+        event,
+      ): event is Extract<
+        RealtimeTableEventMessage,
+        { eventName: typeof TableEventName.SeatStateChangedEvent }
+      > =>
+        event.eventName === TableEventName.SeatStateChangedEvent &&
+        event.payload.reason === SeatStateChangeReason.AUTO_LEAVE_ZERO_STACK &&
+        event.payload.seatNo === foldSeatNo,
+    );
+    expect(autoLeaveEvent).toBeDefined();
+    if (!autoLeaveEvent) {
+      return;
+    }
+    expect(autoLeaveEvent.payload.currentStatus).toBe(SeatStatus.EMPTY);
+
+    const dealEndIndex = folded.events.findIndex(
+      (event) => event.eventName === TableEventName.DealEndEvent,
+    );
+    const autoLeaveIndex = folded.events.findIndex(
+      (event) => event === autoLeaveEvent,
+    );
+    expect(autoLeaveIndex).toBeGreaterThan(dealEndIndex);
+  });
+
   it("ヘッズアップでも5bet cap超過のRAISEを拒否する", async () => {
     const service = createRealtimeTableService();
     const user1 = createUser(1);
@@ -713,6 +1412,87 @@ describe("RealtimeTableService 席管理", () => {
       TableEventName.CheckEvent,
     );
     expect(checkEvent.payload.isAuto).toBe(true);
+  });
+
+  it("タイムアウト自動アクション(FOLD)でも終局イベントまで進行する", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      executeAutoAction: ReturnType<
+        typeof createRealtimeTableService
+      >["executeAutoAction"];
+    };
+
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined2.ok) {
+      return;
+    }
+
+    const bringIn = expectEvent(
+      joined2.events.find(
+        (event) => event.eventName === TableEventName.BringInEvent,
+      ),
+      TableEventName.BringInEvent,
+    );
+    const autoSeatNo = bringIn.payload.nextToActSeatNo as number;
+
+    const autoAction = await service.executeAutoAction({
+      tableId: TABLE_ID,
+      seatNo: autoSeatNo,
+      occurredAt: NOW,
+    });
+    expect(autoAction.ok).toBe(true);
+    if (!autoAction.ok) {
+      return;
+    }
+
+    const foldEvent = expectEvent(
+      autoAction.events[0],
+      TableEventName.FoldEvent,
+    );
+    expect(foldEvent.payload.isAuto).toBe(true);
+
+    const streetAdvanceIndex = autoAction.events.findIndex(
+      (event) => event.eventName === TableEventName.StreetAdvanceEvent,
+    );
+    const dealEndIndex = autoAction.events.findIndex(
+      (event) => event.eventName === TableEventName.DealEndEvent,
+    );
+    expect(streetAdvanceIndex).toBeGreaterThan(0);
+    expect(dealEndIndex).toBeGreaterThan(streetAdvanceIndex);
+
+    const streetAdvance = expectEvent(
+      autoAction.events[streetAdvanceIndex],
+      TableEventName.StreetAdvanceEvent,
+    );
+    expect(streetAdvance.payload.reason).toBe(StreetAdvanceReason.HAND_CLOSED);
+    expect(streetAdvance.payload.toStreet).toBeNull();
+
+    const dealEnd = expectEvent(
+      autoAction.events[dealEndIndex],
+      TableEventName.DealEndEvent,
+    );
+    expect(dealEnd.payload.endReason).toBe(DealEndReason.UNCONTESTED);
   });
 
   it("disconnectStreak>=3 の切断席は自動FOLD後に自動LEAVEする", async () => {

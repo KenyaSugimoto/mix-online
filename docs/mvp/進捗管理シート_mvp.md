@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.30  
+Version: v1.31  
 Last Updated: 2026-02-14  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -35,7 +35,7 @@ Last Updated: 2026-02-14
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
-| M5 | リリース準備完了 | IN_PROGRESS | 55% | Codex | TBA | M5-12は進行停止不具合でBLOCKED。M5-16/17でプレイ成立を先行解消 |
+| M5 | リリース準備完了 | IN_PROGRESS | 65% | Codex | TBA | M5-16完了。M5-17で契約整合後にM5-12再開 |
 
 ---
 
@@ -48,8 +48,8 @@ Last Updated: 2026-02-14
 | M5-00 | M4完了時点のリリース監査（できること/未対応の棚卸し） | P0 | DONE | 監査結果を進捗管理シートと実装推進ガイドへ反映済み | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | DONE | `/api/auth/me` が固定ユーザー以外を返せる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-11 | Lobby/Table/History のMVP固定データ撤廃（DB Repositoryへ切替） | P0 | DONE | Supabase環境変数設定時に実データ返却、未設定時はMVP fallbackを維持 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-12 | ローカル統合プレイ確認（HTTP+WS接続経路固定、手動2ユーザー検証） | P0 | BLOCKED | M5-16/17完了後に、ローカルで2人1ハンド完了を再現し記録できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
-| M5-16 | Realtimeハンド進行成立（StreetAdvance/DealCard/Showdown/DealEnd 実装） | P0 | NOT_STARTED | 進行停止せず 3rd〜終局まで遷移し、`table.status`/`hands.status` が整合する | [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
+| M5-12 | ローカル統合プレイ確認（HTTP+WS接続経路固定、手動2ユーザー検証） | P0 | BLOCKED | M5-17完了後に、ローカルで2人1ハンド完了を再現し記録できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-16 | Realtimeハンド進行成立（StreetAdvance/DealCard/Showdown/DealEnd 実装） | P0 | DONE | `table.act` 後に `toActSeatNo=null` でも遷移継続し、3rd〜終局（UNCONTESTED/SHOWDOWN）まで進行できる | [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
 | M5-17 | `table.act` 契約整合（BET/BRING_IN方針確定 + 合法アクションUI制御） | P0 | NOT_STARTED | クライアント提示アクションとサーバー受理アクションが一致し、非合法操作をUIで抑止できる | [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | M5-12 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
@@ -77,7 +77,7 @@ Last Updated: 2026-02-14
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | 監視最小セットと閾値を運用可能化 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-02 | 運用Runbook整備（デプロイ手順、ローリング更新、障害復旧） | P1 | NOT_STARTED | 第三者が復旧手順を再現できる | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) |
 | M5-03 | 非機能検証（レイテンシp95、5xx率、再接続品質） | P1 | NOT_STARTED | 非機能目標の測定結果が取得可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-16 | Realtimeハンド進行成立（StreetAdvance/DealCard/Showdown/DealEnd 実装） | P0 | NOT_STARTED | 1ハンドが3rd〜終局まで停止せず進み、席/卓/履歴が整合する | [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`asyncapi.yaml`](./asyncapi.yaml), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
+| M5-16 | Realtimeハンド進行成立（StreetAdvance/DealCard/Showdown/DealEnd 実装） | P0 | DONE | 1ハンドが3rd〜終局まで停止せず進み、席/卓/履歴が整合する | [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`asyncapi.yaml`](./asyncapi.yaml), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | M5-17 | `table.act` 契約整合（BET/BRING_IN方針確定 + 合法アクションUI制御） | P0 | NOT_STARTED | UI提示とサーバー受理のアクション差分を解消する | [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M5-18 | TableStore投影強化（DealCard/StreetAdvance/Showdown/DealEnd反映） | P1 | NOT_STARTED | 主要Realtimeイベントで卓状態/手番/カード表示が破綻しない | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M5-19 | テーブルUI再設計（ゲームテーブル表示、カード可視化、操作導線改善） | P1 | NOT_STARTED | 画面設計書の卓UI要件（座席/カード/操作導線）を満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css) |
@@ -123,12 +123,13 @@ Last Updated: 2026-02-14
 | M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | DONE | 2026-02-14 | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`apps/server/src/__tests__/e2e/hp.e2e.test.ts`](../../apps/server/src/__tests__/e2e/hp.e2e.test.ts), [`apps/server/src/__tests__/e2e/ng.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ng.e2e.test.ts), [`apps/server/src/__tests__/e2e/ed.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ed.e2e.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | DONE | 2026-02-14 | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/google-oauth-client.ts`](../../apps/server/src/google-oauth-client.ts), [`apps/server/src/repository/auth/index.ts`](../../apps/server/src/repository/auth/index.ts), [`apps/server/src/__tests__/integration/http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-11 | Lobby/Table/History のMVP固定データ撤廃（DB Repositoryへ切替） | P0 | DONE | 2026-02-14 | [`apps/server/src/repository/lobby/supabase.ts`](../../apps/server/src/repository/lobby/supabase.ts), [`apps/server/src/repository/table-detail/supabase.ts`](../../apps/server/src/repository/table-detail/supabase.ts), [`apps/server/src/repository/history/supabase.ts`](../../apps/server/src/repository/history/supabase.ts), [`apps/server/src/realtime/server.ts`](../../apps/server/src/realtime/server.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
+| M5-16 | Realtimeハンド進行成立（StreetAdvance/DealCard/Showdown/DealEnd 実装） | P0 | DONE | 2026-02-14 | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`packages/shared/src/index.ts`](../../packages/shared/src/index.ts) |
 
 ## Blocked
 
 | ID | Task | Priority | Blocking Reason | Next Action | Owner |
 | --- | --- | --- | --- | --- | --- |
-| M5-12 | ローカル統合プレイ確認（手動2ユーザー） | P0 | ベッティングラウンド完了後の進行遷移未実装により、実プレイが停止する | `M5-16`（進行遷移）→ `M5-17`（契約整合）完了後に再実施 | Codex |
+| M5-12 | ローカル統合プレイ確認（手動2ユーザー） | P0 | `table.act` 契約整合（M5-17）未完了により、UI提示アクションとサーバー受理アクションに差分が残る | `M5-17` 完了後に手動2ユーザー検証を再実施 | Codex |
 
 ## M4完了時点の機能棚卸し（2026-02-14）
 
@@ -136,7 +137,7 @@ Last Updated: 2026-02-14
 | --- | --- | --- | --- |
 | 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる。初期表示名は匿名ID（`Player-XXXXXX`）で採番し、再ログインで上書きしない | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える）。ユーザー自身の表示名変更API/UIは未実装 | P0主要対応完了 |
 | Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立。Supabase環境変数設定時はRepository経由で実データを返却できる | Realtimeの永続化は未接続のため、実プレイ後の履歴反映は `M5-12` で再確認が必要 | P0主要対応完了 |
-| Realtimeプレイ | `/ws` 接続、着席、3rd開始（DealInit/PostAnte/DealCards3rd/BringIn）までは動作確認済み | ベッティングラウンド完了後の進行遷移（StreetAdvance/DealEnd）が未実装で、`toActSeatNo=null` のまま停止しうる | P0対応が必要 |
+| Realtimeプレイ | `/ws` 接続、着席、3rd開始に加え、`StreetAdvance/DealCard/Showdown/DealEnd` で終局まで進行できることを unit で確認済み | `table.act` の契約差分（BET/BRING_IN）とUI提示アクション整合が未解消（M5-17） | P0対応が必要 |
 | ゲーム画面UI | 席状態ごとの基本操作可否、手番タイマー、卓/席サマリ表示は実装済み | カード表示、合法アクション絞り込み、`reason`/`appliesFrom` ログ表示などゲームプレイ必須UIが不足 | P0〜P1対応が必要 |
 | 運用/リリース準備 | 品質ゲート（lint/contract-literals/typecheck/test）とCIの段階E2Eは稼働 | 監視・Runbook・非機能検証が未着手 | P1対応が必要 |
 
@@ -146,7 +147,7 @@ Last Updated: 2026-02-14
 
 | Date | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- | --- |
-| 2026-02-14 | 手番進行が `toActSeatNo=null` で停止し、卓が `BETTING` から終局へ遷移しない | 高 | `M5-16` で StreetAdvance/DealEnd/次ハンド開始の進行ロジックを実装し、HP-04系E2Eで固定 | OPEN |
+| 2026-02-14 | 手番進行が `toActSeatNo=null` で停止し、卓が `BETTING` から終局へ遷移しない | 高 | `M5-16` で StreetAdvance/DealCard/Showdown/DealEnd と次ハンド開始判定を実装し、unitテストで回帰検知を追加 | CLOSED |
 | 2026-02-14 | `table.act` の契約値（BET/BRING_IN）とサーバー実装が不一致で、UIに非対応アクションが表示される | 高 | `M5-17` で契約整合（受理 or 禁止方針）を確定し、UIで合法アクションのみ提示 | OPEN |
 | 2026-02-14 | Realtime契約/E2Eが全イベント系（DealCard/StreetAdvance/Showdown/DealEnd）を検証できておらず、回帰を見逃す | 高 | `M5-20` で契約テストとHPシナリオを拡張し、停止系不具合をCIで検知 | OPEN |
 | 2026-02-14 | OAuth callbackが固定ユーザーを発行しており、実ユーザー識別ができない | 高 | `M5-10` で code exchange + user永続化 + セッション統合テストを実施 | CLOSED |
@@ -162,6 +163,7 @@ Last Updated: 2026-02-14
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-14 | M5-16 Realtime進行遷移の実装方針 | `table.act` 後に `toActSeatNo=null` となった場合、`StreetAdvance` を起点に `DealCard`（4th-7th）・`Showdown`・`DealEnd` を連結し、`SEATED_WAIT_NEXT_HAND` 活性化と次ハンド開始判定まで同一トランザクション内で処理する | 手動プレイで顕在化した進行停止を解消し、`M5-12` の再検証前提をコード上で固定するため | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
 | 2026-02-14 | M5-12スコープ再定義（実装前のギャップ棚卸し） | 進行停止不具合を受け、`M5-12` は一旦 `BLOCKED` とし、先に `M5-16/17/18/20` でプレイ成立の実装ギャップを解消してから手動2ユーザー検証を再開する | 手動検証だけ先行しても「プレイ不能状態」を繰り返すため、実装優先順位を再整理して品質を担保する必要があるため | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md), [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts) |
 | 2026-02-14 | M5-12 ローカル接続経路固定方針 | Web開発サーバー（Vite）で `/api` に加えて `/ws` を `http://localhost:3000` へproxyし、`TableStore` は `VITE_WS_URL` 未設定時に同一Origin `/ws` を使う | ローカル起動時のHTTP/WS経路差分をなくし、2ユーザー手動検証で再現可能な接続条件を固定するため | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-14 | M5-11 API実データ化方針 | `startRealtimeServer` で Supabase 環境変数を検出した場合に `Lobby/Table/History` のRepositoryを Supabase 実装へ注入し、未設定時は既存MVP fallbackを維持する | ローカル検証・既存テストの互換を保ちながら、本番相当の実データ経路へ段階移行するため | [`apps/server/src/realtime/server.ts`](../../apps/server/src/realtime/server.ts), [`apps/server/src/repository/lobby/supabase.ts`](../../apps/server/src/repository/lobby/supabase.ts), [`apps/server/src/repository/table-detail/supabase.ts`](../../apps/server/src/repository/table-detail/supabase.ts), [`apps/server/src/repository/history/supabase.ts`](../../apps/server/src/repository/history/supabase.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -244,4 +246,4 @@ Last Updated: 2026-02-14
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了、M5-12の接続経路固定 | M5-16（進行遷移）、M5-17（契約整合） | 進行停止不具合、Realtime契約未検証範囲、DEC-01 が残存 | M5-16 -> M5-17 -> M5-12 再実施 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了、M5-12の接続経路固定、M5-16完了 | M5-17（契約整合） | `table.act` 契約差分、Realtime契約未検証範囲、DEC-01 が残存 | M5-17 -> M5-12 再実施 |
