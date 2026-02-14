@@ -33,6 +33,7 @@ describe("HTTP契約テスト（M2-06）", () => {
     const openapi = readFileSync(openapiPath, "utf-8");
 
     expect(openapi).toContain("/api/auth/me:");
+    expect(openapi).toContain("/api/auth/me/display-name:");
     expect(openapi).toContain("/api/auth/logout:");
     expect(openapi).toContain("/api/lobby/tables:");
     expect(openapi).toContain("/api/tables/{tableId}:");
@@ -59,6 +60,27 @@ describe("HTTP契約テスト（M2-06）", () => {
     };
     expect(unauthorizedLogout.status).toBe(401);
     expect(unauthorizedLogoutBody.error.code).toBe(ErrorCode.AUTH_EXPIRED);
+
+    const unauthorizedDisplayNamePatch = await app.request(
+      "/api/auth/me/display-name",
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          displayName: "Renamed Player",
+        }),
+      },
+    );
+    const unauthorizedDisplayNamePatchBody =
+      (await unauthorizedDisplayNamePatch.json()) as {
+        error: { code: string };
+      };
+    expect(unauthorizedDisplayNamePatch.status).toBe(401);
+    expect(unauthorizedDisplayNamePatchBody.error.code).toBe(
+      ErrorCode.AUTH_EXPIRED,
+    );
 
     const { app: authenticatedApp, cookie } = createAuthenticatedApp();
     const authorizedMe = await authenticatedApp.request("/api/auth/me", {

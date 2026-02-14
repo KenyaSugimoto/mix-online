@@ -23,6 +23,23 @@ describe("auth-user-repository", () => {
     expect(second.walletBalance).toBe(4000);
   });
 
+  it("in-memory repository は userId 指定で表示名を更新できる", async () => {
+    const repository = createInMemoryAuthUserRepository();
+    const user = await repository.findOrCreateByGoogleSub({
+      googleSub: "google-sub-2",
+      now: new Date("2026-02-14T12:00:00.000Z"),
+    });
+
+    const updated = await repository.updateDisplayName({
+      userId: user.userId,
+      displayName: "Renamed Player",
+    });
+
+    expect(updated.userId).toBe(user.userId);
+    expect(updated.displayName).toBe("Renamed Player");
+    expect(updated.walletBalance).toBe(4000);
+  });
+
   it("Supabase repository は未登録ユーザー時に匿名表示名で users/wallets を作成して返す", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -86,6 +103,49 @@ describe("auth-user-repository", () => {
     expect(usersBody[0]).toEqual({
       google_sub: "google-sub-1",
       display_name: toDefaultDisplayName("google-sub-1"),
+    });
+  });
+
+  it("Supabase repository は表示名を更新して返す", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([{ id: "user-1", display_name: "Renamed Player" }]),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ balance: 4000 }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    const repository = createSupabaseAuthUserRepository({
+      supabaseUrl: "http://127.0.0.1:54321",
+      serviceRoleKey: "service-role-key",
+      fetchImpl: fetchMock,
+    });
+
+    const updated = await repository.updateDisplayName({
+      userId: "user-1",
+      displayName: "Renamed Player",
+    });
+
+    expect(updated).toEqual({
+      userId: "user-1",
+      displayName: "Renamed Player",
+      walletBalance: 4000,
+    });
+    const usersPatchCall = fetchMock.mock.calls[0];
+    expect(usersPatchCall?.[0].toString()).toContain("/rest/v1/users");
+    const usersPatchCallInit = usersPatchCall?.[1] as RequestInit;
+    expect(usersPatchCallInit.method).toBe("PATCH");
+    expect(JSON.parse(usersPatchCallInit.body as string)).toEqual({
+      display_name: "Renamed Player",
     });
   });
 });

@@ -92,6 +92,31 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/auth/me/display-name:
+    patch:
+      tags: [Auth]
+      summary: 表示名変更
+      description: 現在セッションの表示名を更新する。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthUpdateDisplayNameRequest"
+      responses:
+        "200":
+          description: 表示名更新後のユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMeResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/auth/logout:
     post:
       tags: [Auth]
@@ -259,6 +284,17 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
 
   schemas:
+    AuthUpdateDisplayNameRequest:
+      type: object
+      required:
+        - displayName
+      additionalProperties: false
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 64
+
     AuthMeResponse:
       type: object
       required:
