@@ -264,9 +264,9 @@ const dealNextStreet = (params: {
       seatNo: player.seatNo,
       visibility:
         toStreet === Street.SEVENTH
-          ? CardVisibility.DOWN_HIDDEN
+          ? CardVisibility.DOWN_SELF
           : CardVisibility.UP,
-      card: toStreet === Street.SEVENTH ? null : dealtCard,
+      card: dealtCard,
     };
   });
 
@@ -603,7 +603,10 @@ export const startThirdStreet = (table: TableState): PendingEvent[] => {
         | typeof ThirdStreetCardPosition.HOLE_1
         | typeof ThirdStreetCardPosition.HOLE_2
         | typeof ThirdStreetCardPosition.UP_3;
-      visibility: typeof CardVisibility.DOWN_HIDDEN | typeof CardVisibility.UP;
+      visibility:
+        | typeof CardVisibility.DOWN_HIDDEN
+        | typeof CardVisibility.DOWN_SELF
+        | typeof CardVisibility.UP;
       card: CardValue | null;
     }>;
   }> = [];
@@ -624,13 +627,13 @@ export const startThirdStreet = (table: TableState): PendingEvent[] => {
       cards: [
         {
           position: ThirdStreetCardPosition.HOLE_1,
-          visibility: CardVisibility.DOWN_HIDDEN,
-          card: null,
+          visibility: CardVisibility.DOWN_SELF,
+          card: hole1,
         },
         {
           position: ThirdStreetCardPosition.HOLE_2,
-          visibility: CardVisibility.DOWN_HIDDEN,
-          card: null,
+          visibility: CardVisibility.DOWN_SELF,
+          card: hole2,
         },
         {
           position: ThirdStreetCardPosition.UP_3,

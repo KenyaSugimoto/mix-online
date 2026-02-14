@@ -1,4 +1,8 @@
-import type { RealtimeTableEventMessage } from "@mix-online/shared";
+import {
+  CardSlot,
+  CardVisibility,
+  type RealtimeTableEventMessage,
+} from "@mix-online/shared";
 import type { SessionUser } from "../../auth-session";
 import {
   TABLE_SNAPSHOT_MESSAGE_TYPE,
@@ -99,6 +103,53 @@ export const createSnapshotMessage = (params: {
   const table =
     params.tables.get(params.tableId) ??
     createDefaultTableState(params.tableId);
+
+  const currentHandCards =
+    table.currentHand?.players.map((player) => {
+      const slotOrder: Record<string, number> = {
+        [CardSlot.HOLE_1]: 1,
+        [CardSlot.HOLE_2]: 2,
+        [CardSlot.UP_3]: 3,
+        [CardSlot.UP_4]: 4,
+        [CardSlot.UP_5]: 5,
+        [CardSlot.UP_6]: 6,
+        [CardSlot.DOWN_7]: 7,
+      };
+
+      const cards = [
+        ...player.cardsDown.map((card, index) => ({
+          slot:
+            index === 0
+              ? CardSlot.HOLE_1
+              : index === 1
+                ? CardSlot.HOLE_2
+                : CardSlot.DOWN_7,
+          visibility: CardVisibility.DOWN_SELF,
+          card,
+        })),
+        ...player.cardsUp.map((card, index) => ({
+          slot:
+            index === 0
+              ? CardSlot.UP_3
+              : index === 1
+                ? CardSlot.UP_4
+                : index === 2
+                  ? CardSlot.UP_5
+                  : CardSlot.UP_6,
+          visibility: CardVisibility.UP,
+          card,
+        })),
+      ].sort(
+        (left, right) =>
+          (slotOrder[left.slot] ?? Number.MAX_SAFE_INTEGER) -
+          (slotOrder[right.slot] ?? Number.MAX_SAFE_INTEGER),
+      );
+      return {
+        seatNo: player.seatNo,
+        cards,
+      };
+    }) ?? [];
+
   return {
     type: TABLE_SNAPSHOT_MESSAGE_TYPE,
     tableId: params.tableId,
@@ -139,6 +190,7 @@ export const createSnapshotMessage = (params: {
               raiseCount: table.currentHand.raiseCount,
               toActSeatNo: table.currentHand.toActSeatNo,
               actionDeadlineAt: null,
+              cards: currentHandCards,
             }
           : null,
         dealerSeatNo: table.dealerSeatNo,

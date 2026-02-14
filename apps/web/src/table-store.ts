@@ -1,5 +1,11 @@
 import {
   BettingStructure,
+  CARD_RANKS,
+  CARD_SLOTS,
+  CARD_SUITS,
+  CARD_VISIBILITIES,
+  CardSlot,
+  type CardVisibility,
   GAME_TYPES,
   HAND_STATUSES,
   HandStatus,
@@ -7,15 +13,20 @@ import {
   REALTIME_ERROR_CODES,
   type RealtimeErrorCode,
   RealtimeTableCommandType,
+  SEAT_STATE_CHANGE_APPLIES_FROM,
+  SEAT_STATE_CHANGE_REASONS,
   SEAT_STATUSES,
   SNAPSHOT_REASONS,
   STREETS,
+  STREET_ADVANCE_REASONS,
   SeatStatus,
   Street,
   TABLE_STATUSES,
+  THIRD_STREET_CARD_POSITIONS,
   type TableCommandAction,
   TableEventName,
   TableStatus,
+  type ThirdStreetCardPosition,
 } from "@mix-online/shared";
 import type { CurrentHandSummary, TableDetail, TableSeat } from "./table-api";
 import type { SeatCommandType } from "./table-control";
@@ -42,9 +53,40 @@ export const TableStoreSyncStatus = {
 export type TableStoreSyncStatus =
   (typeof TableStoreSyncStatus)[keyof typeof TableStoreSyncStatus];
 
+type TableStoreCard = {
+  slot: CardSlot;
+  visibility: CardVisibility;
+  card: {
+    rank: (typeof CARD_RANKS)[number];
+    suit: (typeof CARD_SUITS)[number];
+  } | null;
+};
+
+export type TableStoreCardsBySeatNo = Record<number, TableStoreCard[]>;
+
+export type TableStoreEventLogEntry =
+  | {
+      kind: "seat_state_changed";
+      occurredAt: string;
+      seatNo: number;
+      previousStatus: (typeof SEAT_STATUSES)[number];
+      currentStatus: (typeof SEAT_STATUSES)[number];
+      reason: (typeof SEAT_STATE_CHANGE_REASONS)[number];
+      appliesFrom: (typeof SEAT_STATE_CHANGE_APPLIES_FROM)[number];
+    }
+  | {
+      kind: "street_advance";
+      occurredAt: string;
+      fromStreet: (typeof STREETS)[number];
+      toStreet: (typeof STREETS)[number] | null;
+      reason: (typeof STREET_ADVANCE_REASONS)[number];
+    };
+
 export type TableStoreState = {
   table: TableDetail;
   tableSeq: number;
+  cardsBySeatNo: TableStoreCardsBySeatNo;
+  eventLogs: TableStoreEventLogEntry[];
   connectionStatus: TableStoreConnectionStatus;
   syncStatus: TableStoreSyncStatus;
   lastErrorCode: RealtimeErrorCode | null;
@@ -116,6 +158,17 @@ type TableSnapshotHand = {
   raiseCount: number;
   toActSeatNo: number | null;
   actionDeadlineAt: string | null;
+  cards: Array<{
+    seatNo: number;
+    cards: Array<{
+      slot: (typeof CARD_SLOTS)[number];
+      visibility: (typeof CARD_VISIBILITIES)[number];
+      card: {
+        rank: (typeof CARD_RANKS)[number];
+        suit: (typeof CARD_SUITS)[number];
+      } | null;
+    }>;
+  }>;
 };
 
 type TableSnapshotMessage = {
@@ -185,6 +238,16 @@ const isEnumValue = <T extends readonly string[]>(
   value: unknown,
   values: T,
 ): value is T[number] => isString(value) && values.includes(value as T[number]);
+
+const isCardValue = (
+  value: unknown,
+): value is {
+  rank: (typeof CARD_RANKS)[number];
+  suit: (typeof CARD_SUITS)[number];
+} =>
+  isRecord(value) &&
+  isEnumValue(value.rank, CARD_RANKS) &&
+  isEnumValue(value.suit, CARD_SUITS);
 
 const parseJsonMessage = (raw: string): WsMessage | null => {
   let parsed: unknown;
@@ -287,8 +350,35 @@ const parseJsonMessage = (raw: string): WsMessage | null => {
       !isInteger(snapshotTable.currentHand.streetBetTo) ||
       !isInteger(snapshotTable.currentHand.raiseCount) ||
       !isNullableInteger(snapshotTable.currentHand.toActSeatNo) ||
-      !isNullableString(snapshotTable.currentHand.actionDeadlineAt)
+      !isNullableString(snapshotTable.currentHand.actionDeadlineAt) ||
+      !Array.isArray(snapshotTable.currentHand.cards)
     ) {
+      return null;
+    }
+
+    const hasValidCurrentHandCards = snapshotTable.currentHand.cards.every(
+      (seatCards) => {
+        if (!isRecord(seatCards) || !isInteger(seatCards.seatNo)) {
+          return false;
+        }
+        if (!Array.isArray(seatCards.cards)) {
+          return false;
+        }
+        return seatCards.cards.every((cardView) => {
+          if (!isRecord(cardView)) {
+            return false;
+          }
+          if (
+            !isEnumValue(cardView.slot, CARD_SLOTS) ||
+            !isEnumValue(cardView.visibility, CARD_VISIBILITIES)
+          ) {
+            return false;
+          }
+          return cardView.card === null || isCardValue(cardView.card);
+        });
+      },
+    );
+    if (!hasValidCurrentHandCards) {
       return null;
     }
 
@@ -388,6 +478,104 @@ const updateSeat = (
 
 const formatStakesDisplay = (smallBet: number, bigBet: number) =>
   `$${smallBet}/$${bigBet} Fixed Limit`;
+
+const MAX_EVENT_LOG_COUNT = 40;
+
+const mapSnapshotCardsBySeatNo = (
+  hand: TableSnapshotHand | null,
+): TableStoreCardsBySeatNo => {
+  if (hand === null) {
+    return {};
+  }
+
+  return hand.cards.reduce<TableStoreCardsBySeatNo>((acc, seatCards) => {
+    acc[seatCards.seatNo] = seatCards.cards.map((cardView) => ({
+      slot: cardView.slot,
+      visibility: cardView.visibility,
+      card: cardView.card
+        ? {
+            rank: cardView.card.rank,
+            suit: cardView.card.suit,
+          }
+        : null,
+    }));
+    return acc;
+  }, {});
+};
+
+const pushEventLog = (
+  current: TableStoreEventLogEntry[],
+  entry: TableStoreEventLogEntry | null,
+) => {
+  if (entry === null) {
+    return current;
+  }
+  const next = [...current, entry];
+  if (next.length <= MAX_EVENT_LOG_COUNT) {
+    return next;
+  }
+  return next.slice(next.length - MAX_EVENT_LOG_COUNT);
+};
+
+const buildEventLog = (
+  event: TableEventMessage,
+): TableStoreEventLogEntry | null => {
+  if (event.eventName === TableEventName.SeatStateChangedEvent) {
+    const payload = event.payload;
+    if (
+      isInteger(payload.seatNo) &&
+      isEnumValue(payload.previousStatus, SEAT_STATUSES) &&
+      isEnumValue(payload.currentStatus, SEAT_STATUSES) &&
+      isEnumValue(payload.reason, SEAT_STATE_CHANGE_REASONS) &&
+      isEnumValue(payload.appliesFrom, SEAT_STATE_CHANGE_APPLIES_FROM)
+    ) {
+      return {
+        kind: "seat_state_changed",
+        occurredAt: event.occurredAt,
+        seatNo: payload.seatNo,
+        previousStatus: payload.previousStatus,
+        currentStatus: payload.currentStatus,
+        reason: payload.reason,
+        appliesFrom: payload.appliesFrom,
+      };
+    }
+  }
+
+  if (event.eventName === TableEventName.StreetAdvanceEvent) {
+    const payload = event.payload;
+    if (
+      isEnumValue(payload.fromStreet, STREETS) &&
+      (payload.toStreet === null || isEnumValue(payload.toStreet, STREETS)) &&
+      isEnumValue(payload.reason, STREET_ADVANCE_REASONS)
+    ) {
+      return {
+        kind: "street_advance",
+        occurredAt: event.occurredAt,
+        fromStreet: payload.fromStreet,
+        toStreet: payload.toStreet,
+        reason: payload.reason,
+      };
+    }
+  }
+
+  return null;
+};
+
+const mapStreetToSlot = (street: (typeof STREETS)[number]): CardSlot | null => {
+  if (street === Street.FOURTH) {
+    return CardSlot.UP_4;
+  }
+  if (street === Street.FIFTH) {
+    return CardSlot.UP_5;
+  }
+  if (street === Street.SIXTH) {
+    return CardSlot.UP_6;
+  }
+  if (street === Street.SEVENTH) {
+    return CardSlot.DOWN_7;
+  }
+  return null;
+};
 
 const mapSnapshotTable = (
   current: TableDetail,
@@ -530,6 +718,17 @@ type PostAntePayload = {
 
 type DealCards3rdPayload = {
   bringInSeatNo: number;
+  cards: Array<{
+    seatNo: number;
+    cards: Array<{
+      position: (typeof ThirdStreetCardPosition)[keyof typeof ThirdStreetCardPosition];
+      visibility: (typeof CARD_VISIBILITIES)[number];
+      card: {
+        rank: (typeof CARD_RANKS)[number];
+        suit: (typeof CARD_SUITS)[number];
+      } | null;
+    }>;
+  }>;
 };
 
 type ActionPayload = {
@@ -548,6 +747,48 @@ type ChipActionPayload = ActionPayload & {
   stackAfter: number;
   streetBetTo: number;
   raiseCount: number;
+};
+
+type DealCardPayload = {
+  street: (typeof STREETS)[number];
+  cards: Array<{
+    seatNo: number;
+    visibility: (typeof CARD_VISIBILITIES)[number];
+    card: {
+      rank: (typeof CARD_RANKS)[number];
+      suit: (typeof CARD_SUITS)[number];
+    } | null;
+  }>;
+  toActSeatNo: number | null;
+  potAfter: number;
+};
+
+type StreetAdvancePayload = {
+  fromStreet: (typeof STREETS)[number];
+  toStreet: (typeof STREETS)[number] | null;
+  potTotal: number;
+  nextToActSeatNo: number | null;
+  tableStatus:
+    | typeof TableStatus.BETTING
+    | typeof TableStatus.SHOWDOWN
+    | typeof TableStatus.HAND_END;
+  reason: (typeof STREET_ADVANCE_REASONS)[number];
+};
+
+type ShowdownPayload = {
+  hasShowdown: boolean;
+};
+
+type DealEndPayload = {
+  finalPot: number;
+  nextDealerSeatNo: number;
+  nextGameType: (typeof GAME_TYPES)[number];
+  mixIndex: number;
+  handsSinceRotation: number;
+  results: Array<{
+    seatNo: number;
+    stackAfter: number;
+  }>;
 };
 
 const isSeatStateChangedPayload = (
@@ -600,7 +841,31 @@ const isPostAntePayload = (
 
 const isDealCards3rdPayload = (
   payload: Record<string, unknown>,
-): payload is DealCards3rdPayload => isInteger(payload.bringInSeatNo);
+): payload is DealCards3rdPayload => {
+  if (!isInteger(payload.bringInSeatNo) || !Array.isArray(payload.cards)) {
+    return false;
+  }
+  return payload.cards.every((seatCards) => {
+    if (!isRecord(seatCards) || !isInteger(seatCards.seatNo)) {
+      return false;
+    }
+    if (!Array.isArray(seatCards.cards)) {
+      return false;
+    }
+    return seatCards.cards.every((cardView) => {
+      if (!isRecord(cardView)) {
+        return false;
+      }
+      if (
+        !isEnumValue(cardView.position, THIRD_STREET_CARD_POSITIONS) ||
+        !isEnumValue(cardView.visibility, CARD_VISIBILITIES)
+      ) {
+        return false;
+      }
+      return cardView.card === null || isCardValue(cardView.card);
+    });
+  });
+};
 
 const isBringInPayload = (
   payload: Record<string, unknown>,
@@ -632,6 +897,146 @@ const isChipActionPayload = (
     isInteger(streetBetTo) &&
     isInteger(raiseCount)
   );
+};
+
+const isDealCardPayload = (
+  payload: Record<string, unknown>,
+): payload is DealCardPayload => {
+  if (
+    !isEnumValue(payload.street, STREETS) ||
+    !Array.isArray(payload.cards) ||
+    !isNullableInteger(payload.toActSeatNo) ||
+    !isInteger(payload.potAfter)
+  ) {
+    return false;
+  }
+  return payload.cards.every((cardView) => {
+    if (!isRecord(cardView)) {
+      return false;
+    }
+    if (
+      !isInteger(cardView.seatNo) ||
+      !isEnumValue(cardView.visibility, CARD_VISIBILITIES)
+    ) {
+      return false;
+    }
+    return cardView.card === null || isCardValue(cardView.card);
+  });
+};
+
+const isStreetAdvancePayload = (
+  payload: Record<string, unknown>,
+): payload is StreetAdvancePayload =>
+  isEnumValue(payload.fromStreet, STREETS) &&
+  (payload.toStreet === null || isEnumValue(payload.toStreet, STREETS)) &&
+  isInteger(payload.potTotal) &&
+  isNullableInteger(payload.nextToActSeatNo) &&
+  (payload.tableStatus === TableStatus.BETTING ||
+    payload.tableStatus === TableStatus.SHOWDOWN ||
+    payload.tableStatus === TableStatus.HAND_END) &&
+  isEnumValue(payload.reason, STREET_ADVANCE_REASONS);
+
+const isShowdownPayload = (
+  payload: Record<string, unknown>,
+): payload is ShowdownPayload => payload.hasShowdown === true;
+
+const isDealEndPayload = (
+  payload: Record<string, unknown>,
+): payload is DealEndPayload =>
+  isInteger(payload.finalPot) &&
+  isInteger(payload.nextDealerSeatNo) &&
+  isEnumValue(payload.nextGameType, GAME_TYPES) &&
+  isInteger(payload.mixIndex) &&
+  isInteger(payload.handsSinceRotation) &&
+  Array.isArray(payload.results) &&
+  payload.results.every(
+    (result) =>
+      isRecord(result) &&
+      isInteger(result.seatNo) &&
+      isInteger(result.stackAfter),
+  );
+
+const cloneCardsBySeatNo = (
+  cardsBySeatNo: TableStoreCardsBySeatNo,
+): TableStoreCardsBySeatNo =>
+  Object.fromEntries(
+    Object.entries(cardsBySeatNo).map(([seatNo, cards]) => [
+      Number(seatNo),
+      cards.map((card) => ({
+        slot: card.slot,
+        visibility: card.visibility,
+        card: card.card
+          ? {
+              rank: card.card.rank,
+              suit: card.card.suit,
+            }
+          : null,
+      })),
+    ]),
+  );
+
+const applyEventToCardsBySeatNo = (
+  cardsBySeatNo: TableStoreCardsBySeatNo,
+  event: TableEventMessage,
+): TableStoreCardsBySeatNo => {
+  const payload = event.payload;
+
+  if (event.eventName === TableEventName.DealInitEvent) {
+    return {};
+  }
+
+  if (
+    event.eventName === TableEventName.DealCards3rdEvent &&
+    isDealCards3rdPayload(payload)
+  ) {
+    return payload.cards.reduce<TableStoreCardsBySeatNo>((acc, seatCards) => {
+      acc[seatCards.seatNo] = seatCards.cards.map((cardView) => ({
+        slot: cardView.position,
+        visibility: cardView.visibility,
+        card: cardView.card
+          ? {
+              rank: cardView.card.rank,
+              suit: cardView.card.suit,
+            }
+          : null,
+      }));
+      return acc;
+    }, {});
+  }
+
+  if (
+    event.eventName === TableEventName.DealCardEvent &&
+    isDealCardPayload(payload)
+  ) {
+    const slot = mapStreetToSlot(payload.street);
+    if (slot === null) {
+      return cardsBySeatNo;
+    }
+    const next = cloneCardsBySeatNo(cardsBySeatNo);
+    for (const cardView of payload.cards) {
+      const existing = next[cardView.seatNo] ?? [];
+      next[cardView.seatNo] = [
+        ...existing,
+        {
+          slot,
+          visibility: cardView.visibility,
+          card: cardView.card
+            ? {
+                rank: cardView.card.rank,
+                suit: cardView.card.suit,
+              }
+            : null,
+        },
+      ];
+    }
+    return next;
+  }
+
+  if (event.eventName === TableEventName.DealEndEvent) {
+    return {};
+  }
+
+  return cardsBySeatNo;
 };
 
 const applyEventToTable = (
@@ -969,6 +1374,83 @@ const applyEventToTable = (
     );
   }
 
+  if (
+    event.eventName === TableEventName.DealCardEvent &&
+    isDealCardPayload(payload)
+  ) {
+    return mergeCurrentHand(
+      {
+        ...table,
+        status: TableStatus.BETTING,
+      },
+      {
+        street: payload.street,
+        potTotal: payload.potAfter,
+        toActSeatNo: payload.toActSeatNo,
+      },
+      event.handId,
+    );
+  }
+
+  if (
+    event.eventName === TableEventName.StreetAdvanceEvent &&
+    isStreetAdvancePayload(payload)
+  ) {
+    return mergeCurrentHand(
+      {
+        ...table,
+        status: payload.tableStatus,
+      },
+      {
+        street: payload.toStreet ?? payload.fromStreet,
+        potTotal: payload.potTotal,
+        toActSeatNo: payload.nextToActSeatNo,
+      },
+      event.handId,
+    );
+  }
+
+  if (
+    event.eventName === TableEventName.ShowdownEvent &&
+    isShowdownPayload(payload)
+  ) {
+    return mergeCurrentHand(
+      {
+        ...table,
+        status: TableStatus.SHOWDOWN,
+      },
+      {
+        status: HandStatus.SHOWDOWN,
+        toActSeatNo: null,
+      },
+      event.handId,
+    );
+  }
+
+  if (
+    event.eventName === TableEventName.DealEndEvent &&
+    isDealEndPayload(payload)
+  ) {
+    let next: TableDetail = {
+      ...table,
+      status: TableStatus.HAND_END,
+      gameType: payload.nextGameType,
+      mixIndex: payload.mixIndex,
+      handsSinceRotation: payload.handsSinceRotation,
+      dealerSeatNo: payload.nextDealerSeatNo,
+      currentHand: null,
+    };
+
+    for (const result of payload.results) {
+      next = updateSeat(next, result.seatNo, (seat) => ({
+        ...seat,
+        stack: result.stackAfter,
+      }));
+    }
+
+    return next;
+  }
+
   return table;
 };
 
@@ -982,6 +1464,8 @@ const cloneSnapshot = (state: TableStoreState): TableStoreSnapshot => ({
       ? { ...state.table.currentHand }
       : null,
   },
+  cardsBySeatNo: cloneCardsBySeatNo(state.cardsBySeatNo),
+  eventLogs: state.eventLogs.map((entry) => ({ ...entry })),
 });
 
 export type TableStore = {
@@ -1023,6 +1507,8 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       inferredCurrentUserId,
     ),
     tableSeq: 0,
+    cardsBySeatNo: {},
+    eventLogs: [],
     connectionStatus: TableStoreConnectionStatus.IDLE,
     syncStatus: TableStoreSyncStatus.IDLE,
     lastErrorCode: null,
@@ -1175,9 +1661,21 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       });
     }
 
+    const nextTable = applyEventToTable(
+      state.table,
+      message,
+      inferredCurrentUserId,
+    );
+    const nextCardsBySeatNo = applyEventToCardsBySeatNo(
+      state.cardsBySeatNo,
+      message,
+    );
+
     patchState({
-      table: applyEventToTable(state.table, message, inferredCurrentUserId),
+      table: nextTable,
       tableSeq: message.tableSeq,
+      cardsBySeatNo: nextCardsBySeatNo,
+      eventLogs: pushEventLog(state.eventLogs, buildEventLog(message)),
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,
       lastErrorMessage: null,
@@ -1192,6 +1690,9 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
     clearResumeInFlight();
     patchState({
       table: mapSnapshotTable(state.table, message, inferredCurrentUserId),
+      cardsBySeatNo: mapSnapshotCardsBySeatNo(
+        message.payload.table.currentHand,
+      ),
       tableSeq: message.tableSeq,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,

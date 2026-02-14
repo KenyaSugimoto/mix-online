@@ -423,6 +423,16 @@ export class RealtimeTableService {
     return table?.currentHand?.toActSeatNo ?? null;
   }
 
+  getSeatNosForUser(tableId: string, userId: string): number[] {
+    const table = this.tables.get(tableId);
+    if (!table) {
+      return [];
+    }
+    return table.seats
+      .filter((seat) => seat.userId === userId)
+      .map((seat) => seat.seatNo);
+  }
+
   listPendingActionTableIds(): string[] {
     return [...this.tables.values()]
       .filter(

@@ -1,5 +1,9 @@
 import {
   BettingStructure,
+  CardRank,
+  CardSlot,
+  CardSuit,
+  CardVisibility,
   GameType,
   HandStatus,
   RealtimeTableCommandType,
@@ -8,9 +12,11 @@ import {
   SeatStatus,
   SnapshotReason,
   Street,
+  StreetAdvanceReason,
   TableCommandAction,
   TableEventName,
   TableStatus,
+  ThirdStreetCardPosition,
 } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import type { TableDetail } from "./table-api";
@@ -388,6 +394,33 @@ describe("table-store", () => {
               raiseCount: 1,
               toActSeatNo: 2,
               actionDeadlineAt: null,
+              cards: [
+                {
+                  seatNo: 1,
+                  cards: [
+                    {
+                      slot: CardSlot.HOLE_1,
+                      visibility: CardVisibility.DOWN_SELF,
+                      card: { rank: CardRank.A, suit: CardSuit.S },
+                    },
+                    {
+                      slot: CardSlot.HOLE_2,
+                      visibility: CardVisibility.DOWN_SELF,
+                      card: { rank: CardRank.K, suit: CardSuit.H },
+                    },
+                    {
+                      slot: CardSlot.UP_3,
+                      visibility: CardVisibility.UP,
+                      card: { rank: CardRank.N9, suit: CardSuit.D },
+                    },
+                    {
+                      slot: CardSlot.UP_4,
+                      visibility: CardVisibility.UP,
+                      card: { rank: CardRank.N2, suit: CardSuit.C },
+                    },
+                  ],
+                },
+              ],
             },
             dealerSeatNo: 2,
             mixIndex: 1,
@@ -403,6 +436,10 @@ describe("table-store", () => {
     expect(snapshot.table.status).toBe(TableStatus.BETTING);
     expect(snapshot.table.gameType).toBe(GameType.RAZZ);
     expect(snapshot.table.currentHand?.street).toBe(Street.FOURTH);
+    expect(snapshot.cardsBySeatNo[1]?.length).toBe(4);
+    expect(snapshot.cardsBySeatNo[1]?.[0]?.visibility).toBe(
+      CardVisibility.DOWN_SELF,
+    );
   });
 
   it("JOIN と ACT コマンドを送信できる", () => {
@@ -557,5 +594,185 @@ describe("table-store", () => {
       .table.seats.find((seat) => seat.seatNo === 3);
     expect(seat3?.isYou).toBe(true);
     expect(seat3?.userId).toBe("f1b2c3d4-9999-4999-8999-999999999999");
+  });
+
+  it("DealCards3rd / DealCard / DealEnd でカード投影を更新する", () => {
+    const sockets: FakeWebSocket[] = [];
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable: createInitialTable(),
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 1,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 1,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.DealCards3rdEvent,
+        payload: {
+          bringInSeatNo: 1,
+          cards: [
+            {
+              seatNo: 1,
+              cards: [
+                {
+                  position: ThirdStreetCardPosition.HOLE_1,
+                  visibility: CardVisibility.DOWN_SELF,
+                  card: { rank: CardRank.A, suit: CardSuit.S },
+                },
+                {
+                  position: ThirdStreetCardPosition.HOLE_2,
+                  visibility: CardVisibility.DOWN_SELF,
+                  card: { rank: CardRank.K, suit: CardSuit.S },
+                },
+                {
+                  position: ThirdStreetCardPosition.UP_3,
+                  visibility: CardVisibility.UP,
+                  card: { rank: CardRank.N9, suit: CardSuit.D },
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    expect(store.getSnapshot().cardsBySeatNo[1]?.length).toBe(3);
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 2,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 2,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.DealCardEvent,
+        payload: {
+          street: Street.FOURTH,
+          cards: [
+            {
+              seatNo: 1,
+              visibility: CardVisibility.UP,
+              card: { rank: CardRank.N5, suit: CardSuit.C },
+            },
+          ],
+          toActSeatNo: 1,
+          potAfter: 20,
+        },
+      }),
+    );
+    expect(store.getSnapshot().cardsBySeatNo[1]?.length).toBe(4);
+    expect(store.getSnapshot().cardsBySeatNo[1]?.[3]?.slot).toBe(CardSlot.UP_4);
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 3,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 3,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.DealEndEvent,
+        payload: {
+          finalPot: 40,
+          nextDealerSeatNo: 2,
+          nextGameType: GameType.RAZZ,
+          mixIndex: 1,
+          handsSinceRotation: 2,
+          results: [
+            {
+              seatNo: 1,
+              stackAfter: 1020,
+            },
+          ],
+        },
+      }),
+    );
+    expect(Object.keys(store.getSnapshot().cardsBySeatNo)).toEqual([]);
+  });
+
+  it("SeatStateChanged と StreetAdvance のログを保持する", () => {
+    const sockets: FakeWebSocket[] = [];
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable: createInitialTable(),
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 1,
+        handId: null,
+        handSeq: null,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.SeatStateChangedEvent,
+        payload: {
+          seatNo: 3,
+          previousStatus: SeatStatus.EMPTY,
+          currentStatus: SeatStatus.SEATED_WAIT_NEXT_HAND,
+          reason: SeatStateChangeReason.JOIN,
+          user: {
+            userId: "33333333-3333-4333-8333-333333333333",
+            displayName: "U3",
+          },
+          stack: 800,
+          appliesFrom: SeatStateChangeAppliesFrom.IMMEDIATE,
+        },
+      }),
+    );
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 2,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 2,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.StreetAdvanceEvent,
+        payload: {
+          fromStreet: Street.THIRD,
+          toStreet: Street.FOURTH,
+          potTotal: 80,
+          activeSeatNos: [1, 2],
+          nextToActSeatNo: 1,
+          tableStatus: TableStatus.BETTING,
+          reason: StreetAdvanceReason.BETTING_ROUND_COMPLETE,
+        },
+      }),
+    );
+
+    const logs = store.getSnapshot().eventLogs;
+    expect(logs.length).toBe(2);
+    expect(logs[0]?.kind).toBe("seat_state_changed");
+    expect(logs[1]?.kind).toBe("street_advance");
   });
 });
