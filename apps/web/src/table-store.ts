@@ -315,8 +315,13 @@ const parseJsonMessage = (raw: string): WsMessage | null => {
 };
 
 const resolveWsUrl = () => {
+  const explicitWsUrl = import.meta.env.VITE_WS_URL;
+  if (typeof explicitWsUrl === "string" && explicitWsUrl.length > 0) {
+    return explicitWsUrl;
+  }
+
   if (typeof window === "undefined") {
-    return "ws://localhost/ws";
+    return "ws://localhost:3000/ws";
   }
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${protocol}//${window.location.host}/ws`;

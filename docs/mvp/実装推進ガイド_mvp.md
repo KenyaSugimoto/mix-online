@@ -212,8 +212,13 @@ M4完了時点で「実装は一通り揃っているが、リリース判定に
 | --- | --- | --- | --- | --- |
 | M5-10 | 認証の実ユーザー連携 | Google code exchange + 実ユーザー連携を実装済み（Supabase設定時は `users`/`wallets` 永続化、未設定時はin-memory fallback）。初期表示名は匿名ID（`Player-XXXXXX`）を採番し、再ログインで上書きしない | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定した環境で `/api/auth/me` が実ユーザー情報を返し、固定ユーザー依存がない | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/index.ts`](../../apps/server/src/repository/auth/index.ts), [`openapi.yaml`](./openapi.yaml) |
 | M5-11 | APIの実データ化 | Supabase環境変数設定時に Lobby/Table/History が Supabase Repository 経由で実データを返却。未設定時はMVP fallbackを維持 | PostgreSQL Repository経由で実データを返し、MVP fixture依存を除去 | [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-12 | ローカル実プレイ成立確認 | WS経路が環境依存で、手動2ユーザー確認記録がない | ローカルで2ユーザーがログイン〜1ハンド完了まで再現できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-12 | ローカル実プレイ成立確認 | HTTP/WS接続経路は固定済みだが、ベッティングラウンド完了後の進行停止不具合により `BLOCKED` | ローカルで2ユーザーがログイン〜1ハンド完了まで再現できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-16 | Realtimeハンド進行成立 | `table.act` 後の遷移で `toActSeatNo=null` になった時にStreet/終局遷移が発火せず停止する | 3rd〜終局まで `StreetAdvance/DealCard/Showdown/DealEnd` が順序通り発行され、手番が停止しない | [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`asyncapi.yaml`](./asyncapi.yaml), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
+| M5-17 | `table.act` 契約整合 | クライアントが `BET/BRING_IN` を送れる一方でサーバー未対応のため `INVALID_ACTION` が発生しやすい | UI提示アクションとサーバー受理アクションを一致させ、不正操作はUIで抑止できる | [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
+| M5-18 | TableStore投影強化 | `DealCard/StreetAdvance/Showdown/DealEnd` の投影が未実装で、イベントが来ても画面状態へ反映できない | 全主要 `table.event` をクライアント状態へ反映し、手番/ストリート/カード表示が破綻しない | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M5-13 | ゲーム画面UIの仕様充足 | `reason`/`appliesFrom` のUIログ保持が未反映 | 画面設計書の状態遷移追跡要件をUIとテストで満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx) |
+| M5-19 | テーブルUI再設計 | 卓画面が情報テキスト中心で、ゲームプレイUI（カード/テーブル/行動導線）として不足 | ゲーム進行を直感的に追えるUI（カード、手番強調、操作導線）へ刷新する | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css) |
+| M5-20 | Realtime契約/E2E強化 | WS契約テストが代表ケース中心で、停止系の回帰を十分に検知できない | HP-04/06/10相当を自動化し、進行停止・契約乖離をCIで検知できる | [`apps/server/src/__tests__/e2e`](../../apps/server/src/__tests__/e2e), [`apps/server/src/__tests__/integration/ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-14 | 表示名変更API追加 | ユーザー自身で表示名を変更するHTTP APIがない | `PATCH /api/auth/me/display-name` で表示名を更新できる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-15 | 表示名変更UI追加 | 表示名変更の操作導線がWeb UIにない | ログイン後に表示名変更をUIから完結できる | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
 
@@ -221,8 +226,12 @@ M4完了時点で「実装は一通り揃っているが、リリース判定に
 
 1. `M5-10`（認証実運用化）
 2. `M5-11`（実データ化）
-3. `M5-12`（ローカル実プレイ成立確認）
-4. `M5-13`（UI仕様ギャップ解消）
-5. `M5-14`（表示名変更API）
-6. `M5-15`（表示名変更UI）
-7. `M5-01` / `M5-02` / `M5-03`（監視・Runbook・非機能）
+3. `M5-16`（Realtimeハンド進行成立）
+4. `M5-17`（`table.act` 契約整合）
+5. `M5-18`（TableStore投影強化）
+6. `M5-12`（ローカル実プレイ成立確認）
+7. `M5-13`（UI仕様ギャップ解消）
+8. `M5-19`（テーブルUI再設計）
+9. `M5-14`（表示名変更API）
+10. `M5-15`（表示名変更UI）
+11. `M5-20` / `M5-01` / `M5-02` / `M5-03`（契約/E2E強化、監視・Runbook・非機能）
