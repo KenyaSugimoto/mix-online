@@ -12,12 +12,19 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../../app";
 import { createInMemorySessionStore } from "../../auth-session";
+import {
+  createInMemoryAuthUserRepository,
+  toDefaultDisplayName,
+} from "../../repository/auth-user-repository";
 
 describe("HTTP統合テスト", () => {
   const TEST_GOOGLE_OAUTH_CONFIG = {
     authEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
     clientId: "test-google-client-id",
+    clientSecret: "test-google-client-secret",
     redirectUri: "http://localhost:3000/api/auth/google/callback",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    userInfoEndpoint: "https://openidconnect.googleapis.com/v1/userinfo",
     scope: "openid email profile",
   } as const;
 
@@ -141,7 +148,18 @@ describe("HTTP統合テスト", () => {
   });
 
   it("Google callbackで state が一致した場合に session Cookieを発行する", async () => {
-    const app = createApp();
+    const authUserRepository = createInMemoryAuthUserRepository();
+    const googleOAuthClient = {
+      exchangeCodeForUser: vi.fn().mockResolvedValue({
+        googleSub: "google-sub-100",
+        displayName: "OAuth User 100",
+      }),
+    };
+    const app = createApp({
+      googleOAuthConfig: TEST_GOOGLE_OAUTH_CONFIG,
+      authUserRepository,
+      googleOAuthClient,
+    });
     const state = "11111111-1111-4111-8111-111111111111";
     const response = await app.request(
       `/api/auth/google/callback?code=fake-code&state=${state}`,
@@ -153,15 +171,130 @@ describe("HTTP統合テスト", () => {
     );
     const location = response.headers.get("location");
     const setCookie = response.headers.get("set-cookie");
+    const sessionId = setCookie?.match(/session=([^;]+)/)?.[1];
 
     expect(response.status).toBe(302);
     expect(location).toBe("/lobby");
     expect(setCookie).toContain("session=");
     expect(setCookie).toContain("oauth_state=");
+    expect(googleOAuthClient.exchangeCodeForUser).toHaveBeenCalledWith({
+      code: "fake-code",
+      config: TEST_GOOGLE_OAUTH_CONFIG,
+    });
+    expect(sessionId).toBeDefined();
+
+    const meResponse = await app.request("/api/auth/me", {
+      headers: {
+        cookie: `session=${sessionId}`,
+      },
+    });
+    const meBody = (await meResponse.json()) as {
+      user: {
+        userId: string;
+        displayName: string;
+        walletBalance: number;
+      };
+    };
+
+    expect(meResponse.status).toBe(200);
+    expect(meBody.user.displayName).toBe(
+      toDefaultDisplayName("google-sub-100"),
+    );
+    expect(meBody.user.userId).not.toBe("f1b2c3d4-9999-4999-8999-999999999999");
+    expect(meBody.user.walletBalance).toBe(4000);
+  });
+
+  it("Google callbackで同一sub再ログインしても表示名を上書きしない", async () => {
+    const authUserRepository = createInMemoryAuthUserRepository();
+    const googleOAuthClient = {
+      exchangeCodeForUser: vi
+        .fn()
+        .mockResolvedValueOnce({
+          googleSub: "google-sub-300",
+          displayName: "Real Name 300",
+        })
+        .mockResolvedValueOnce({
+          googleSub: "google-sub-300",
+          displayName: "Changed Real Name 300",
+        }),
+    };
+    const app = createApp({
+      googleOAuthConfig: TEST_GOOGLE_OAUTH_CONFIG,
+      authUserRepository,
+      googleOAuthClient,
+    });
+
+    const firstState = "11111111-1111-4111-8111-111111111111";
+    const firstCallbackResponse = await app.request(
+      `/api/auth/google/callback?code=first-code&state=${firstState}`,
+      {
+        headers: {
+          cookie: `oauth_state=${firstState}`,
+        },
+      },
+    );
+    const firstSessionId =
+      firstCallbackResponse.headers
+        .get("set-cookie")
+        ?.match(/session=([^;]+)/)?.[1] ?? null;
+    expect(firstSessionId).toBeTruthy();
+
+    const firstMeResponse = await app.request("/api/auth/me", {
+      headers: {
+        cookie: `session=${firstSessionId}`,
+      },
+    });
+    const firstMeBody = (await firstMeResponse.json()) as {
+      user: {
+        displayName: string;
+      };
+    };
+    expect(firstMeBody.user.displayName).toBe(
+      toDefaultDisplayName("google-sub-300"),
+    );
+
+    const secondState = "22222222-2222-4222-8222-222222222222";
+    const secondCallbackResponse = await app.request(
+      `/api/auth/google/callback?code=second-code&state=${secondState}`,
+      {
+        headers: {
+          cookie: `oauth_state=${secondState}`,
+        },
+      },
+    );
+    const secondSessionId =
+      secondCallbackResponse.headers
+        .get("set-cookie")
+        ?.match(/session=([^;]+)/)?.[1] ?? null;
+    expect(secondSessionId).toBeTruthy();
+
+    const secondMeResponse = await app.request("/api/auth/me", {
+      headers: {
+        cookie: `session=${secondSessionId}`,
+      },
+    });
+    const secondMeBody = (await secondMeResponse.json()) as {
+      user: {
+        displayName: string;
+      };
+    };
+    expect(secondMeBody.user.displayName).toBe(
+      toDefaultDisplayName("google-sub-300"),
+    );
   });
 
   it("Google callbackで webClientOrigin 指定時はフロントURLへリダイレクトする", async () => {
+    const authUserRepository = createInMemoryAuthUserRepository();
+    const googleOAuthClient = {
+      exchangeCodeForUser: vi.fn().mockResolvedValue({
+        googleSub: "google-sub-200",
+        displayName: "OAuth User 200",
+      }),
+    };
     const app = createApp({
+      googleOAuthConfig: TEST_GOOGLE_OAUTH_CONFIG,
+      authUserRepository,
+      googleOAuthClient,
       webClientOrigin: "http://localhost:5173",
     });
     const state = "11111111-1111-4111-8111-111111111111";
@@ -177,6 +310,31 @@ describe("HTTP統合テスト", () => {
 
     expect(response.status).toBe(302);
     expect(location).toBe("http://localhost:5173/lobby");
+  });
+
+  it("Google callbackで client secret 未設定時は INTERNAL_SERVER_ERROR を返す", async () => {
+    const app = createApp({
+      googleOAuthConfig: {
+        ...TEST_GOOGLE_OAUTH_CONFIG,
+        clientSecret: "",
+      },
+    });
+    const state = "11111111-1111-4111-8111-111111111111";
+    const response = await app.request(
+      `/api/auth/google/callback?code=fake-code&state=${state}`,
+      {
+        headers: {
+          cookie: `oauth_state=${state}`,
+        },
+      },
+    );
+    const body = (await response.json()) as {
+      error: { code: string; message: string };
+    };
+
+    expect(response.status).toBe(500);
+    expect(body.error.code).toBe(ErrorCode.INTERNAL_SERVER_ERROR);
+    expect(body.error.message).toContain("GOOGLE_OAUTH_CLIENT_SECRET");
   });
 
   it("認証なしで /api/auth/me を呼ぶと AUTH_EXPIRED を返す", async () => {

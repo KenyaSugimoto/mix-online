@@ -88,8 +88,9 @@ Vercel配置を前提にしたデプロイ視点の全体図は [`全体アー�
 - マイグレーションは **Supabase CLI** (`supabase migration`) を使用する
 - マイグレーションファイルは生SQL形式で `supabase/migrations/` 配下に配置する
 - ローカル開発環境は `supabase start`（Docker）でSupabase互換のPostgreSQLを起動する
-- ローカル運用時は `pnpm db:start` / `pnpm db:reset` / `pnpm db:status` / `pnpm db:stop` を使用する
-- Colima 利用時は `pnpm db:start` が失敗時に DB 最小構成へフォールバックして起動する
+- ローカル運用時は `pnpm db:start` / `pnpm db:start:api` / `pnpm db:reset` / `pnpm db:status` / `pnpm db:stop` を使用する
+- Colima 利用時の `pnpm db:start` は失敗時に、まず `edge-runtime/logflare/vector` 除外のAPI利用可能構成へ、さらに失敗した場合は DB 最小構成へフォールバックして起動する
+- 認証/REST（`SERVICE_ROLE_KEY` 取得や `/rest/v1/*` 検証）を行う場合は `pnpm db:start:api` または full起動を使用する
 - 本番適用は `supabase db push` でリモートプロジェクトへ反映する
 - DDLの正本は `supabase/migrations/` とし、重複コピーを作らない
 - seed投入・ローカル起動・DBリセットの実行手順と期待値は `supabase/migrations/README.md` を正とする
@@ -474,10 +475,18 @@ interface GameRule {
 Google OAuth開始API設定（実装ルール）:
 
 - `GOOGLE_OAUTH_CLIENT_ID` は必須。未設定時、`GET /api/auth/google/start` は `500 INTERNAL_SERVER_ERROR` を返す。
+- `GOOGLE_OAUTH_CLIENT_SECRET` は callback 時に必須。未設定時、`GET /api/auth/google/callback` は `500 INTERNAL_SERVER_ERROR` を返す。
 - `GOOGLE_OAUTH_REDIRECT_URI` は任意。未設定時のデフォルトは `http://localhost:3000/api/auth/google/callback`。
 - `GOOGLE_OAUTH_SCOPE` は任意。未設定時のデフォルトは `openid email profile`。
 - `GOOGLE_OAUTH_AUTH_ENDPOINT` は任意。未設定時のデフォルトは `https://accounts.google.com/o/oauth2/v2/auth`。
+- `GOOGLE_OAUTH_TOKEN_ENDPOINT` は任意。未設定時のデフォルトは `https://oauth2.googleapis.com/token`。
+- `GOOGLE_OAUTH_USERINFO_ENDPOINT` は任意。未設定時のデフォルトは `https://openidconnect.googleapis.com/v1/userinfo`。
 - `WEB_CLIENT_ORIGIN` は任意。`GET /api/auth/google/callback` 成功時のリダイレクト先生成に使用し、未設定時のローカル既定値は `http://localhost:5173`（`/lobby` へ遷移）。
+- callback 後のユーザー永続化は `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` が設定されている場合に Supabase REST（`users` / `wallets`）を使用する。
+- 上記 Supabase 環境変数が未設定の場合、開発用フォールバックとして in-memory のユーザーリポジトリを使用する（プロセス再起動で消える）。
+- 初回ログイン時の `users.display_name` は Google の `name` を採用せず、`Player-XXXXXX`（`google_sub` 由来の匿名ID）を採番して保存する。
+- 同一 `google_sub` で再ログインした場合、既存の `users.display_name` は上書きしない（ユーザーが後で変更した名前を維持する）。
+- ユーザー自身による表示名変更API/UIは別タスク（`M5-14` / `M5-15`）で対応する。
 - サーバー起動時に `process.cwd()` 配下の `.env.local` → `.env` の順で環境変数を自動読込する（既存の環境変数は上書きしない）。
   - `pnpm --filter server dev` の既定起動では `apps/server/.env.local` が読込対象。
   - テンプレートは `apps/server/.env.local.example` を参照。

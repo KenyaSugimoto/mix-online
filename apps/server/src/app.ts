@@ -4,7 +4,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
   type SessionStore,
-  type SessionUser,
   clearOauthStateCookie,
   clearSessionCookie,
   createInMemorySessionStore,
@@ -14,9 +13,18 @@ import {
   getSessionIdFromCookie,
 } from "./auth-session";
 import { HttpAppError, toHttpErrorResponse } from "./error-response";
+import {
+  type GoogleOAuthClient,
+  type GoogleOAuthExchangeConfig,
+  createGoogleOAuthClient,
+} from "./google-oauth-client";
 import { decodeHistoryCursor, encodeHistoryCursor } from "./history-cursor";
 import { compareHistoryOrder } from "./history-hand";
 import { toLobbyTablesResponse } from "./lobby-table";
+import {
+  type AuthUserRepository,
+  createInMemoryAuthUserRepository,
+} from "./repository/auth-user-repository";
 import {
   type HistoryRepository,
   createMvpHistoryRepository,
@@ -36,10 +44,8 @@ export type AppVariables = {
   requestId: string;
 };
 
-export type GoogleOAuthConfig = {
+export type GoogleOAuthConfig = GoogleOAuthExchangeConfig & {
   authEndpoint: string;
-  clientId: string;
-  redirectUri: string;
   scope: string;
 };
 
@@ -51,19 +57,18 @@ type CreateAppOptions = {
   sessionStore?: SessionStore;
   now?: () => Date;
   googleOAuthConfig?: GoogleOAuthConfig;
+  googleOAuthClient?: GoogleOAuthClient;
+  authUserRepository?: AuthUserRepository;
   webClientOrigin?: string;
-};
-
-const MVP_AUTH_USER: SessionUser = {
-  userId: "f1b2c3d4-9999-4999-8999-999999999999",
-  displayName: "MVP User",
-  walletBalance: 4000,
 };
 
 const DEFAULT_GOOGLE_OAUTH_CONFIG: GoogleOAuthConfig = {
   authEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
   clientId: "",
+  clientSecret: "",
   redirectUri: "http://localhost:3000/api/auth/google/callback",
+  tokenEndpoint: "https://oauth2.googleapis.com/token",
+  userInfoEndpoint: "https://openidconnect.googleapis.com/v1/userinfo",
   scope: "openid email profile",
 };
 const GOOGLE_OAUTH_RESPONSE_TYPE = "code";
@@ -102,6 +107,10 @@ export const createApp = (options: CreateAppOptions = {}) => {
   const now = options.now ?? (() => new Date());
   const googleOAuthConfig =
     options.googleOAuthConfig ?? DEFAULT_GOOGLE_OAUTH_CONFIG;
+  const googleOAuthClient =
+    options.googleOAuthClient ?? createGoogleOAuthClient();
+  const authUserRepository =
+    options.authUserRepository ?? createInMemoryAuthUserRepository();
   const webClientOrigin = options.webClientOrigin;
 
   app.use("/*", cors());
@@ -180,7 +189,7 @@ export const createApp = (options: CreateAppOptions = {}) => {
     return c.body(null, 302);
   });
 
-  app.get("/api/auth/google/callback", (c) => {
+  app.get("/api/auth/google/callback", async (c) => {
     const code = c.req.query("code");
     const state = c.req.query("state");
 
@@ -199,7 +208,24 @@ export const createApp = (options: CreateAppOptions = {}) => {
       );
     }
 
-    const session = sessionStore.create(MVP_AUTH_USER, now());
+    if (!googleOAuthConfig.clientSecret) {
+      throw new HttpAppError(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        "GOOGLE_OAUTH_CLIENT_SECRET が未設定です。サーバー環境変数を設定してください。",
+      );
+    }
+
+    const oauthUser = await googleOAuthClient.exchangeCodeForUser({
+      code,
+      config: googleOAuthConfig,
+    });
+    const issuedAt = now();
+    const authenticatedUser = await authUserRepository.findOrCreateByGoogleSub({
+      googleSub: oauthUser.googleSub,
+      now: issuedAt,
+    });
+
+    const session = sessionStore.create(authenticatedUser, issuedAt);
     const redirectLocation = webClientOrigin
       ? new URL(POST_AUTH_REDIRECT_PATH, webClientOrigin).toString()
       : POST_AUTH_REDIRECT_PATH;
