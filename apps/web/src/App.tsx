@@ -251,6 +251,7 @@ const ProtectedContent = (props: {
     return (
       <TableScreen
         tableId={route.tableId}
+        currentUserId={authState.user.userId}
         onGoLobby={onGoLobby}
         onLogout={onLogout}
       />

@@ -2,11 +2,12 @@ import {
   RealtimeTableCommandType,
   SeatStatus,
   TABLE_COMMAND_ACTIONS,
+  TableBuyIn,
   TableCommandAction,
   type TableCommandAction as TableCommandActionType,
   TableStatus,
 } from "@mix-online/shared";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { formatChipsToUsd } from "./auth-api";
 import { TableApiError, type TableDetail, getTableDetail } from "./table-api";
 import {
@@ -17,12 +18,22 @@ import {
   formatSeatStatusLabel,
   resolveTableControlState,
 } from "./table-control";
-import { LocaleCode } from "./web-constants";
+import {
+  type TableStore,
+  TableStoreConnectionStatus,
+  type TableStoreSnapshot,
+  TableStoreSyncStatus,
+  createTableStore,
+} from "./table-store";
+import { LobbyStateStatus, LocaleCode } from "./web-constants";
 
 type TableScreenState =
-  | { status: "loading"; requestVersion: number }
-  | { status: "loaded"; table: TableDetail }
-  | { status: "error"; message: string };
+  | {
+      status: typeof LobbyStateStatus.LOADING;
+      requestVersion: number;
+    }
+  | { status: typeof LobbyStateStatus.LOADED; table: TableDetail }
+  | { status: typeof LobbyStateStatus.ERROR; message: string };
 
 const resolveRemainingSeconds = (deadlineAt: string | null, now: number) => {
   if (!deadlineAt) {
@@ -53,27 +64,97 @@ const formatTableStatusLabel = (status: TableStatus) => {
   return "ハンド終了";
 };
 
+const formatConnectionStatusLabel = (
+  status: (typeof TableStoreConnectionStatus)[keyof typeof TableStoreConnectionStatus],
+) => {
+  if (status === TableStoreConnectionStatus.CONNECTING) {
+    return "接続中";
+  }
+  if (status === TableStoreConnectionStatus.OPEN) {
+    return "接続済み";
+  }
+  if (status === TableStoreConnectionStatus.RECONNECTING) {
+    return "再接続中";
+  }
+  if (status === TableStoreConnectionStatus.CLOSED) {
+    return "切断";
+  }
+  return "未開始";
+};
+
+const formatSyncStatusLabel = (
+  status: (typeof TableStoreSyncStatus)[keyof typeof TableStoreSyncStatus],
+) => {
+  if (status === TableStoreSyncStatus.RESYNCING) {
+    return "再同期中";
+  }
+  if (status === TableStoreSyncStatus.IN_SYNC) {
+    return "同期済み";
+  }
+  return "未同期";
+};
+
 export const TableScreen = (props: {
   tableId: string;
+  currentUserId: string;
   onGoLobby: () => void;
   onLogout: () => void;
 }) => {
-  const { tableId, onGoLobby, onLogout } = props;
+  const { tableId, currentUserId, onGoLobby, onLogout } = props;
+  const tableStoreRef = useRef<TableStore | null>(null);
+  const tableStoreUnsubscribeRef = useRef<(() => void) | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
   const [state, setState] = useState<TableScreenState>({
-    status: "loading",
+    status: LobbyStateStatus.LOADING,
     requestVersion: 0,
   });
   const [selectedAction, setSelectedAction] = useState<TableCommandActionType>(
     TableCommandAction.CHECK,
   );
   const [amountText, setAmountText] = useState("0");
+  const [joinBuyInText, setJoinBuyInText] = useState("1000");
   const [commandPreview, setCommandPreview] = useState<string | null>(null);
   const [timerNow, setTimerNow] = useState(() => Date.now());
+  const [realtimeState, setRealtimeState] = useState<{
+    connectionStatus: TableStoreSnapshot["connectionStatus"];
+    syncStatus: TableStoreSnapshot["syncStatus"];
+    tableSeq: number;
+    lastErrorMessage: string | null;
+  }>({
+    connectionStatus: TableStoreConnectionStatus.IDLE,
+    syncStatus: TableStoreSyncStatus.IDLE,
+    tableSeq: 0,
+    lastErrorMessage: null,
+  });
+
+  useEffect(() => {
+    void tableId;
+    tableStoreUnsubscribeRef.current?.();
+    tableStoreUnsubscribeRef.current = null;
+    tableStoreRef.current?.stop();
+    tableStoreRef.current = null;
+  }, [tableId]);
+
+  useEffect(() => {
+    return () => {
+      tableStoreUnsubscribeRef.current?.();
+      tableStoreUnsubscribeRef.current = null;
+      tableStoreRef.current?.stop();
+      tableStoreRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
-    setState({ status: "loading", requestVersion });
+    setState({ status: LobbyStateStatus.LOADING, requestVersion });
+    if (tableStoreRef.current === null) {
+      setRealtimeState({
+        connectionStatus: TableStoreConnectionStatus.IDLE,
+        syncStatus: TableStoreSyncStatus.IDLE,
+        tableSeq: 0,
+        lastErrorMessage: null,
+      });
+    }
 
     getTableDetail(tableId)
       .then((response) => {
@@ -81,8 +162,13 @@ export const TableScreen = (props: {
           return;
         }
 
+        const existingStore = tableStoreRef.current;
+        if (existingStore) {
+          existingStore.replaceTable(response.table);
+        }
+
         setState({
-          status: "loaded",
+          status: LobbyStateStatus.LOADED,
           table: response.table,
         });
       })
@@ -95,7 +181,7 @@ export const TableScreen = (props: {
           error instanceof TableApiError
             ? error.message
             : "卓詳細の取得に失敗しました。";
-        setState({ status: "error", message });
+        setState({ status: LobbyStateStatus.ERROR, message });
       });
 
     return () => {
@@ -103,8 +189,45 @@ export const TableScreen = (props: {
     };
   }, [requestVersion, tableId]);
 
+  useEffect(() => {
+    if (state.status !== LobbyStateStatus.LOADED) {
+      return;
+    }
+    if (tableStoreRef.current) {
+      return;
+    }
+
+    const store = createTableStore({
+      tableId,
+      initialTable: state.table,
+      currentUserId,
+    });
+
+    const applyRealtimeSnapshot = (snapshot: TableStoreSnapshot) => {
+      setRealtimeState({
+        connectionStatus: snapshot.connectionStatus,
+        syncStatus: snapshot.syncStatus,
+        tableSeq: snapshot.tableSeq,
+        lastErrorMessage: snapshot.lastErrorMessage,
+      });
+      setState((previousState) => {
+        if (previousState.status !== LobbyStateStatus.LOADED) {
+          return previousState;
+        }
+        return {
+          status: LobbyStateStatus.LOADED,
+          table: snapshot.table,
+        };
+      });
+    };
+
+    tableStoreRef.current = store;
+    tableStoreUnsubscribeRef.current = store.subscribe(applyRealtimeSnapshot);
+    store.start();
+  }, [currentUserId, state, tableId]);
+
   const actionDeadlineAt =
-    state.status === "loaded"
+    state.status === LobbyStateStatus.LOADED
       ? (state.table.currentHand?.actionDeadlineAt ?? null)
       : null;
   useEffect(() => {
@@ -122,7 +245,7 @@ export const TableScreen = (props: {
     };
   }, [actionDeadlineAt]);
 
-  const table = state.status === "loaded" ? state.table : null;
+  const table = state.status === LobbyStateStatus.LOADED ? state.table : null;
   const mySeat = table?.seats.find((seat) => seat.isYou) ?? null;
   const isYourTurn =
     !!table &&
@@ -140,8 +263,45 @@ export const TableScreen = (props: {
   );
 
   const handleSeatCommand = (commandType: SeatCommandType) => {
+    const store = tableStoreRef.current;
+    if (!store) {
+      setCommandPreview("WebSocket初期化前のためコマンド送信できません。");
+      return;
+    }
+
+    if (commandType === RealtimeTableCommandType.JOIN) {
+      const buyIn = Number.parseInt(joinBuyInText, 10);
+      if (
+        !Number.isInteger(buyIn) ||
+        buyIn < TableBuyIn.MIN ||
+        buyIn > TableBuyIn.MAX
+      ) {
+        setCommandPreview(
+          `buyIn は ${TableBuyIn.MIN}〜${TableBuyIn.MAX} の整数で入力してください。`,
+        );
+        return;
+      }
+
+      const sent = store.sendSeatCommand(commandType, { buyIn });
+      setCommandPreview(
+        sent
+          ? `送信: ${commandType} (buyIn=${buyIn})`
+          : `送信失敗: ${
+              store.getSnapshot().lastErrorMessage ??
+              "JOIN コマンドを送信できませんでした。"
+            }`,
+      );
+      return;
+    }
+
+    const sent = store.sendSeatCommand(commandType);
     setCommandPreview(
-      `送信プレビュー: ${commandType}（M4-04 で WebSocket 送信を接続予定）`,
+      sent
+        ? `送信: ${commandType}`
+        : `送信失敗: ${
+            store.getSnapshot().lastErrorMessage ??
+            `${commandType} コマンドを送信できませんでした。`
+          }`,
     );
   };
 
@@ -160,15 +320,33 @@ export const TableScreen = (props: {
       return;
     }
 
-    const payload = requiresAmount
-      ? `{ action: ${selectedAction}, amount: ${amount} }`
-      : `{ action: ${selectedAction} }`;
+    const store = tableStoreRef.current;
+    if (!store) {
+      setCommandPreview("WebSocket初期化前のためコマンド送信できません。");
+      return;
+    }
+
+    const sent = store.sendActionCommand(selectedAction, {
+      amount: requiresAmount ? amount : undefined,
+    });
+    if (sent) {
+      setCommandPreview(
+        requiresAmount
+          ? `送信: ${RealtimeTableCommandType.ACT} { action: ${selectedAction}, amount: ${amount} }`
+          : `送信: ${RealtimeTableCommandType.ACT} { action: ${selectedAction} }`,
+      );
+      return;
+    }
+
     setCommandPreview(
-      `送信プレビュー: ${RealtimeTableCommandType.ACT} ${payload}（M4-04 で WebSocket 送信を接続予定）`,
+      `送信失敗: ${
+        store.getSnapshot().lastErrorMessage ??
+        `${RealtimeTableCommandType.ACT} を送信できませんでした。`
+      }`,
     );
   };
 
-  if (state.status === "loading") {
+  if (state.status === LobbyStateStatus.LOADING) {
     return (
       <section className="surface state-panel" aria-live="polite">
         <h2>卓詳細を読み込み中です</h2>
@@ -183,7 +361,7 @@ export const TableScreen = (props: {
     );
   }
 
-  if (state.status === "error") {
+  if (state.status === LobbyStateStatus.ERROR) {
     return (
       <section className="surface state-panel">
         <h2>卓詳細の取得に失敗しました</h2>
@@ -204,7 +382,7 @@ export const TableScreen = (props: {
     );
   }
 
-  if (state.status === "loaded") {
+  if (state.status === LobbyStateStatus.LOADED) {
     return (
       <section className="surface table-panel">
         <header className="table-panel-header">
@@ -223,6 +401,22 @@ export const TableScreen = (props: {
               ゲーム: <strong>{state.table.gameType}</strong> / ステークス:{" "}
               <strong>{state.table.stakes.display}</strong>
             </p>
+            <p className="table-summary-line">
+              Realtime接続:{" "}
+              <span className="status-chip">
+                {formatConnectionStatusLabel(realtimeState.connectionStatus)}
+              </span>{" "}
+              / 同期:{" "}
+              <span className="status-chip">
+                {formatSyncStatusLabel(realtimeState.syncStatus)}
+              </span>{" "}
+              / tableSeq: <strong>{realtimeState.tableSeq}</strong>
+            </p>
+            {realtimeState.lastErrorMessage ? (
+              <output className="command-preview">
+                Realtimeエラー: {realtimeState.lastErrorMessage}
+              </output>
+            ) : null}
           </div>
           <div className="row-actions">
             <button
@@ -347,13 +541,31 @@ export const TableScreen = (props: {
               type="submit"
               disabled={!controlState.actionInputEnabled}
             >
-              送信プレビュー
+              送信
             </button>
           </form>
         </div>
 
         <div className="surface inline-panel action-panel">
           <h3>席操作</h3>
+          {controlState.seatCommandAvailability[
+            RealtimeTableCommandType.JOIN
+          ] ? (
+            <div className="action-form">
+              <label className="field-label" htmlFor="table-seat-buyin">
+                buyIn ({TableBuyIn.MIN}〜{TableBuyIn.MAX})
+              </label>
+              <input
+                id="table-seat-buyin"
+                inputMode="numeric"
+                min={TableBuyIn.MIN}
+                max={TableBuyIn.MAX}
+                step={1}
+                value={joinBuyInText}
+                onChange={(event) => setJoinBuyInText(event.target.value)}
+              />
+            </div>
+          ) : null}
           <div className="row-actions">
             {SEAT_COMMAND_TYPES.map((commandType) => (
               <button
