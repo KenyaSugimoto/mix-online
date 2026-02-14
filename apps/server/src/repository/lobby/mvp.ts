@@ -1,8 +1,5 @@
-import type { LobbyTableRecord } from "../lobby-table";
-
-export interface LobbyTableRepository {
-  listTables(): Promise<LobbyTableRecord[]>;
-}
+import type { LobbyTableRecord } from "../../lobby-table";
+import type { LobbyTableRepository } from "./contract";
 
 const MVP_FIXED_TABLES: LobbyTableRecord[] = [
   {

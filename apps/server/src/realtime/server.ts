@@ -11,13 +11,19 @@ import {
   type AuthUserRepository,
   createInMemoryAuthUserRepository,
   createSupabaseAuthUserRepository,
-} from "../repository/auth-user-repository";
-import type { HistoryRepository } from "../repository/history-repository";
-import { createSupabaseHistoryRepository } from "../repository/history-repository.supabase";
-import type { LobbyTableRepository } from "../repository/lobby-table-repository";
-import { createSupabaseLobbyTableRepository } from "../repository/lobby-table-repository.supabase";
-import type { TableDetailRepository } from "../repository/table-detail-repository";
-import { createSupabaseTableDetailRepository } from "../repository/table-detail-repository.supabase";
+} from "../repository/auth";
+import {
+  type HistoryRepository,
+  createSupabaseHistoryRepository,
+} from "../repository/history";
+import {
+  type LobbyTableRepository,
+  createSupabaseLobbyTableRepository,
+} from "../repository/lobby";
+import {
+  type TableDetailRepository,
+  createSupabaseTableDetailRepository,
+} from "../repository/table-detail";
 import {
   type RealtimeTableService,
   type RealtimeTableServiceRuntimeState,

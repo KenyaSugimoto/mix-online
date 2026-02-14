@@ -1,6 +1,7 @@
 import { SeatStatus } from "@mix-online/shared";
-import type { LobbyTableRecord } from "../lobby-table";
-import type { LobbyTableRepository } from "./lobby-table-repository";
+import type { LobbyTableRecord } from "../../lobby-table";
+import { isRecord } from "../shared/guards";
+import type { LobbyTableRepository } from "./contract";
 
 const REST_TABLES_PATH = "/rest/v1/tables";
 const REST_TABLE_SEATS_PATH = "/rest/v1/table_seats";
@@ -27,9 +28,6 @@ type SupabaseTableSeatRow = {
   user_id: string | null;
   status: string;
 };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
 
 const toError = async (params: {
   response: Response;

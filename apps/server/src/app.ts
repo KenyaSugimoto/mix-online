@@ -24,19 +24,19 @@ import { toLobbyTablesResponse } from "./lobby-table";
 import {
   type AuthUserRepository,
   createInMemoryAuthUserRepository,
-} from "./repository/auth-user-repository";
+} from "./repository/auth";
 import {
   type HistoryRepository,
   createMvpHistoryRepository,
-} from "./repository/history-repository";
+} from "./repository/history";
 import {
   type LobbyTableRepository,
   createMvpLobbyTableRepository,
-} from "./repository/lobby-table-repository";
+} from "./repository/lobby";
 import {
   type TableDetailRepository,
   createMvpTableDetailRepository,
-} from "./repository/table-detail-repository";
+} from "./repository/table-detail";
 import { toTableDetailResponse } from "./table-detail";
 import { resolveRequestId, validateUuid } from "./validation";
 

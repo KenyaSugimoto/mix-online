@@ -1,11 +1,6 @@
 import {
-  ACTION_TYPES,
   ActionType,
-  GAME_TYPES,
-  type GameType,
-  POT_SIDES,
   PotSide,
-  STREETS,
   Street,
   TableEventName,
 } from "@mix-online/shared";
@@ -16,8 +11,15 @@ import type {
   HandParticipantRecord,
   PotResultRecord,
   StreetActionGroupRecord,
-} from "../history-hand";
-import type { HistoryRepository } from "./history-repository";
+} from "../../history-hand";
+import {
+  isActionType,
+  isGameType,
+  isPotSide,
+  isRecord,
+  isStreet,
+} from "../shared/guards";
+import type { HistoryRepository } from "./contract";
 
 const REST_HANDS_PATH = "/rest/v1/hands";
 const REST_HAND_PLAYERS_PATH = "/rest/v1/hand_players";
@@ -97,31 +99,6 @@ const EVENT_NAME_TO_ACTION_TYPE: Partial<
   [TableEventName.CheckEvent]: ActionType.CHECK,
   [TableEventName.FoldEvent]: ActionType.FOLD,
 };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const isStreet = (
-  value: unknown,
-): value is (typeof Street)[keyof typeof Street] =>
-  typeof value === "string" && (STREETS as readonly string[]).includes(value);
-
-const isActionType = (
-  value: unknown,
-): value is (typeof ActionType)[keyof typeof ActionType] =>
-  typeof value === "string" &&
-  (ACTION_TYPES as readonly string[]).includes(value);
-
-const isGameType = (
-  value: unknown,
-): value is (typeof GameType)[keyof typeof GameType] =>
-  typeof value === "string" &&
-  (GAME_TYPES as readonly string[]).includes(value);
-
-const isPotSide = (
-  value: unknown,
-): value is (typeof PotSide)[keyof typeof PotSide] =>
-  typeof value === "string" && (POT_SIDES as readonly string[]).includes(value);
 
 const toError = async (params: {
   response: Response;

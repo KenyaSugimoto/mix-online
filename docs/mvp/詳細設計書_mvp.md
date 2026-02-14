@@ -701,8 +701,8 @@ erDiagram
 
 実装基準（M1-03）:
 
-- Repository契約は `apps/server/src/repository/command-repository.ts` を正とする。
-- `persistCommandAndPublish`（`apps/server/src/repository/persist-command.ts`）で
+- Repository契約は `apps/server/src/repository/command/contract.ts` を正とする。
+- `persistCommandAndPublish`（`apps/server/src/repository/command/persist-command.ts`）で
   `withTransaction` 内に `hand_events` 追記 + 関連更新を集約する。
 - `publisher.publish` は `withTransaction` 成功後にのみ実行し、配信先行を禁止する。
 - 単体テストは `apps/server/src/__tests__/unit/persist-command.unit.test.ts` で順序保証と失敗時挙動を検証する。

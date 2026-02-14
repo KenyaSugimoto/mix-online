@@ -3,7 +3,7 @@ import {
   createInMemoryAuthUserRepository,
   createSupabaseAuthUserRepository,
   toDefaultDisplayName,
-} from "../../repository/auth-user-repository";
+} from "../../repository/auth";
 
 describe("auth-user-repository", () => {
   it("in-memory repository は google_sub ごとにユーザーを再利用し、表示名を上書きしない", async () => {

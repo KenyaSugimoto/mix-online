@@ -1,28 +1,31 @@
-import { createHash, randomUUID } from "node:crypto";
-import type { SessionUser } from "../auth-session";
+import { isRecord } from "../shared/guards";
+import type { AuthUserRepository } from "./contract";
+import {
+  DEFAULT_INITIAL_WALLET_BALANCE,
+  toDefaultDisplayName,
+} from "./in-memory";
 
-const DEFAULT_INITIAL_WALLET_BALANCE = 4000;
 const REST_USERS_PATH = "/rest/v1/users";
 const REST_WALLETS_PATH = "/rest/v1/wallets";
 const PREFER_RETURN_REPRESENTATION = "return=representation";
 const PREFER_IGNORE_DUPLICATES =
   "resolution=ignore-duplicates,return=representation";
-const DEFAULT_DISPLAY_NAME_PREFIX = "Player-";
-const DEFAULT_DISPLAY_NAME_SUFFIX_LENGTH = 6;
 
-type FindOrCreateByGoogleSubParams = {
-  googleSub: string;
-  now: Date;
+type SupabaseAuthUserRepositoryOptions = {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  defaultInitialWalletBalance?: number;
+  fetchImpl?: typeof fetch;
 };
 
-export interface AuthUserRepository {
-  findOrCreateByGoogleSub(
-    params: FindOrCreateByGoogleSubParams,
-  ): Promise<SessionUser>;
-}
+type SupabaseUserRow = {
+  id: string;
+  display_name: string;
+};
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+type SupabaseWalletRow = {
+  balance: number;
+};
 
 const parseErrorCode = (payload: unknown): string | null => {
   if (!isRecord(payload)) {
@@ -44,58 +47,6 @@ const toError = async (params: {
   return new Error(
     `${params.step} failed: status=${params.response.status}, body=${responseBody}`,
   );
-};
-
-const buildDefaultDisplayName = (googleSub: string) => {
-  const digest = createHash("sha256").update(googleSub).digest("hex");
-  const suffix = digest
-    .slice(0, DEFAULT_DISPLAY_NAME_SUFFIX_LENGTH)
-    .toUpperCase();
-  return `${DEFAULT_DISPLAY_NAME_PREFIX}${suffix}`;
-};
-
-export const toDefaultDisplayName = (googleSub: string) =>
-  buildDefaultDisplayName(googleSub);
-
-export const createInMemoryAuthUserRepository = (options?: {
-  defaultInitialWalletBalance?: number;
-}): AuthUserRepository => {
-  const defaultInitialWalletBalance =
-    options?.defaultInitialWalletBalance ?? DEFAULT_INITIAL_WALLET_BALANCE;
-  const usersByGoogleSub = new Map<string, SessionUser>();
-
-  return {
-    async findOrCreateByGoogleSub(params) {
-      const existing = usersByGoogleSub.get(params.googleSub);
-      if (existing) {
-        return existing;
-      }
-
-      const created: SessionUser = {
-        userId: randomUUID(),
-        displayName: buildDefaultDisplayName(params.googleSub),
-        walletBalance: defaultInitialWalletBalance,
-      };
-      usersByGoogleSub.set(params.googleSub, created);
-      return created;
-    },
-  };
-};
-
-type SupabaseAuthUserRepositoryOptions = {
-  supabaseUrl: string;
-  serviceRoleKey: string;
-  defaultInitialWalletBalance?: number;
-  fetchImpl?: typeof fetch;
-};
-
-type SupabaseUserRow = {
-  id: string;
-  display_name: string;
-};
-
-type SupabaseWalletRow = {
-  balance: number;
 };
 
 const parseSupabaseSingleRow = (
@@ -197,7 +148,7 @@ export const createSupabaseAuthUserRepository = (
           body: JSON.stringify([
             {
               google_sub: params.googleSub,
-              display_name: buildDefaultDisplayName(params.googleSub),
+              display_name: toDefaultDisplayName(params.googleSub),
             },
           ]),
         });

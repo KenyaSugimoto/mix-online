@@ -9,9 +9,9 @@ import {
   TableStatus,
 } from "@mix-online/shared";
 import { describe, expect, it, vi } from "vitest";
-import { createSupabaseHistoryRepository } from "../../repository/history-repository.supabase";
-import { createSupabaseLobbyTableRepository } from "../../repository/lobby-table-repository.supabase";
-import { createSupabaseTableDetailRepository } from "../../repository/table-detail-repository.supabase";
+import { createSupabaseHistoryRepository } from "../../repository/history";
+import { createSupabaseLobbyTableRepository } from "../../repository/lobby";
+import { createSupabaseTableDetailRepository } from "../../repository/table-detail";
 
 const SUPABASE_URL = "http://127.0.0.1:54321";
 const SERVICE_ROLE_KEY = "service-role-key";

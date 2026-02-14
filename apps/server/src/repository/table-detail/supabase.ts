@@ -1,20 +1,17 @@
-import {
-  GameType,
-  HAND_STATUSES,
-  HandStatus,
-  SEAT_STATUSES,
-  STREETS,
-  SeatStatus,
-  Street,
-  TABLE_STATUSES,
-  TableStatus,
-} from "@mix-online/shared";
+import { GameType, HandStatus, SeatStatus, Street } from "@mix-online/shared";
 import type {
   CurrentHandSummaryRecord,
   TableDetailRecord,
   TableSeatRecord,
-} from "../table-detail";
-import type { TableDetailRepository } from "./table-detail-repository";
+} from "../../table-detail";
+import {
+  isRecord,
+  isStreet,
+  parseHandStatus,
+  parseSeatStatus,
+  parseTableStatus,
+} from "../shared/guards";
+import type { TableDetailRepository } from "./contract";
 
 const REST_TABLES_PATH = "/rest/v1/tables";
 const REST_TABLE_SEATS_PATH = "/rest/v1/table_seats";
@@ -85,53 +82,6 @@ type HandEventContext = {
   potTotal: number;
   toActSeatNo: number | null;
   actionDeadlineAt: string | null;
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const isStreet = (
-  value: unknown,
-): value is (typeof Street)[keyof typeof Street] =>
-  typeof value === "string" && (STREETS as readonly string[]).includes(value);
-
-const parseTableStatus = (
-  value: unknown,
-): (typeof TableStatus)[keyof typeof TableStatus] => {
-  if (
-    typeof value === "string" &&
-    (TABLE_STATUSES as readonly string[]).includes(value)
-  ) {
-    return value as (typeof TableStatus)[keyof typeof TableStatus];
-  }
-
-  return TableStatus.WAITING;
-};
-
-const parseSeatStatus = (
-  value: unknown,
-): (typeof SeatStatus)[keyof typeof SeatStatus] => {
-  if (
-    typeof value === "string" &&
-    (SEAT_STATUSES as readonly string[]).includes(value)
-  ) {
-    return value as (typeof SeatStatus)[keyof typeof SeatStatus];
-  }
-
-  return SeatStatus.EMPTY;
-};
-
-const parseHandStatus = (
-  value: unknown,
-): (typeof HandStatus)[keyof typeof HandStatus] => {
-  if (
-    typeof value === "string" &&
-    (HAND_STATUSES as readonly string[]).includes(value)
-  ) {
-    return value as (typeof HandStatus)[keyof typeof HandStatus];
-  }
-
-  return HandStatus.IN_PROGRESS;
 };
 
 const toError = async (params: {

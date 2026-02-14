@@ -1,5 +1,5 @@
 import { ActionType, GameType, PotSide, Street } from "@mix-online/shared";
-import type { HandHistoryDetailRecord } from "../history-hand";
+import type { HandHistoryDetailRecord } from "../../history-hand";
 
 export const MVP_AUTH_USER_ID = "f1b2c3d4-9999-4999-8999-999999999999";
 

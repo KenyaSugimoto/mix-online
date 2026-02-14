@@ -2,7 +2,7 @@ import type {
   CommandPersistenceBatch,
   CommandRepository,
   TableEventPublisher,
-} from "./command-repository";
+} from "./contract";
 
 export type PersistCommandInput = {
   repository: CommandRepository;
