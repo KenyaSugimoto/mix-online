@@ -23,6 +23,7 @@
 
 1. ローカル Supabase を起動する
    - `pnpm db:start`
+   - 認証/REST API（`SERVICE_ROLE_KEY` 取得や `/rest/v1/*` 検証）も使う場合は `pnpm db:start:api`
 2. マイグレーションを再適用し seed を投入する
    - `pnpm db:reset`
 3. 接続情報を確認する（Studio URL / DB URL）
@@ -33,8 +34,12 @@
 
 Colima 利用時の補足:
 
-- `pnpm db:start` は、通常の `supabase start` が失敗した場合に自動で DB 最小構成（postgresのみ）へフォールバックする。
-- フォールバック時、`pnpm db:status` には `Stopped services` が表示されるが、DB検証（migration/seed確認）用途では正常。
+- `pnpm db:start` は、通常の `supabase start` が失敗した場合に以下の順で自動フォールバックする。
+  1. `edge-runtime,logflare,vector` を除外した API利用可能構成
+  2. それも失敗した場合は DB最小構成（postgresのみ）
+- `pnpm db:start:api` は `edge-runtime,logflare,vector` を除外した API利用可能構成で起動する（認証・REST検証向け）。
+- DB最小構成フォールバック時、`pnpm db:status` には `Stopped services` が表示されるが、DB検証（migration/seed確認）用途では正常。
+- `SERVICE_ROLE_KEY` が必要な検証（例: OAuth callback 後の users/wallets 永続化確認）は、`db:start:api` または full起動を使用する。
 
 ## seed適用の確認クエリ（SQL Editor で実行）
 

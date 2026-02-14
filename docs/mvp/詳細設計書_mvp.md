@@ -88,8 +88,9 @@ Vercel配置を前提にしたデプロイ視点の全体図は [`全体アー�
 - マイグレーションは **Supabase CLI** (`supabase migration`) を使用する
 - マイグレーションファイルは生SQL形式で `supabase/migrations/` 配下に配置する
 - ローカル開発環境は `supabase start`（Docker）でSupabase互換のPostgreSQLを起動する
-- ローカル運用時は `pnpm db:start` / `pnpm db:reset` / `pnpm db:status` / `pnpm db:stop` を使用する
-- Colima 利用時は `pnpm db:start` が失敗時に DB 最小構成へフォールバックして起動する
+- ローカル運用時は `pnpm db:start` / `pnpm db:start:api` / `pnpm db:reset` / `pnpm db:status` / `pnpm db:stop` を使用する
+- Colima 利用時の `pnpm db:start` は失敗時に、まず `edge-runtime/logflare/vector` 除外のAPI利用可能構成へ、さらに失敗した場合は DB 最小構成へフォールバックして起動する
+- 認証/REST（`SERVICE_ROLE_KEY` 取得や `/rest/v1/*` 検証）を行う場合は `pnpm db:start:api` または full起動を使用する
 - 本番適用は `supabase db push` でリモートプロジェクトへ反映する
 - DDLの正本は `supabase/migrations/` とし、重複コピーを作らない
 - seed投入・ローカル起動・DBリセットの実行手順と期待値は `supabase/migrations/README.md` を正とする
