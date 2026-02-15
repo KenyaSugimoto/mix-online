@@ -246,16 +246,19 @@
 - 前提条件:
 1. `pnpm --filter server dev` でAPI/WSサーバーを起動（`http://localhost:3000`）。
 2. `pnpm --filter web dev` でWebを起動（`http://localhost:5173`）。
-3. ブラウザ2セッション（通常 + シークレット）を用意し、別ユーザーでログインする。
+3. `pnpm m5-12:preflight -- --output docs/mvp/plans/M5-12_preflight-log_<YYYYMMDD-HHMM>.md` を実行し、HTTP(`/api`) と WS(`/ws`) の疎通ログを保存する。
+4. ブラウザ2セッション（通常 + シークレット）を用意し、別ユーザーでログインする。
 - 入力（操作）:
 1. 両セッションでログイン後、同一卓（`/tables/{tableId}`）へ遷移する。
 2. `U1` と `U2` がそれぞれ `JOIN`（例: `buyIn=1000`）を実行する。
 3. 3rd〜終局まで最低1ハンド分のアクション（CHECK/CALL/FOLD等）を進める。
 4. 終局後に履歴画面で該当ハンドを開く。
+5. 実施結果を `docs/mvp/plans/M5-12_local-integration-checklog_template.md` に記録する。
 - 期待値:
-1. ログイン後のロビー遷移・卓詳細取得が失敗しない（HTTP `/api/*` 経路正常）。
-2. 卓画面のイベントが双方で受信され、手番進行が一致する（WS `/ws` 経路正常）。
-3. ハンド終局後、履歴一覧/詳細に同一 `handId` が反映される。
+1. preflightログで HTTP(`/api/health`) と WS(`/ws`) の direct/proxy 双方が正常である。
+2. ログイン後のロビー遷移・卓詳細取得が失敗しない（HTTP `/api/*` 経路正常）。
+3. 卓画面のイベントが双方で受信され、手番進行が一致する（WS `/ws` 経路正常）。
+4. ハンド終局後、履歴一覧/詳細に同一 `handId` が反映される。
 
 ### NG-01 buy-in範囲外（下限/上限）
 

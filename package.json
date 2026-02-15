@@ -26,7 +26,8 @@
     "test:e2e:hp": "vitest run apps/server/src/__tests__/e2e/hp.e2e.test.ts",
     "test:e2e:ng": "vitest run apps/server/src/__tests__/e2e/ng.e2e.test.ts",
     "test:e2e:ed": "vitest run apps/server/src/__tests__/e2e/ed.e2e.test.ts",
-    "test:e2e": "pnpm test:e2e:foundation && pnpm test:e2e:hp && pnpm test:e2e:ng && pnpm test:e2e:ed"
+    "test:e2e": "pnpm test:e2e:foundation && pnpm test:e2e:hp && pnpm test:e2e:ng && pnpm test:e2e:ed",
+    "m5-12:preflight": "node ./scripts/m5-12-preflight.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

@@ -34,6 +34,9 @@ export class WsGateway {
   private readonly sessionStore: WsGatewayOptions["sessionStore"];
   private readonly now: () => Date;
   private readonly tableService: RealtimeTableService;
+  private readonly onTableEvents:
+    | ((events: RealtimeTableEventMessage[]) => void | Promise<void>)
+    | undefined;
   private readonly actionTimeoutMs: number;
   private readonly revealWaitMs: number;
   private readonly setTimeoutFn: (
@@ -49,6 +52,7 @@ export class WsGateway {
     this.sessionStore = options.sessionStore;
     this.now = options.now ?? (() => new Date());
     this.tableService = options.tableService ?? createRealtimeTableService();
+    this.onTableEvents = options.onTableEvents;
     this.actionTimeoutMs = options.actionTimeoutMs ?? DEFAULT_ACTION_TIMEOUT_MS;
     this.revealWaitMs =
       options.revealWaitMs ?? WsGateway.DEFAULT_REVEAL_WAIT_MS;
@@ -58,6 +62,16 @@ export class WsGateway {
     this.clearTimeoutFn =
       options.clearTimeoutFn ??
       ((timeoutId) => globalThis.clearTimeout(timeoutId));
+  }
+
+  private async notifyTableEvents(
+    events: RealtimeTableEventMessage[],
+  ): Promise<void> {
+    if (!this.onTableEvents || events.length === 0) {
+      return;
+    }
+
+    await this.onTableEvents(events);
   }
 
   private resolveViewerSeatNos(
@@ -368,6 +382,7 @@ export class WsGateway {
       }
 
       trackedConnection.currentTableId = result.tableId;
+      await this.notifyTableEvents(result.events);
       for (const event of result.events) {
         this.broadcastToTable(result.tableId, event, session.user);
       }
@@ -401,6 +416,7 @@ export class WsGateway {
     });
 
     if (result.ok) {
+      await this.notifyTableEvents(result.events);
       for (const event of result.events) {
         this.broadcastToTable(result.tableId, event, connection.currentUser);
       }
@@ -468,6 +484,7 @@ export class WsGateway {
     });
 
     if (result.ok) {
+      await this.notifyTableEvents(result.events);
       for (const event of result.events) {
         this.broadcastToTable(result.tableId, event);
       }
@@ -484,6 +501,7 @@ export class WsGateway {
     });
 
     if (result.ok) {
+      await this.notifyTableEvents(result.events);
       for (const event of result.events) {
         this.broadcastToTable(result.tableId, event);
       }

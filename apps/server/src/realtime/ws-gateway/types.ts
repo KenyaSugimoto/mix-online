@@ -1,4 +1,5 @@
 import type { IncomingMessage } from "node:http";
+import type { RealtimeTableEventMessage } from "@mix-online/shared";
 import type { WebSocket } from "ws";
 import type { SessionStore, SessionUser } from "../../auth-session";
 import type { RealtimeTableService } from "../table-service";
@@ -9,6 +10,7 @@ export type WsGatewayOptions = {
   sessionStore: SessionStore;
   now?: () => Date;
   tableService?: RealtimeTableService;
+  onTableEvents?: (events: RealtimeTableEventMessage[]) => void | Promise<void>;
   actionTimeoutMs?: number;
   revealWaitMs?: number;
   setTimeoutFn?: (callback: () => void, timeoutMs: number) => TimerHandle;
