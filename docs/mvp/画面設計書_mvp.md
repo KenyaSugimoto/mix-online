@@ -111,7 +111,7 @@ flowchart TD
 - `DealEndEvent` 受信後は、勝者席パネルをハイライトし、席パネル内に獲得額バッジ（`WON +$xx`）を表示する。
 - 持ち時間は現在手番者の席カード上で、残り秒数（秒）+ バーで可視化する。
 
-カード表示・進行ログ方針:
+カード表示・アクション履歴方針:
 
 - テーブル中央を6席レイアウトで表示し、`cardsBySeatNo` を使って 3rd〜7th の配札カードを席ごとに可視化する。
 - 7枚カードは1列横並びで表示し、カード同士を少し重ねて視認性と省スペースを両立する。
@@ -119,7 +119,7 @@ flowchart TD
 - 表向きカード（`UP_3`〜`UP_6`）は伏せ札との判別性を上げるため、少し上にずらして表示する。
 - スートは文字ではなく記号（`♠` / `♥` / `♦` / `♣`）で表示し、`♠` / `♣` は黒、`♥` / `♦` は赤で描画する。
 - `ShowdownEvent` 受信時は、`players[].action=SHOW` の席にのみ `handLabel`（役名）を表示する。`action=MUCK` の席は `handLabel` を表示しない（必要に応じて `MUCK` 表示のみ行う）。
-- 進行ログ欄は卓右上の折りたたみUI（既定: 折りたたみ）に配置し、必要時に展開して `SeatStateChangedEvent.reason/appliesFrom` と `StreetAdvanceEvent.reason` を確認できるようにする。
+- アクション履歴欄は卓右上の折りたたみUI（既定: 折りたたみ）に配置し、必要時に展開して `SeatStateChangedEvent.reason/appliesFrom` と `StreetAdvanceEvent.reason` を確認できるようにする。
 
 ---
 
