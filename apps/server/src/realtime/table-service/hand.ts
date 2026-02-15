@@ -177,6 +177,32 @@ const applySeatTransitionsAfterHand = (table: TableState): PendingEvent[] => {
       continue;
     }
 
+    if (
+      seat.status === SeatStatus.LEAVE_PENDING &&
+      seat.userId !== null &&
+      seat.displayName !== null
+    ) {
+      const previousStatus = seat.status;
+      seat.status = SeatStatus.SIT_OUT;
+      events.push({
+        handId: null,
+        eventName: TableEventName.SeatStateChangedEvent,
+        payload: {
+          seatNo: seat.seatNo,
+          previousStatus,
+          currentStatus: SeatStatus.SIT_OUT,
+          reason: SeatStateChangeReason.SIT_OUT,
+          user: {
+            userId: seat.userId,
+            displayName: seat.displayName,
+          },
+          stack: seat.stack,
+          appliesFrom: SeatStateChangeAppliesFrom.IMMEDIATE,
+        },
+      });
+      continue;
+    }
+
     // 次のハンド開始待ちのプレイヤーは次のハンド開始とともにアクティブにする
     if (
       seat.status === SeatStatus.SEATED_WAIT_NEXT_HAND &&

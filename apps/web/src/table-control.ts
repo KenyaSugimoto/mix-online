@@ -118,10 +118,15 @@ export const resolveTableControlState = (params: {
 
   if (seatStatus === SeatStatus.LEAVE_PENDING) {
     return {
-      modeLabel: "退席予約中",
-      note: "現在ハンド終了後に退席します。再着席操作は受け付けません。",
-      actionInputEnabled: false,
-      seatCommandAvailability: noSeatCommands,
+      modeLabel: "次ハンド離席予約中",
+      note: isYourTurn
+        ? `${RealtimeTableCommandType.ACT} 入力を有効化しています。ハンド終了後に離席します。`
+        : "このハンド終了後に離席します。予約を解除するには着席を押してください。",
+      actionInputEnabled: isYourTurn,
+      seatCommandAvailability: {
+        ...noSeatCommands,
+        [RealtimeTableCommandType.RETURN]: true,
+      },
     };
   }
 

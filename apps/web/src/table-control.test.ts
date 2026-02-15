@@ -75,24 +75,33 @@ describe("table-control", () => {
     });
   });
 
-  it("LEAVE_PENDING と DISCONNECTED はすべて無効化する", () => {
+  it("LEAVE_PENDING は予約解除の RETURN を有効化し、手番時は table.act を許可する", () => {
     const leavePending = resolveTableControlState({
+      seatStatus: SeatStatus.LEAVE_PENDING,
+      isYourTurn: true,
+    });
+    const leavePendingWaiting = resolveTableControlState({
       seatStatus: SeatStatus.LEAVE_PENDING,
       isYourTurn: false,
     });
+
+    expect(leavePending.actionInputEnabled).toBe(true);
+    expect(leavePendingWaiting.actionInputEnabled).toBe(false);
+    expect(leavePending.seatCommandAvailability).toEqual({
+      [RealtimeTableCommandType.JOIN]: false,
+      [RealtimeTableCommandType.SIT_OUT]: false,
+      [RealtimeTableCommandType.RETURN]: true,
+      [RealtimeTableCommandType.LEAVE]: false,
+    });
+  });
+
+  it("DISCONNECTED はすべて無効化する", () => {
     const disconnected = resolveTableControlState({
       seatStatus: SeatStatus.DISCONNECTED,
       isYourTurn: false,
     });
 
-    expect(leavePending.actionInputEnabled).toBe(false);
     expect(disconnected.actionInputEnabled).toBe(false);
-    expect(leavePending.seatCommandAvailability).toEqual({
-      [RealtimeTableCommandType.JOIN]: false,
-      [RealtimeTableCommandType.SIT_OUT]: false,
-      [RealtimeTableCommandType.RETURN]: false,
-      [RealtimeTableCommandType.LEAVE]: false,
-    });
     expect(disconnected.seatCommandAvailability).toEqual({
       [RealtimeTableCommandType.JOIN]: false,
       [RealtimeTableCommandType.SIT_OUT]: false,

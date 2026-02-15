@@ -35,6 +35,12 @@ const fail = (
   };
 };
 
+const isHandInProgress = (table: TableState) =>
+  table.currentHand !== null &&
+  (table.status === TableStatus.DEALING ||
+    table.status === TableStatus.BETTING ||
+    table.status === TableStatus.SHOWDOWN);
+
 export const applyCommand = (params: {
   table: TableState;
   user: SessionUser;
@@ -143,6 +149,15 @@ export const applyCommand = (params: {
   }
 
   if (params.command.type === RealtimeTableCommandType.SIT_OUT) {
+    if (seat.status === SeatStatus.LEAVE_PENDING) {
+      return {
+        ok: true,
+        nextWalletBalance: params.currentBalance,
+        startHand: false,
+        events: [],
+      };
+    }
+
     if (
       seat.status !== SeatStatus.ACTIVE &&
       seat.status !== SeatStatus.SEATED_WAIT_NEXT_HAND
@@ -156,7 +171,11 @@ export const applyCommand = (params: {
     }
 
     const previousStatus = seat.status;
-    seat.status = SeatStatus.SIT_OUT;
+    const nextStatus =
+      seat.status === SeatStatus.ACTIVE && isHandInProgress(params.table)
+        ? SeatStatus.LEAVE_PENDING
+        : SeatStatus.SIT_OUT;
+    seat.status = nextStatus;
 
     return {
       ok: true,
@@ -169,14 +188,20 @@ export const applyCommand = (params: {
           payload: {
             seatNo: seat.seatNo,
             previousStatus,
-            currentStatus: seat.status,
-            reason: SeatStateChangeReason.SIT_OUT,
+            currentStatus: nextStatus,
+            reason:
+              nextStatus === SeatStatus.LEAVE_PENDING
+                ? SeatStateChangeReason.LEAVE_PENDING
+                : SeatStateChangeReason.SIT_OUT,
             user: {
               userId: params.user.userId,
               displayName: params.user.displayName,
             },
             stack: seat.stack,
-            appliesFrom: SeatStateChangeAppliesFrom.IMMEDIATE,
+            appliesFrom:
+              nextStatus === SeatStatus.LEAVE_PENDING
+                ? SeatStateChangeAppliesFrom.NEXT_HAND
+                : SeatStateChangeAppliesFrom.IMMEDIATE,
           },
         },
       ],
@@ -184,26 +209,33 @@ export const applyCommand = (params: {
   }
 
   if (params.command.type === RealtimeTableCommandType.RETURN) {
-    if (seat.status !== SeatStatus.SIT_OUT) {
+    if (
+      seat.status !== SeatStatus.SIT_OUT &&
+      seat.status !== SeatStatus.LEAVE_PENDING
+    ) {
       return fail(
         RealtimeErrorCode.INVALID_ACTION,
-        "SIT_OUT 状態以外では return できません。",
+        "SIT_OUT / LEAVE_PENDING 状態以外では return できません。",
         params.command.requestId,
         params.table.tableId,
       );
     }
 
     const nextStatus =
-      params.table.status === TableStatus.WAITING
+      seat.status === SeatStatus.LEAVE_PENDING
         ? SeatStatus.ACTIVE
-        : SeatStatus.SEATED_WAIT_NEXT_HAND;
+        : params.table.status === TableStatus.WAITING
+          ? SeatStatus.ACTIVE
+          : SeatStatus.SEATED_WAIT_NEXT_HAND;
     const previousStatus = seat.status;
     seat.status = nextStatus;
+    const shouldStartHand =
+      nextStatus === SeatStatus.ACTIVE && canStartHand(params.table);
 
     return {
       ok: true,
       nextWalletBalance: params.currentBalance,
-      startHand: canStartHand(params.table),
+      startHand: shouldStartHand,
       events: [
         {
           handId: null,

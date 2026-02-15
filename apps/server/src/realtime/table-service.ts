@@ -268,6 +268,14 @@ export class RealtimeTableService {
         },
       ];
 
+      if (
+        restoredSeatStatus === SeatStatus.ACTIVE &&
+        table.status === TableStatus.WAITING &&
+        table.currentHand === null
+      ) {
+        events.push(...startThirdStreet(table));
+      }
+
       return {
         ok: true,
         tableId: params.tableId,

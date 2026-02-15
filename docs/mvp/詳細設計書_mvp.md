@@ -753,10 +753,10 @@ erDiagram
 
 ## 10.3 SIT OUT / LEAVE 実行タイミング
 
-- `SIT OUT` は即時反映し、次ハンドから不参加。
-- `LEAVE` はハンド非参加時は即時席解放。
-- ハンド参加中の `LEAVE` 要求は `LEAVE_PENDING` とし、ハンド終了直後に席解放。
-- `LEAVE_PENDING` 中は再着席コマンドを拒否。
+- ハンド進行中の `SIT OUT` 要求は `LEAVE_PENDING`（次ハンド離席予約）として扱い、現在ハンド終了後に `SIT_OUT` へ遷移する。
+- ハンド非進行時の `SIT OUT` 要求は即時 `SIT_OUT` へ遷移する。
+- `LEAVE_PENDING` 中でも現在ハンドの `table.act` は継続でき、`table.return` で予約解除（`ACTIVE` 復帰）できる。
+- `LEAVE` はハンド参加有無に関わらず即時席解放し、スタックをウォレットへ払い戻す。
 
 ---
 
