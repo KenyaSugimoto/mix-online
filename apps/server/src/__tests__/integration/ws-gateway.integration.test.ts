@@ -887,4 +887,197 @@ describe("WebSocketゲートウェイ統合", () => {
       await server.close();
     }
   });
+
+  it("M5-40 ヘッズアップで期限超過後に再接続しても table.act を受理しない", async () => {
+    const tableId = "55555555-5555-4555-8555-555555555555";
+    const user2 = {
+      userId: "00000000-0000-4000-8000-000000000002",
+      displayName: "U2",
+      walletBalance: 4000,
+    };
+    const server = startRealtimeServer({
+      port: 0,
+      now: () => new Date(),
+      actionTimeoutMs: 120,
+    });
+    const session1 = server.sessionStore.create(TEST_USER, new Date());
+    const session2 = server.sessionStore.create(user2, new Date());
+    const socket1 = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+      headers: {
+        Cookie: createSessionCookie(session1.sessionId),
+      },
+    });
+    const socket2 = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+      headers: {
+        Cookie: createSessionCookie(session2.sessionId),
+      },
+    });
+
+    let reconnectSocket: WebSocket | null = null;
+    try {
+      await waitForOpen(socket1);
+      await waitForOpen(socket2);
+
+      socket1.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111151",
+          sentAt: new Date().toISOString(),
+          payload: {
+            tableId,
+            buyIn: 1000,
+          },
+        }),
+      );
+      const joined1 = (await waitForMessage(socket1)) as {
+        eventName?: string;
+        payload?: {
+          seatNo?: number;
+          user?: {
+            userId?: string;
+          };
+        };
+      };
+
+      socket2.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111152",
+          sentAt: new Date().toISOString(),
+          payload: {
+            tableId,
+            buyIn: 1000,
+          },
+        }),
+      );
+      const openingEvents = (await waitForMessages(socket1, 4)) as Array<{
+        eventName?: string;
+        payload?: {
+          seatNo?: number;
+          bringInSeatNo?: number;
+          nextToActSeatNo?: number | null;
+          user?: {
+            userId?: string;
+          };
+        };
+      }>;
+
+      const seatNoByUserId = new Map<string, number>();
+      if (
+        joined1.eventName === TableEventName.SeatStateChangedEvent &&
+        joined1.payload?.seatNo &&
+        joined1.payload.user?.userId
+      ) {
+        seatNoByUserId.set(joined1.payload.user.userId, joined1.payload.seatNo);
+      }
+      for (const event of openingEvents) {
+        if (
+          event.eventName === TableEventName.SeatStateChangedEvent &&
+          event.payload?.seatNo &&
+          event.payload.user?.userId
+        ) {
+          seatNoByUserId.set(event.payload.user.userId, event.payload.seatNo);
+        }
+      }
+
+      const user1SeatNo = seatNoByUserId.get(TEST_USER.userId) ?? null;
+      const user2SeatNo = seatNoByUserId.get(user2.userId) ?? null;
+      expect(user1SeatNo).not.toBeNull();
+      expect(user2SeatNo).not.toBeNull();
+
+      const bringInSeatNo = openingEvents.find(
+        (event) => event.eventName === TableEventName.DealCards3rdEvent,
+      )?.payload?.bringInSeatNo;
+      expect(bringInSeatNo).not.toBeUndefined();
+      if (!user1SeatNo || !user2SeatNo || !bringInSeatNo) {
+        return;
+      }
+
+      const bringInSocket = bringInSeatNo === user1SeatNo ? socket1 : socket2;
+      bringInSocket.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.ACT,
+          requestId: "11111111-1111-4111-8111-111111111153",
+          sentAt: new Date().toISOString(),
+          payload: {
+            tableId,
+            action: TableCommandAction.BRING_IN,
+          },
+        }),
+      );
+
+      const bringInEvent = (await waitForMessage(socket1)) as {
+        eventName?: string;
+        payload?: {
+          nextToActSeatNo?: number | null;
+        };
+      };
+      expect(bringInEvent.eventName).toBe(TableEventName.BringInEvent);
+      const timeoutSeatNo = bringInEvent.payload?.nextToActSeatNo ?? null;
+      expect(timeoutSeatNo).not.toBeNull();
+      if (!timeoutSeatNo) {
+        return;
+      }
+
+      const timeoutSocket = timeoutSeatNo === user1SeatNo ? socket1 : socket2;
+      const reconnectSessionId =
+        timeoutSeatNo === user1SeatNo ? session1.sessionId : session2.sessionId;
+
+      await waitFor(90);
+      timeoutSocket.terminate();
+      await waitFor(40);
+
+      reconnectSocket = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+        headers: {
+          Cookie: createSessionCookie(reconnectSessionId),
+        },
+      });
+      await waitForOpen(reconnectSocket);
+
+      reconnectSocket.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.ACT,
+          requestId: "11111111-1111-4111-8111-111111111154",
+          sentAt: new Date().toISOString(),
+          payload: {
+            tableId,
+            action: TableCommandAction.FOLD,
+          },
+        }),
+      );
+
+      const reconnectMessages = (await collectMessagesForDuration(
+        reconnectSocket,
+        300,
+      )) as Array<{
+        type?: string;
+        code?: string;
+        eventName?: string;
+        payload?: {
+          isAuto?: boolean;
+        };
+      }>;
+
+      expect(
+        reconnectMessages.some(
+          (message) =>
+            message.type === "table.error" &&
+            message.code === RealtimeErrorCode.INVALID_ACTION,
+        ),
+      ).toBe(true);
+      expect(
+        reconnectMessages.some(
+          (message) =>
+            message.type === "table.event" &&
+            message.eventName === TableEventName.FoldEvent &&
+            message.payload?.isAuto === false,
+        ),
+      ).toBe(false);
+    } finally {
+      reconnectSocket?.terminate();
+      socket1.terminate();
+      socket2.terminate();
+      await server.close();
+    }
+  });
 });

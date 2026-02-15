@@ -277,6 +277,8 @@ export class WsGateway {
 
       if (commandContext.tableId !== null) {
         trackedConnection.currentTableId = commandContext.tableId;
+        await this.runOverdueAutoAction(commandContext.tableId);
+
         const reconnectResult = await this.tableService.handleReconnect({
           tableId: commandContext.tableId,
           user: session.user,
@@ -487,6 +489,19 @@ export class WsGateway {
       this.clearTimeoutFn(existing.timeoutId);
     }
     this.actionTimersByTableId.delete(tableId);
+  }
+
+  private async runOverdueAutoAction(tableId: string): Promise<void> {
+    const timerState = this.actionTimersByTableId.get(tableId);
+    if (!timerState) {
+      return;
+    }
+
+    if (timerState.deadlineAtMs > this.now().getTime()) {
+      return;
+    }
+
+    await this.runAutoAction(tableId, timerState.seatNo);
   }
 
   private scheduleRevealWait(tableId: string): void {
