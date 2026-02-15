@@ -33,6 +33,37 @@ type AuthState =
   | { status: typeof AuthStateStatus.UNAUTHENTICATED }
   | { status: typeof AuthStateStatus.ERROR; message: string };
 
+const ThemeOption = {
+  DARK_EMERALD: "dark-emerald",
+  DARK_NEON_POKER: "dark-neon-poker",
+} as const;
+
+type ThemeOptionValue = (typeof ThemeOption)[keyof typeof ThemeOption];
+
+const THEME_STORAGE_KEY = "mix-online-theme";
+
+const THEME_LABELS: Record<ThemeOptionValue, string> = {
+  [ThemeOption.DARK_EMERALD]: "Dark Emerald",
+  [ThemeOption.DARK_NEON_POKER]: "Neon Poker Game",
+};
+
+const THEME_OPTIONS = [
+  ThemeOption.DARK_EMERALD,
+  ThemeOption.DARK_NEON_POKER,
+] as const;
+
+const DEFAULT_THEME: ThemeOptionValue = ThemeOption.DARK_EMERALD;
+
+const toThemeOption = (value: string | null): ThemeOptionValue => {
+  if (
+    value === ThemeOption.DARK_EMERALD ||
+    value === ThemeOption.DARK_NEON_POKER
+  ) {
+    return value;
+  }
+  return DEFAULT_THEME;
+};
+
 const isProtectedRoute = (pathname: string) =>
   pathname === RoutePath.LOBBY ||
   pathname === RoutePath.HISTORY ||
@@ -41,6 +72,9 @@ const isProtectedRoute = (pathname: string) =>
 
 export function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
+  const [theme, setTheme] = useState<ThemeOptionValue>(() =>
+    toThemeOption(window.localStorage.getItem(THEME_STORAGE_KEY)),
+  );
   const [authState, setAuthState] = useState<AuthState>({
     status: AuthStateStatus.IDLE,
   });
@@ -59,6 +93,11 @@ export function App() {
       window.removeEventListener("popstate", handlePopstate);
     };
   }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   useEffect(() => {
     void authCheckVersion;
@@ -164,6 +203,23 @@ export function App() {
             </p>
           </div>
           <div className="header-actions">
+            <label className="theme-picker" htmlFor="theme-select">
+              Theme
+              <select
+                id="theme-select"
+                className="theme-select"
+                value={theme}
+                onChange={(event) =>
+                  setTheme(toThemeOption(event.target.value))
+                }
+              >
+                {THEME_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {THEME_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               className="ghost-button"
               type="button"
