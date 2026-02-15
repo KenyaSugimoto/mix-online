@@ -6,6 +6,7 @@ import {
   CARD_VISIBILITIES,
   CardSlot,
   type CardVisibility,
+  DEAL_END_REASONS,
   GAME_TYPES,
   HAND_STATUSES,
   HandStatus,
@@ -92,12 +93,25 @@ export type TableStoreLastActionBySeatNo = Partial<
   Record<number, TableStoreLastAction>
 >;
 
+export type TableStoreLatestDealEndSummary = {
+  occurredAt: string;
+  endReason: (typeof DEAL_END_REASONS)[number] | null;
+  finalPot: number;
+  results: Array<{
+    seatNo: number;
+    delta: number;
+    stackAfter: number;
+  }>;
+  winnerSeatNos: number[];
+};
+
 export type TableStoreState = {
   table: TableDetail;
   tableSeq: number;
   cardsBySeatNo: TableStoreCardsBySeatNo;
   eventLogs: TableStoreEventLogEntry[];
   lastActionBySeatNo: TableStoreLastActionBySeatNo;
+  latestDealEndSummary: TableStoreLatestDealEndSummary | null;
   connectionStatus: TableStoreConnectionStatus;
   syncStatus: TableStoreSyncStatus;
   lastErrorCode: RealtimeErrorCode | null;
@@ -876,6 +890,7 @@ type ShowdownPayload = {
 };
 
 type DealEndPayload = {
+  endReason?: (typeof DEAL_END_REASONS)[number];
   finalPot: number;
   nextDealerSeatNo: number;
   nextGameType: (typeof GAME_TYPES)[number];
@@ -883,6 +898,7 @@ type DealEndPayload = {
   handsSinceRotation: number;
   results: Array<{
     seatNo: number;
+    delta?: number;
     stackAfter: number;
   }>;
 };
@@ -1038,19 +1054,36 @@ const isShowdownPayload = (
 
 const isDealEndPayload = (
   payload: Record<string, unknown>,
-): payload is DealEndPayload =>
-  isInteger(payload.finalPot) &&
-  isInteger(payload.nextDealerSeatNo) &&
-  isEnumValue(payload.nextGameType, GAME_TYPES) &&
-  isInteger(payload.mixIndex) &&
-  isInteger(payload.handsSinceRotation) &&
-  Array.isArray(payload.results) &&
-  payload.results.every(
-    (result) =>
-      isRecord(result) &&
-      isInteger(result.seatNo) &&
-      isInteger(result.stackAfter),
-  );
+): payload is DealEndPayload => {
+  if (
+    !isInteger(payload.finalPot) ||
+    !isInteger(payload.nextDealerSeatNo) ||
+    !isEnumValue(payload.nextGameType, GAME_TYPES) ||
+    !isInteger(payload.mixIndex) ||
+    !isInteger(payload.handsSinceRotation) ||
+    !Array.isArray(payload.results)
+  ) {
+    return false;
+  }
+
+  if (
+    payload.endReason !== undefined &&
+    !isEnumValue(payload.endReason, DEAL_END_REASONS)
+  ) {
+    return false;
+  }
+
+  return payload.results.every((result) => {
+    if (
+      !isRecord(result) ||
+      !isInteger(result.seatNo) ||
+      !isInteger(result.stackAfter)
+    ) {
+      return false;
+    }
+    return result.delta === undefined || isInteger(result.delta);
+  });
+};
 
 const cloneCardsBySeatNo = (
   cardsBySeatNo: TableStoreCardsBySeatNo,
@@ -1080,6 +1113,52 @@ const cloneLastActionBySeatNo = (
       action ? { ...action } : action,
     ]),
   );
+
+const cloneLatestDealEndSummary = (
+  summary: TableStoreLatestDealEndSummary | null,
+): TableStoreLatestDealEndSummary | null => {
+  if (summary === null) {
+    return null;
+  }
+  return {
+    ...summary,
+    results: summary.results.map((result) => ({ ...result })),
+    winnerSeatNos: [...summary.winnerSeatNos],
+  };
+};
+
+const resolveLatestDealEndSummary = (
+  event: TableEventMessage,
+): TableStoreLatestDealEndSummary | null => {
+  if (event.eventName !== TableEventName.DealEndEvent) {
+    return null;
+  }
+  if (!isDealEndPayload(event.payload)) {
+    return null;
+  }
+
+  const results = event.payload.results.map((result) => ({
+    seatNo: result.seatNo,
+    delta: result.delta ?? 0,
+    stackAfter: result.stackAfter,
+  }));
+  const winnerSeatNos = results
+    .filter((result) => result.delta > 0)
+    .sort((left, right) =>
+      left.delta === right.delta
+        ? left.seatNo - right.seatNo
+        : right.delta - left.delta,
+    )
+    .map((result) => result.seatNo);
+
+  return {
+    occurredAt: event.occurredAt,
+    endReason: event.payload.endReason ?? null,
+    finalPot: event.payload.finalPot,
+    results,
+    winnerSeatNos,
+  };
+};
 
 const applyEventToCardsBySeatNo = (
   cardsBySeatNo: TableStoreCardsBySeatNo,
@@ -1136,10 +1215,6 @@ const applyEventToCardsBySeatNo = (
       ];
     }
     return next;
-  }
-
-  if (event.eventName === TableEventName.DealEndEvent) {
-    return {};
   }
 
   return cardsBySeatNo;
@@ -1548,7 +1623,15 @@ const applyEventToTable = (
       mixIndex: payload.mixIndex,
       handsSinceRotation: payload.handsSinceRotation,
       dealerSeatNo: payload.nextDealerSeatNo,
-      currentHand: null,
+      currentHand: table.currentHand
+        ? {
+            ...table.currentHand,
+            status: HandStatus.HAND_END,
+            potTotal: payload.finalPot,
+            toActSeatNo: null,
+            actionDeadlineAt: null,
+          }
+        : null,
     };
 
     for (const result of payload.results) {
@@ -1577,6 +1660,7 @@ const cloneSnapshot = (state: TableStoreState): TableStoreSnapshot => ({
   cardsBySeatNo: cloneCardsBySeatNo(state.cardsBySeatNo),
   eventLogs: state.eventLogs.map((entry) => ({ ...entry })),
   lastActionBySeatNo: cloneLastActionBySeatNo(state.lastActionBySeatNo),
+  latestDealEndSummary: cloneLatestDealEndSummary(state.latestDealEndSummary),
 });
 
 export type TableStore = {
@@ -1621,6 +1705,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
     cardsBySeatNo: {},
     eventLogs: [],
     lastActionBySeatNo: {},
+    latestDealEndSummary: null,
     connectionStatus: TableStoreConnectionStatus.IDLE,
     syncStatus: TableStoreSyncStatus.IDLE,
     lastErrorCode: null,
@@ -1792,6 +1877,11 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
               ...state.lastActionBySeatNo,
               [action.seatNo]: action,
             };
+    const dealEndSummary = resolveLatestDealEndSummary(message);
+    const nextLatestDealEndSummary =
+      message.eventName === TableEventName.DealInitEvent
+        ? null
+        : (dealEndSummary ?? state.latestDealEndSummary);
 
     patchState({
       table: nextTable,
@@ -1799,6 +1889,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       cardsBySeatNo: nextCardsBySeatNo,
       eventLogs: pushEventLog(state.eventLogs, buildEventLog(message)),
       lastActionBySeatNo: nextLastActionBySeatNo,
+      latestDealEndSummary: nextLatestDealEndSummary,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,
       lastErrorMessage: null,
@@ -1817,6 +1908,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
         message.payload.table.currentHand,
       ),
       lastActionBySeatNo: {},
+      latestDealEndSummary: null,
       tableSeq: message.tableSeq,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,

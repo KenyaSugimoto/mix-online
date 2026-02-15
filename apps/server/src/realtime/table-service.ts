@@ -24,6 +24,7 @@ import {
 import {
   applyActCommand,
   applyCommand,
+  startNextHandAfterRevealWait,
   startThirdStreet,
 } from "./table-service/gameplay";
 import {
@@ -418,9 +419,62 @@ export class RealtimeTableService {
     });
   }
 
+  async executeRevealWaitTimeout(params: {
+    tableId: string;
+    occurredAt: Date;
+  }): Promise<RealtimeTableServiceResult> {
+    const actor = this.actorRegistry.getOrCreate(params.tableId);
+    return actor.enqueue(({ allocateTableSeq, allocateHandSeq }) => {
+      const table = this.tables.get(params.tableId);
+      if (!table) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      const events = startNextHandAfterRevealWait(table);
+      if (events.length === 0) {
+        return {
+          ok: true,
+          tableId: params.tableId,
+          events: [],
+        };
+      }
+
+      return {
+        ok: true,
+        tableId: params.tableId,
+        events: mapEvents({
+          tableId: params.tableId,
+          events,
+          occurredAt: params.occurredAt,
+          allocateTableSeq,
+          allocateHandSeq,
+          eventHistoryByTableId: this.eventHistoryByTableId,
+          retainedEventLimit: this.retainedEventLimit,
+        }),
+      };
+    });
+  }
+
   getNextToActSeatNo(tableId: string): number | null {
     const table = this.tables.get(tableId);
     return table?.currentHand?.toActSeatNo ?? null;
+  }
+
+  hasPendingRevealWait(tableId: string): boolean {
+    const table = this.tables.get(tableId);
+    if (!table) {
+      return false;
+    }
+
+    return (
+      table.pendingNextHandStart &&
+      table.status === TableStatus.HAND_END &&
+      table.currentHand !== null
+    );
   }
 
   getSeatNosForUser(tableId: string, userId: string): number[] {
@@ -439,6 +493,17 @@ export class RealtimeTableService {
         (table) =>
           table.status === TableStatus.BETTING &&
           table.currentHand?.toActSeatNo !== null,
+      )
+      .map((table) => table.tableId);
+  }
+
+  listPendingRevealWaitTableIds(): string[] {
+    return [...this.tables.values()]
+      .filter(
+        (table) =>
+          table.pendingNextHandStart &&
+          table.status === TableStatus.HAND_END &&
+          table.currentHand !== null,
       )
       .map((table) => table.tableId);
   }

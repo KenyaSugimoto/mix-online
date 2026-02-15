@@ -25,6 +25,7 @@ export type TableState = Omit<RealtimeTableState, "seats"> & {
   bringIn: number;
   currentHand: HandState | null;
   nextHandNo: number;
+  pendingNextHandStart: boolean;
 };
 
 export type HandPlayerState = {

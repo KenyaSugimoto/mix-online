@@ -10,6 +10,7 @@ export type WsGatewayOptions = {
   now?: () => Date;
   tableService?: RealtimeTableService;
   actionTimeoutMs?: number;
+  revealWaitMs?: number;
   setTimeoutFn?: (callback: () => void, timeoutMs: number) => TimerHandle;
   clearTimeoutFn?: (timeoutId: TimerHandle) => void;
 };

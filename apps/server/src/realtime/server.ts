@@ -242,6 +242,10 @@ export const startRealtimeServer = (
   });
   // Pending状態のテーブルについて、アクション自動実行タイマーをスケジュールする (サーバ再起動対策)
   wsGateway.schedulePendingActions(tableService.listPendingActionTableIds());
+  // HAND_ENDリビール待機中のテーブルについて、次ハンド開始タイマーを再設定する
+  wsGateway.schedulePendingRevealWaits(
+    tableService.listPendingRevealWaitTableIds(),
+  );
 
   // Start HTTP server
   const server = serve({

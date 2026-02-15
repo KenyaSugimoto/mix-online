@@ -819,6 +819,9 @@ describe("RealtimeTableService 席管理", () => {
       executeCommand: ReturnType<
         typeof createRealtimeTableService
       >["executeCommand"];
+      executeRevealWaitTimeout: ReturnType<
+        typeof createRealtimeTableService
+      >["executeRevealWaitTimeout"];
       tables: Map<
         string,
         {
@@ -926,6 +929,25 @@ describe("RealtimeTableService 席管理", () => {
     const dealEnd = expectEvent(check.events[3], TableEventName.DealEndEvent);
     expect(dealEnd.payload.endReason).toBe(DealEndReason.SHOWDOWN);
     expect(dealEnd.payload.finalPot).toBeGreaterThan(0);
+    expect(
+      check.events.some(
+        (event) => event.eventName === TableEventName.DealInitEvent,
+      ),
+    ).toBe(false);
+
+    const revealWaitDone = await service.executeRevealWaitTimeout({
+      tableId: TABLE_ID,
+      occurredAt: NOW,
+    });
+    expect(revealWaitDone.ok).toBe(true);
+    if (!revealWaitDone.ok) {
+      return;
+    }
+    expect(
+      revealWaitDone.events.some(
+        (event) => event.eventName === TableEventName.DealInitEvent,
+      ),
+    ).toBe(true);
   });
 
   it("ALL_IN_RUNOUT では 5th-7th を自動進行して Showdown/DealEnd する", async () => {
@@ -1089,7 +1111,7 @@ describe("RealtimeTableService 席管理", () => {
     expect(dealEnd.payload.endReason).toBe(DealEndReason.SHOWDOWN);
   });
 
-  it("SEATED_WAIT_NEXT_HAND の席はハンド終了時に ACTIVE 化され次ハンドへ参加できる", async () => {
+  it("SEATED_WAIT_NEXT_HAND の席はリビール待機完了後に ACTIVE 化され次ハンドへ参加できる", async () => {
     const service = createRealtimeTableService();
     const user1 = createUser(1);
     const user2 = createUser(2);
@@ -1174,7 +1196,27 @@ describe("RealtimeTableService 席管理", () => {
       return;
     }
 
-    const activatedEvent = folded.events.find(
+    expect(
+      folded.events.some(
+        (event) => event.eventName === TableEventName.SeatStateChangedEvent,
+      ),
+    ).toBe(false);
+    expect(
+      folded.events.some(
+        (event) => event.eventName === TableEventName.DealInitEvent,
+      ),
+    ).toBe(false);
+
+    const revealWaitDone = await service.executeRevealWaitTimeout({
+      tableId: TABLE_ID,
+      occurredAt: NOW,
+    });
+    expect(revealWaitDone.ok).toBe(true);
+    if (!revealWaitDone.ok) {
+      return;
+    }
+
+    const activatedEvent = revealWaitDone.events.find(
       (
         event,
       ): event is Extract<
@@ -1191,10 +1233,10 @@ describe("RealtimeTableService 席管理", () => {
     }
     expect(activatedEvent.payload.currentStatus).toBe(SeatStatus.ACTIVE);
 
-    const activatedEventIndex = folded.events.findIndex(
+    const activatedEventIndex = revealWaitDone.events.findIndex(
       (event) => event === activatedEvent,
     );
-    const nextDealInitIndex = folded.events.findIndex(
+    const nextDealInitIndex = revealWaitDone.events.findIndex(
       (event, index) =>
         index > activatedEventIndex &&
         event.eventName === TableEventName.DealInitEvent,
@@ -1202,7 +1244,7 @@ describe("RealtimeTableService 席管理", () => {
     expect(nextDealInitIndex).toBeGreaterThan(activatedEventIndex);
 
     const nextDealInit = expectEvent(
-      folded.events[nextDealInitIndex],
+      revealWaitDone.events[nextDealInitIndex],
       TableEventName.DealInitEvent,
     );
     expect(
@@ -1217,6 +1259,9 @@ describe("RealtimeTableService 席管理", () => {
       executeCommand: ReturnType<
         typeof createRealtimeTableService
       >["executeCommand"];
+      executeRevealWaitTimeout: ReturnType<
+        typeof createRealtimeTableService
+      >["executeRevealWaitTimeout"];
       tables: Map<
         string,
         {
@@ -1315,7 +1360,16 @@ describe("RealtimeTableService 席管理", () => {
       return;
     }
 
-    const autoLeaveEvent = folded.events.find(
+    const revealWaitDone = await service.executeRevealWaitTimeout({
+      tableId: TABLE_ID,
+      occurredAt: NOW,
+    });
+    expect(revealWaitDone.ok).toBe(true);
+    if (!revealWaitDone.ok) {
+      return;
+    }
+
+    const autoLeaveEvent = revealWaitDone.events.find(
       (
         event,
       ): event is Extract<
@@ -1331,14 +1385,6 @@ describe("RealtimeTableService 席管理", () => {
       return;
     }
     expect(autoLeaveEvent.payload.currentStatus).toBe(SeatStatus.EMPTY);
-
-    const dealEndIndex = folded.events.findIndex(
-      (event) => event.eventName === TableEventName.DealEndEvent,
-    );
-    const autoLeaveIndex = folded.events.findIndex(
-      (event) => event === autoLeaveEvent,
-    );
-    expect(autoLeaveIndex).toBeGreaterThan(dealEndIndex);
   });
 
   it("ヘッズアップでも5bet cap超過のRAISEを拒否する", async () => {

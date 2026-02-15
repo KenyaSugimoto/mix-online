@@ -1,7 +1,7 @@
 # Mix Stud Online 状態遷移図（MVP）
 
-Version: v1.0  
-Last Updated: 2026-02-10  
+Version: v1.1  
+Last Updated: 2026-02-15  
 参照要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 参照設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)  
 契約仕様: [`openapi.yaml`](./openapi.yaml), [`asyncapi.yaml`](./asyncapi.yaml)  
@@ -33,8 +33,8 @@ stateDiagram-v2
 
   SHOWDOWN --> HAND_END: DealEndEvent\nendReason=SHOWDOWN or AUTO_END
 
-  HAND_END --> DEALING: 次ハンド開始条件成立
-  HAND_END --> WAITING: ACTIVE不足 または ante不足者あり
+  HAND_END --> DEALING: リビール待機(数秒)後\n次ハンド開始条件成立
+  HAND_END --> WAITING: リビール待機(数秒)後\nACTIVE不足 または ante不足者あり
 ```
 
 ---

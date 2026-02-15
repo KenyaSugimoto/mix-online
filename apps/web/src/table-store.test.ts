@@ -4,6 +4,7 @@ import {
   CardSlot,
   CardSuit,
   CardVisibility,
+  DealEndReason,
   GameType,
   HandStatus,
   RealtimeTableCommandType,
@@ -689,6 +690,7 @@ describe("table-store", () => {
         occurredAt: BASE_TIME.toISOString(),
         eventName: TableEventName.DealEndEvent,
         payload: {
+          endReason: DealEndReason.SHOWDOWN,
           finalPot: 40,
           nextDealerSeatNo: 2,
           nextGameType: GameType.RAZZ,
@@ -697,13 +699,20 @@ describe("table-store", () => {
           results: [
             {
               seatNo: 1,
+              delta: 20,
               stackAfter: 1020,
             },
           ],
         },
       }),
     );
-    expect(Object.keys(store.getSnapshot().cardsBySeatNo)).toEqual([]);
+    expect(store.getSnapshot().table.status).toBe(TableStatus.HAND_END);
+    expect(store.getSnapshot().cardsBySeatNo[1]?.length).toBe(4);
+    expect(store.getSnapshot().latestDealEndSummary).toMatchObject({
+      finalPot: 40,
+      winnerSeatNos: [1],
+      endReason: DealEndReason.SHOWDOWN,
+    });
   });
 
   it("SeatStateChanged と StreetAdvance のログを保持する", () => {
@@ -774,6 +783,87 @@ describe("table-store", () => {
     expect(logs.length).toBe(2);
     expect(logs[0]?.kind).toBe("seat_state_changed");
     expect(logs[1]?.kind).toBe("street_advance");
+  });
+
+  it("DealInit を受信したら直前ハンドの勝者サマリーをクリアする", () => {
+    const sockets: FakeWebSocket[] = [];
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable: createInitialTable(),
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 1,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 3,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.DealEndEvent,
+        payload: {
+          endReason: DealEndReason.UNCONTESTED,
+          finalPot: 20,
+          nextDealerSeatNo: 2,
+          nextGameType: GameType.STUD_HI,
+          mixIndex: 0,
+          handsSinceRotation: 1,
+          results: [
+            {
+              seatNo: 1,
+              delta: 10,
+              stackAfter: 1010,
+            },
+          ],
+        },
+      }),
+    );
+    expect(store.getSnapshot().latestDealEndSummary?.winnerSeatNos).toEqual([
+      1,
+    ]);
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 2,
+        handId: "44444444-4444-4444-8444-444444444444",
+        handSeq: 1,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.DealInitEvent,
+        payload: {
+          handNo: 43,
+          gameType: GameType.STUD_HI,
+          dealerSeatNo: 2,
+          mixIndex: 0,
+          handsSinceRotation: 1,
+          stakes: {
+            smallBet: 20,
+            bigBet: 40,
+            ante: 5,
+            bringIn: 10,
+          },
+          participants: [
+            { seatNo: 1, startStack: 1010 },
+            { seatNo: 2, startStack: 990 },
+          ],
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().latestDealEndSummary).toBeNull();
   });
 
   it("StreetAdvance で新ストリート開始時は streetBetTo/raiseCount をリセットする", () => {
