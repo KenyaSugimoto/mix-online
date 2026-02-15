@@ -79,6 +79,21 @@ const expectBringInSeatNoFromDeal3rd = (
     TableEventName.DealCards3rdEvent,
   ).payload.bringInSeatNo;
 
+const toThirdStreetCardSequence = (events: RealtimeTableEventMessage[]) => {
+  const dealCards3rd = expectEvent(
+    events.find(
+      (event) => event.eventName === TableEventName.DealCards3rdEvent,
+    ),
+    TableEventName.DealCards3rdEvent,
+  );
+  return dealCards3rd.payload.cards.flatMap((seatCard) =>
+    seatCard.cards.map((card) => {
+      const value = card.card ? `${card.card.rank}${card.card.suit}` : "null";
+      return `${seatCard.seatNo}:${card.position}:${value}`;
+    }),
+  );
+};
+
 describe("RealtimeTableService 席管理", () => {
   it("join/sitOut/return/leave の状態遷移を処理できる", async () => {
     const service = createRealtimeTableService();
@@ -307,6 +322,44 @@ describe("RealtimeTableService 席管理", () => {
     );
     expect(dealCards3rd.payload.street).toBe(Street.THIRD);
     expect(typeof dealCards3rd.payload.bringInSeatNo).toBe("number");
+  });
+
+  it("新規ハンド開始時の3rd配札が固定カード列にならない", async () => {
+    const startTwoPlayerHand = async (baseUserIndex: number) => {
+      const service = createRealtimeTableService();
+      const firstJoin = await service.executeCommand({
+        command: createCommand({
+          type: RealtimeTableCommandType.JOIN,
+          payload: { buyIn: BUY_IN_HIGH },
+        }),
+        user: createUser(baseUserIndex),
+        occurredAt: NOW,
+      });
+      expect(firstJoin.ok).toBe(true);
+
+      const secondJoin = await service.executeCommand({
+        command: createCommand({
+          type: RealtimeTableCommandType.JOIN,
+          payload: { buyIn: BUY_IN_HIGH },
+          requestId: createRequestId(baseUserIndex + 1),
+        }),
+        user: createUser(baseUserIndex + 1),
+        occurredAt: NOW,
+      });
+      expect(secondJoin.ok).toBe(true);
+      if (!secondJoin.ok) {
+        return [];
+      }
+
+      return toThirdStreetCardSequence(secondJoin.events);
+    };
+
+    const firstSequence = await startTwoPlayerHand(101);
+    const secondSequence = await startTwoPlayerHand(201);
+
+    expect(firstSequence.length).toBe(6);
+    expect(secondSequence.length).toBe(6);
+    expect(firstSequence).not.toEqual(secondSequence);
   });
 
   it("非手番アクションと toCall あり CHECK を拒否する", async () => {

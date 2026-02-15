@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.40  
+Version: v1.41  
 Last Updated: 2026-02-15  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -35,7 +35,7 @@ Last Updated: 2026-02-15
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
-| M5 | リリース準備完了 | IN_PROGRESS | 85% | Codex | TBA | M5-23でハンド終了後のリビール待機フェーズ（次ハンド開始ディレイ）を実装し、終局直後のカード確認時間を確保した |
+| M5 | リリース準備完了 | IN_PROGRESS | 88% | Codex | TBA | M5-25で配札デッキを毎ハンドシャッフルするよう修正し、固定カード列の再発防止テストを追加した |
 
 ---
 
@@ -63,7 +63,6 @@ Last Updated: 2026-02-15
 | M5-03 | 非機能検証（レイテンシp95、5xx率、再接続品質） | P1 | NOT_STARTED | 非機能目標の測定結果が取得可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-20 | Realtime契約/E2E強化（HP-04/HP-06/HP-10の自動化） | P1 | NOT_STARTED | 手動検証依存を減らし、進行停止回帰をCIで検知できる | [`apps/server/src/__tests__/e2e`](../../apps/server/src/__tests__/e2e), [`apps/server/src/__tests__/integration/ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-27 | ショーダウン役表示の追加（Muckしなかったプレイヤーの役を表示） | P1 | NOT_STARTED | Showdown時に公開対象プレイヤーの役名をUI表示し、Muckしたプレイヤーの役は表示しない | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
-| M5-25 | 配札ランダム性の不具合修正（スート偏り/固定配札の解消） | P0 | NOT_STARTED | 通常対局で毎回同一カード列にならず、4スートを含むランダム配札が行われる | [`apps/server/src/realtime/table-service/gameplay.ts`](../../apps/server/src/realtime/table-service/gameplay.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-26 | Realtime進行ロジックの回帰耐性強化（高リスク経路のシナリオ追加） | P1 | NOT_STARTED | Street遷移・手番・ショーダウン境界の回帰をCIで継続検知できる | [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/server/src/__tests__/integration/ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | DEC-01 | 未決事項の合意（プレイヤー名変更、最低バイイン、オッドチップ詳細） | P1 | NOT_STARTED | 仕様合意をADR化し関連仕様へ反映 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
@@ -112,6 +111,7 @@ Last Updated: 2026-02-15
 | M5-22 | テーブルカード表示UI（配札カード可視化） | P1 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-23 | ハンド終了後のリビール待機フェーズ追加（次ハンド開始ディレイ） | P1 | DONE | 2026-02-15 | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`apps/server/src/realtime/ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-24 | 手番持ち時間表示の同期不具合修正（秒数/バー） | P1 | DONE | 2026-02-15 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M5-25 | 配札ランダム性の不具合修正（スート偏り/固定配札の解消） | P0 | DONE | 2026-02-15 | [`apps/server/src/realtime/table-service/deck.ts`](../../apps/server/src/realtime/table-service/deck.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/deck.unit.test.ts`](../../apps/server/src/__tests__/unit/deck.unit.test.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts) |
 | M5-13 | テーブルUIギャップ解消（`reason`/`appliesFrom` 表示、状態不整合検知ログ） | P1 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-19 | テーブルUI再設計（ゲームテーブル表示、カード可視化、操作導線改善） | P1 | DONE | 2026-02-14 | [`docs/mvp/plans/M5-19_table-ui-redesign_plan_2026-02-14.md`](./plans/M5-19_table-ui-redesign_plan_2026-02-14.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | 2026-02-14 | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/contract.ts`](../../apps/server/src/repository/auth/contract.ts), [`apps/server/src/repository/auth/in-memory.ts`](../../apps/server/src/repository/auth/in-memory.ts), [`apps/server/src/repository/auth/supabase.ts`](../../apps/server/src/repository/auth/supabase.ts), [`apps/server/src/__tests__/integration/http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`docs/mvp/openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -139,6 +139,7 @@ Last Updated: 2026-02-15
 
 | Date | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- | --- |
+| 2026-02-15 | 3rd配札が毎ハンド固定カード列になり、スート偏りが再発する | 高 | `M5-25` で配札開始時デッキをFisher-Yatesシャッフルに変更し、固定列再発を検知するunitテストを追加 | CLOSED |
 | 2026-02-14 | 手番進行が `toActSeatNo=null` で停止し、卓が `BETTING` から終局へ遷移しない | 高 | `M5-16` で StreetAdvance/DealCard/Showdown/DealEnd と次ハンド開始判定を実装し、unitテストで回帰検知を追加 | CLOSED |
 | 2026-02-14 | `table.act` の契約値とサーバー実装が不一致で、UIに非合法アクションが表示される | 高 | `M5-17` で `PokerActionLogic.md` 準拠の局面別合法アクション判定（server/UI）へ統一し、`BET` / `BRING_IN` を局面制約付きで受理 | CLOSED |
 | 2026-02-14 | Realtime契約/E2Eが全イベント系（DealCard/StreetAdvance/Showdown/DealEnd）を検証できておらず、回帰を見逃す | 高 | `M5-20` で契約テストとHPシナリオを拡張し、停止系不具合をCIで検知 | OPEN |
@@ -155,6 +156,7 @@ Last Updated: 2026-02-15
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-15 | M5-25 配札ランダム性修正方針 | `startThirdStreet` で標準デッキをそのまま使う実装を廃止し、`createShuffledDeck`（Fisher-Yates + `crypto.randomInt`）で毎ハンド配札順をランダム化する。あわせて、shuffle単体テストと「連続ハンドで同一3rd配札列を許容しない」回帰テストを追加する。 | 実対局で同一カード列とスート偏りが再現しており、ゲーム成立性と信頼性を損なうため。乱数シャッフルを配札開始の必須前処理として固定し、テストで再発を防止するため。 | [`apps/server/src/realtime/table-service/deck.ts`](../../apps/server/src/realtime/table-service/deck.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/deck.unit.test.ts`](../../apps/server/src/__tests__/unit/deck.unit.test.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts) |
 | 2026-02-15 | M5-23 リビール待機フェーズ導入方針 | `DealEndEvent` 後は即 `DealInitEvent` を出さず `HAND_END` を維持し、サーバータイマー満了時に `SEATED_WAIT_NEXT_HAND` 活性化と次ハンド開始判定を実行する。クライアントは `DealEndEvent` でカードをクリアせず、待機中も最終盤面を表示し続ける。 | 終局直後に結果確認する時間を確保しつつ、途中参加席の `NEXT_HAND_ACTIVATE` タイミングを「次ハンド開始時」に維持するため | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`apps/server/src/realtime/ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-14 | M5-15 表示名編集UI方針 | ロビーに表示名編集フォーム（編集モード切替/保存中disable/成功・失敗メッセージ表示）を追加し、`PATCH /api/auth/me/display-name` の結果で `authState` を即時更新する。 | API実装（M5-14）後にユーザーが画面から完結して表示名を変更できる導線を確立し、次画面遷移を待たず表示を同期させるため | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/auth-api.ts`](../../apps/web/src/auth-api.ts), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | 2026-02-14 | M5-14 表示名変更APIの入力制約 | `PATCH /api/auth/me/display-name` は `displayName` を trim 後 1〜64文字で受理し、認証ユーザーの `users.display_name` を更新して `user` を返す。失敗時は `BAD_REQUEST` / `AUTH_EXPIRED` を返す。 | OpenAPI `UserProfile.displayName` の制約（1〜64）と整合させつつ、空白のみ入力や不正payloadを早期に拒否してUI実装（M5-15）と契約を固定するため | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/contract.ts`](../../apps/server/src/repository/auth/contract.ts), [`docs/mvp/openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
