@@ -5,6 +5,7 @@ import {
   CardVisibility,
   RealtimeTableCommandType,
   SeatStatus,
+  ShowdownAction,
   Street,
   TableBuyIn,
 } from "@mix-online/shared";
@@ -211,12 +212,14 @@ export const TableScreen = (props: {
     cardsBySeatNo: TableStoreSnapshot["cardsBySeatNo"];
     eventLogs: TableStoreSnapshot["eventLogs"];
     lastActionBySeatNo: TableStoreSnapshot["lastActionBySeatNo"];
+    showdownBySeatNo: TableStoreSnapshot["showdownBySeatNo"];
     latestDealEndSummary: TableStoreSnapshot["latestDealEndSummary"];
   }>({
     lastErrorMessage: null,
     cardsBySeatNo: {},
     eventLogs: [],
     lastActionBySeatNo: {},
+    showdownBySeatNo: {},
     latestDealEndSummary: null,
   });
 
@@ -246,6 +249,7 @@ export const TableScreen = (props: {
         cardsBySeatNo: {},
         eventLogs: [],
         lastActionBySeatNo: {},
+        showdownBySeatNo: {},
         latestDealEndSummary: null,
       });
     }
@@ -303,6 +307,7 @@ export const TableScreen = (props: {
         cardsBySeatNo: snapshot.cardsBySeatNo,
         eventLogs: snapshot.eventLogs,
         lastActionBySeatNo: snapshot.lastActionBySeatNo,
+        showdownBySeatNo: snapshot.showdownBySeatNo,
         latestDealEndSummary: snapshot.latestDealEndSummary,
       });
       setState((previousState) => {
@@ -599,6 +604,8 @@ export const TableScreen = (props: {
                 );
                 const seatLastAction =
                   realtimeState.lastActionBySeatNo[seat.seatNo] ?? null;
+                const seatShowdown =
+                  realtimeState.showdownBySeatNo[seat.seatNo] ?? null;
                 const seatPositionClass = resolveSeatPositionClass(
                   seat.seatNo,
                   anchorSeatNo,
@@ -643,6 +650,15 @@ export const TableScreen = (props: {
                           <p className="seat-win-badge">
                             WON {formatSignedChips(seatWinDelta)}
                           </p>
+                        ) : null}
+                        {seatShowdown?.action === ShowdownAction.SHOW &&
+                        seatShowdown.handLabel ? (
+                          <p className="seat-showdown-label">
+                            {seatShowdown.handLabel}
+                          </p>
+                        ) : null}
+                        {seatShowdown?.action === ShowdownAction.MUCK ? (
+                          <p className="seat-showdown-muck">MUCK</p>
                         ) : null}
                         <div
                           className="seat-time-wrapper"

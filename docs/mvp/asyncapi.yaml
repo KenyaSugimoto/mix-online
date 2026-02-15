@@ -549,6 +549,9 @@ components:
 
     ShowdownAction:
       type: string
+      description: |
+        Showdown時の公開アクション。
+        `SHOW` は役を公開、`MUCK` は役を非公開のままハンドを捨てる。
       enum:
         - SHOW
         - MUCK
@@ -1323,9 +1326,14 @@ components:
             $ref: "#/components/schemas/Card"
         cardsDown:
           type: array
+          description: |
+            `SHOW` の場合のみ7thの伏せ札を含む。
+            `MUCK` の場合は公開しないため空配列。
           items:
             $ref: "#/components/schemas/Card"
         handLabel:
+          description: |
+            公開した役名。`MUCK` の場合は `null`。
           oneOf:
             - type: string
             - type: "null"

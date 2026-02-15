@@ -7,10 +7,12 @@ import {
   DealEndReason,
   GameType,
   HandStatus,
+  PotSide,
   RealtimeTableCommandType,
   SeatStateChangeAppliesFrom,
   SeatStateChangeReason,
   SeatStatus,
+  ShowdownAction,
   SnapshotReason,
   Street,
   StreetAdvanceReason,
@@ -959,6 +961,114 @@ describe("table-store", () => {
     );
 
     expect(store.getSnapshot().latestDealEndSummary).toBeNull();
+  });
+
+  it("ShowdownEvent の役表示情報を保持し、DealInit でクリアする", () => {
+    const sockets: FakeWebSocket[] = [];
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable: createInitialTable(),
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 1,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 5,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.ShowdownEvent,
+        payload: {
+          hasShowdown: true,
+          showdownOrder: [1, 2],
+          players: [
+            {
+              seatNo: 1,
+              userId: "00000000-0000-4000-8000-000000000001",
+              displayName: "U1",
+              action: ShowdownAction.SHOW,
+              cardsUp: [],
+              cardsDown: [],
+              handLabel: "Straight",
+            },
+            {
+              seatNo: 2,
+              userId: "00000000-0000-4000-8000-000000000002",
+              displayName: "U2",
+              action: ShowdownAction.MUCK,
+              cardsUp: [],
+              cardsDown: [],
+              handLabel: null,
+            },
+          ],
+          potResults: [
+            {
+              potNo: 1,
+              side: PotSide.SCOOP,
+              amount: 40,
+              winners: [
+                {
+                  seatNo: 1,
+                  userId: "00000000-0000-4000-8000-000000000001",
+                  displayName: "U1",
+                  amount: 40,
+                  handLabel: "Straight",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().showdownBySeatNo).toEqual({
+      1: { action: ShowdownAction.SHOW, handLabel: "Straight" },
+      2: { action: ShowdownAction.MUCK, handLabel: null },
+    });
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 2,
+        handId: "44444444-4444-4444-8444-444444444444",
+        handSeq: 1,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.DealInitEvent,
+        payload: {
+          handNo: 43,
+          gameType: GameType.STUD_HI,
+          dealerSeatNo: 2,
+          mixIndex: 0,
+          handsSinceRotation: 1,
+          stakes: {
+            smallBet: 20,
+            bigBet: 40,
+            ante: 5,
+            bringIn: 10,
+          },
+          participants: [
+            { seatNo: 1, startStack: 1020 },
+            { seatNo: 2, startStack: 980 },
+          ],
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().showdownBySeatNo).toEqual({});
   });
 
   it("StreetAdvance で新ストリート開始時は streetBetTo/raiseCount をリセットする", () => {
