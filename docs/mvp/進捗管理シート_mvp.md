@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.49  
+Version: v1.50  
 Last Updated: 2026-02-15  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -35,7 +35,7 @@ Last Updated: 2026-02-15
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
-| M5 | リリース準備完了 | IN_PROGRESS | 97% | Codex | TBA | M5-28, M5-29, M5-30 をDONE化。M5-31（離席予約フロー）を着手し、次ハンド離席予約と着席復帰導線の実装を進行中。運用系（M5-01/M5-02）は優先度を下げて後続対応とする。 |
+| M5 | リリース準備完了 | IN_PROGRESS | 97% | Codex | TBA | M5-28, M5-29, M5-30 をDONE化。M5-31（離席予約フロー）を着手し、次ハンド離席予約と着席復帰導線の実装を進行中。実機確認フィードバックを M5-34〜M5-40 として追加起票し、優先度を再整理した。 |
 
 ---
 
@@ -51,6 +51,8 @@ Last Updated: 2026-02-15
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
+| M5-39 | 切断復帰時のタイムアウト即時自動アクション補正 | P0 | NOT_STARTED | M5-31 完了 | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/server/src/realtime/table-service/seat-command.ts`](../../apps/server/src/realtime/table-service/seat-command.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx) |
+| M5-40 | ヘッズアップ切断復帰時の不正アクション可否不具合修正 | P0 | NOT_STARTED | M5-39 完了 | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service/seat-command.ts`](../../apps/server/src/realtime/table-service/seat-command.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx) |
 | M5-32 | ゲーム開始承認フロー追加（2人以上集合時の30秒承認ウィンドウ） | P1 | NOT_STARTED | M5-31 完了 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`M5-28_33_ui-ux-improvements_2026-02-15.md`](./plans/M5-28_33_ui-ux-improvements_2026-02-15.md), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
 
 ## Backlog
@@ -67,6 +69,13 @@ Last Updated: 2026-02-15
 | M5-31 | 離席予約フロー追加（次ハンド離席予約チェック + 自動離席 + 着席ボタン） | P1 | IN_PROGRESS | `ACTIVE`中の離席予約で現ハンドのプレイ継続を維持し、ハンド終了後に `SIT_OUT` 化、`着席` ボタンで復帰できる | [`状態遷移図_mvp.md`](./状態遷移図_mvp.md), [`M5-28_33_ui-ux-improvements_2026-02-15.md`](./plans/M5-28_33_ui-ux-improvements_2026-02-15.md), [`apps/server/src/realtime/table-service/seat-command.ts`](../../apps/server/src/realtime/table-service/seat-command.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css) |
 | M5-32 | ゲーム開始承認フロー追加（2人以上集合時の30秒承認ウィンドウ） | P1 | NOT_STARTED | 参加候補全員へ開始承認を提示し、30秒タイマー（残り秒数バー表示）と承認人数に応じた開始/再承認ロジックを満たす | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`M5-28_33_ui-ux-improvements_2026-02-15.md`](./plans/M5-28_33_ui-ux-improvements_2026-02-15.md), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
 | M5-33 | 履歴画面の表示整理（ハンド番号表示削除、ANTE表示の省略/簡略化） | P2 | NOT_STARTED | 履歴一覧/詳細で不要情報を減らし、主要情報（結果・損益・アクション）が読み取りやすい構成にできる | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`M5-28_33_ui-ux-improvements_2026-02-15.md`](./plans/M5-28_33_ui-ux-improvements_2026-02-15.md), [`apps/web/src/history-screen.tsx`](../../apps/web/src/history-screen.tsx), [`apps/web/src/history-api.ts`](../../apps/web/src/history-api.ts), [`docs/mvp/openapi.yaml`](./openapi.yaml) |
+| M5-34 | `apps/web/src` リファクタリング（コンポーネント分割 + ディレクトリ分割 + CSS分割） | P1 | NOT_STARTED | 2,000行超クラスの単一ファイルを責務単位に分割し、UI修正時の影響範囲を局所化できる | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M5-35 | UIデザイン系Skills運用の導入（設計生成 + 実装前後レビュー手順の固定） | P1 | NOT_STARTED | UI系タスクで `ui-ux-pro-max` / `frontend-design` / `web-design-guidelines` を必須適用し、実行ログを残せる | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`../../AGENTS.md`](../../AGENTS.md), [`../../.codex/skills/ui-ux-pro-max/SKILL.md`](../../.codex/skills/ui-ux-pro-max/SKILL.md), [`../../.agents/skills/frontend-design/SKILL.md`](../../.agents/skills/frontend-design/SKILL.md), [`../../.agents/skills/web-design-guidelines/SKILL.md`](../../.agents/skills/web-design-guidelines/SKILL.md) |
+| M5-36 | シートパネル横幅調整（7枚カード基準で最適化） | P1 | NOT_STARTED | 各席カード表示の横余白を減らし、7枚カードが自然に収まるパネル幅へ統一する | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M5-37 | 離席状態インジケーター改善（Slack風オンライン/オフライン表示） | P1 | NOT_STARTED | `ACTIVE` / `SIT_OUT` / `DISCONNECTED` を一目で判別でき、離席関連ラベルの冗長さを削減できる | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
+| M5-38 | 席別直近アクション表示の再設計（ストリート切替クリア + ラベル配置調整） | P1 | NOT_STARTED | ストリート遷移時に直近アクションをクリアし、獲得ポット額/役ラベルを横並び基準で表示して縦伸びを防ぐ | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M5-39 | 切断復帰時のタイムアウト即時自動アクション補正 | P0 | NOT_STARTED | 手番プレイヤー切断中に期限超過した場合、次イベント待ちに依存せず即時 `CHECK/FOLD` が適用される | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/server/src/realtime/table-service/seat-command.ts`](../../apps/server/src/realtime/table-service/seat-command.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts) |
+| M5-40 | ヘッズアップ切断復帰時の不正アクション可否不具合修正 | P0 | NOT_STARTED | 2人卓で片方切断→復帰したケースでも、タイムアウト済みプレイヤーは自動FOLD扱いで行動選択が復活しない | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service/seat-command.ts`](../../apps/server/src/realtime/table-service/seat-command.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx) |
 | DEC-01 | 未決事項の合意（プレイヤー名変更、最低バイイン、オッドチップ詳細） | P1 | NOT_STARTED | 仕様合意をADR化し関連仕様へ反映 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Done
@@ -136,7 +145,7 @@ Last Updated: 2026-02-15
 | 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる。初期表示名は匿名ID（`Player-XXXXXX`）で採番し、再ログインで上書きしない。さらに `PATCH /api/auth/me/display-name` とロビー画面の表示名編集導線（`M5-15`）を実装済み | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える） | P0主要対応完了 |
 | Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立。Supabase環境変数設定時はRepository経由で実データを返却できる。`M5-12` で終局後の履歴反映を手動2ユーザー検証で確認済み | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で履歴が消える） | P0主要対応完了 |
 | Realtimeプレイ | `/ws` 接続、着席、3rd開始に加え、`StreetAdvance/DealCard/Showdown/DealEnd` で終局まで進行でき、`table.act` の受理アクションとUI提示候補を一致させた。さらに viewer別カードマスク（`DOWN_SELF`/`DOWN_HIDDEN`）と `table.snapshot` のカード復元情報を配信できる | 履歴永続化との完全整合・E2E拡張（`M5-20`）は未完 | P0主要対応完了 |
-| ゲーム画面UI | 席状態ごとの操作可否、手番タイマー、卓メタ情報、6席フェルトレイアウト、配札カード可視化（viewer別秘匿）、アクションボタン（Fold→Call→Raise の順）、アクション履歴（ストリート単位グループ化、Seat番号 + Action + Amount 表示、自動スクロール対応）を実装済み。`M5-28`/`M5-29` で表示方針確定・実装完了 | UI/UXの改善要望の残タスク（`M5-30`〜`M5-33`）を管理中 | P0主要対応完了 |
+| ゲーム画面UI | 席状態ごとの操作可否、手番タイマー、卓メタ情報、6席フェルトレイアウト、配札カード可視化（viewer別秘匿）、アクションボタン（Fold→Call→Raise の順）、アクション履歴（ストリート単位グループ化、Seat番号 + Action + Amount 表示、自動スクロール対応）を実装済み。`M5-28`/`M5-29` で表示方針確定・実装完了 | UI/UXの改善要望の残タスク（`M5-30`〜`M5-40`）を管理中 | P0主要対応完了 |
 | 運用/リリース準備 | 品質ゲート（lint/contract-literals/typecheck/test）とCIの段階E2Eは稼働 | 監視・Runbook・非機能検証が未着手 | P1対応が必要 |
 
 ---
@@ -154,6 +163,7 @@ Last Updated: 2026-02-15
 | 2026-02-14 | Lobby/Table/History がMVP固定データ依存で本番データ経路を検証できない | 高 | `M5-11` でSupabase Repositoryへ切替。環境変数未設定時のみMVP fallbackを許容 | CLOSED |
 | 2026-02-14 | Webクライアントの `/ws` 接続経路がローカル起動構成と不整合になる可能性 | 中 | `M5-12` でVite proxyに `/ws` を追加して経路を固定。`2026-02-15` に `m5-12:preflight` で `/api`/`/ws` の直結・proxy疎通OKを記録済み | CLOSED |
 | 2026-02-15 | ハンド終局後に `/api/history/hands` に履歴が表示されない | 高 | Realtimeイベントから履歴を集約するランタイム履歴リポジトリを導入し、WS処理でイベント取り込みを実装。`M5-12` の手動2ユーザー検証ログで履歴反映を確認した | CLOSED |
+| 2026-02-15 | 切断→復帰直後にタイムアウト済み手番の自動処理が遅延し、ヘッズアップで行動権が復活する | 高 | `M5-39` / `M5-40` を起票し、タイムアウト処理を次イベント依存から即時処理へ見直し、2人卓再現ケースの unit/integration テストを追加する | OPEN |
 | 2026-02-14 | 画面設計書のUIログ要件（`reason`/`appliesFrom`保持）が未充足 | 中 | `M5-13` でUI反映 + 画面仕様テストケースを追加 | CLOSED |
 | 2026-02-11 | テーブル進行ロジックの複雑化で回帰が起きやすい | 高 | `M5-26`（進行ロジック回帰耐性強化）をBacklog追加し、Street遷移・手番・Showdown境界の高リスク経路をテスト拡張する | OPEN |
 
@@ -163,6 +173,7 @@ Last Updated: 2026-02-15
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-15 | 実機確認フィードバックの追補チケット化（M5-34〜M5-40） | 実機確認で追加された要望/不具合を `M5-34`〜`M5-40` へ分割し、P0（切断/自動アクション整合）とP1（UI改善/リファクタ/運用整備）に優先度を分離する。`M5-39` を `Next` の先頭に置く。 | 不具合修正の緊急度とUI改善の実装順を混在させず、修正判断と検証範囲をチケット単位で明確化するため。 | [`M5-34_40_followup-ticketing_2026-02-15.md`](./plans/M5-34_40_followup-ticketing_2026-02-15.md), [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
 | 2026-02-15 | M5-31 再接続後の自動再開補正 | `DISCONNECTED` プレイヤーが再接続して `ACTIVE` に復帰した時、テーブルが `WAITING` かつ `currentHand=null` なら自動で次ハンドを開始する。 | 「ロビーへ戻る→再入室」後に2人揃ってもゲームが再開しない不具合を解消するため。 | [`apps/server/src/realtime/table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts) |
 | 2026-02-15 | M5-31 離席復帰導線の補正（離席時の着席ボタン） | 自席が `SIT_OUT` の場合は常に `着席する` ボタンを表示する。`LEAVE_PENDING` は「次ハンドで離席する」チェックの解除で復帰する。あわせて、席パネルに離席状態バッジ（`離席中` / `次ハンド離席予約中`）を表示して状態を明示する。 | 離席復帰導線を明確化しつつ、`LEAVE_PENDING` 中に不要な操作を増やさないため。 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts) |
 | 2026-02-15 | M5-31 次ハンド離席予約フロー着手 | `table.sitOut` をハンド進行中は `LEAVE_PENDING`（次ハンド離席予約）として扱い、ハンド終了後に `SIT_OUT` へ自動遷移する。Webは「次ハンドで離席」チェックボックスと `SIT_OUT` 時の `着席する` 導線を追加する。 | 「今のハンドは続けるが次ハンドは離席したい」操作を明示し、画面遷移だけで `DISCONNECTED` になる挙動に依存しない離席導線を提供するため。 | [`apps/server/src/realtime/table-service/seat-command.ts`](../../apps/server/src/realtime/table-service/seat-command.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`docs/mvp/状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
@@ -272,4 +283,4 @@ Last Updated: 2026-02-15
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了、M5-12完了、M5-16完了、M5-17完了、M5-18完了、M5-19完了、M5-21完了、M5-22完了、M5-13完了、M5-27完了、M5-28完了、M5-29完了 | M5-30/31（UI/UX改善・座席管理） | Realtime契約未検証範囲、DEC-01、運用整備（M5-01/M5-02）、UI/UX改善（M5-30〜M5-33）が残存 | M5-30/31 の実装並列進行 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了、M5-12完了、M5-16完了、M5-17完了、M5-18完了、M5-19完了、M5-21完了、M5-22完了、M5-13完了、M5-27完了、M5-28完了、M5-29完了 | M5-31（離席予約フロー） | Realtime契約未検証範囲、切断復帰時の自動アクション整合（M5-39/40）、DEC-01、運用整備（M5-01/M5-02）、UI/UX改善（M5-30〜M5-38）が残存 | M5-31完了後に M5-39 → M5-40 を優先実装し、その後 M5-32 と UI改善タスクを順次着手 |
