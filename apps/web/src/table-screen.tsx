@@ -771,11 +771,7 @@ export const TableScreen = (props: {
           <section className="surface inline-panel table-side-card action-bottom-dock">
             <div className="action-dock-left">
               <h3>アクション</h3>
-              <p>
-                {controlState.actionInputEnabled
-                  ? "手番中です。許可アクションのみ選択できます。"
-                  : "手番外のためアクションは無効です。"}
-              </p>
+
               {controlState.actionInputEnabled &&
               tableActActionOptions.length > 0 ? (
                 <div className="action-dock-buttons">
@@ -791,17 +787,13 @@ export const TableScreen = (props: {
                   ))}
                 </div>
               ) : (
-                <p className="status-chip">
-                  操作可能なアクションはありません。
-                </p>
+                <p className="status-chip">相手のアクションを待っています...</p>
               )}
             </div>
 
             <div className="action-dock-right" ref={actionHistoryRef}>
-              <h3>進行ログ</h3>
-              {actionsByStreet.size === 0 ? (
-                <p className="status-chip">ログ待機中です。</p>
-              ) : (
+              <h3>アクション履歴</h3>
+              {actionsByStreet.size !== 0 && (
                 <div
                   className="action-history-list"
                   aria-label="アクション履歴"

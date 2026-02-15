@@ -410,8 +410,16 @@ const finishShowdownHand = (params: {
   for (const potResult of outcome.potResults) {
     for (const winner of potResult.winners) {
       winningSeatNos.add(winner.seatNo);
-      if (!handLabelByUserId.has(winner.userId)) {
+      const existing = handLabelByUserId.get(winner.userId);
+      if (existing === undefined) {
         handLabelByUserId.set(winner.userId, winner.handLabel);
+      } else if (
+        existing !== null &&
+        winner.handLabel !== null &&
+        existing !== winner.handLabel
+      ) {
+        // ユーザーが複数のpotで異なるラベルで勝った場合（Stud8 Hi/Lo両勝ちなど）、スペース区切りで結合
+        handLabelByUserId.set(winner.userId, `${existing} ${winner.handLabel}`);
       }
     }
   }

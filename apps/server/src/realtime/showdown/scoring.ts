@@ -214,3 +214,33 @@ export const qualifiesStud8Low = (score: LowScore | null): boolean => {
 
 export const labelForHighScore = (score: HighScore): string | null =>
   HIGH_CARD_LABELS[score[0] ?? 0] ?? null;
+
+const HIGH_CARD_LABELS_JA: Record<number, string> = {
+  8: "ストレートフラッシュ",
+  7: "フォーカード",
+  6: "フルハウス",
+  5: "フラッシュ",
+  4: "ストレート",
+  3: "スリーカード",
+  2: "ツーペア",
+  1: "ワンペア",
+  0: "ハイカード",
+};
+
+export const labelForHighScoreJa = (score: HighScore): string =>
+  HIGH_CARD_LABELS_JA[score[0] ?? 0] ?? "ハイカード";
+
+export const labelForLowScore = (score: LowScore | null): string => {
+  if (!score || score.length === 0) {
+    return "ローなし";
+  }
+  const rankToDisplay = (rank: number): string => {
+    if (rank === 1) return CardRank.A;
+    if (rank === 10) return CardRank.T;
+    if (rank === 11) return CardRank.J;
+    if (rank === 12) return CardRank.Q;
+    if (rank === 13) return CardRank.K;
+    return String(rank);
+  };
+  return score.map((v) => rankToDisplay(v)).join("-");
+};

@@ -5,7 +5,8 @@ import {
   compareLowScores,
   evaluateBestHigh,
   evaluateBestLowAto5,
-  labelForHighScore,
+  labelForHighScoreJa,
+  labelForLowScore,
   qualifiesStud8Low,
 } from "./scoring";
 import type {
@@ -108,6 +109,9 @@ export const createShowdownOutcome = (params: {
         const hiAmount = Math.floor(pot.amount / 2) + (pot.amount % 2);
         const loAmount = pot.amount - hiAmount;
 
+        const highLabel = `H: ${labelForHighScoreJa(highWinners[0]?.highScore ?? [0])}`;
+        const lowLabel = `L: ${labelForLowScore(lowWinners[0]?.lowScore ?? null)}`;
+
         potResults.push({
           potNo: pot.potNo,
           side: PotSide.HI,
@@ -116,7 +120,10 @@ export const createShowdownOutcome = (params: {
             amount: hiAmount,
             winners: highWinners,
             dealerSeatNo: params.dealerSeatNo,
-          }),
+          }).map((winner) => ({
+            ...winner,
+            handLabel: highLabel,
+          })),
         });
         potResults.push({
           potNo: pot.potNo,
@@ -126,16 +133,23 @@ export const createShowdownOutcome = (params: {
             amount: loAmount,
             winners: lowWinners,
             dealerSeatNo: params.dealerSeatNo,
-          }),
+          }).map((winner) => ({
+            ...winner,
+            handLabel: lowLabel,
+          })),
         });
         continue;
       }
     }
 
     const topHighWinner = highWinners[0];
-    const scoopLabel = topHighWinner
-      ? labelForHighScore(topHighWinner.highScore)
-      : null;
+    const scoopLabel = (() => {
+      if (!topHighWinner) return null;
+      if (params.gameType === GameType.RAZZ) {
+        return `L: ${labelForLowScore(topHighWinner.lowScore ?? null)}`;
+      }
+      return `H: ${labelForHighScoreJa(topHighWinner.highScore)}`;
+    })();
     potResults.push({
       potNo: pot.potNo,
       side: PotSide.SCOOP,
