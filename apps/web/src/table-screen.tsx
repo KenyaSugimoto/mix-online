@@ -787,9 +787,7 @@ export const TableScreen = (props: {
                   ))}
                 </div>
               ) : (
-                <p className="status-chip">
-                  相手のアクションを待っています...
-                </p>
+                <p className="status-chip">相手のアクションを待っています...</p>
               )}
             </div>
 
