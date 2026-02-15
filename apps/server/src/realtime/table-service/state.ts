@@ -15,6 +15,7 @@ export const createDefaultTableState = (tableId: string): TableState => ({
   bringIn: 10,
   currentHand: null,
   nextHandNo: 1,
+  pendingNextHandStart: false,
   seats: Array.from({ length: 6 }, (_, index) => ({
     seatNo: index + 1,
     status: SeatStatus.EMPTY,

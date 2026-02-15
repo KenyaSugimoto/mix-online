@@ -468,6 +468,12 @@ button {
     rgb(250 204 21 / 25%);
 }
 
+.seat-pod.is-winner {
+  border-color: rgb(34 197 94 / 88%);
+  box-shadow: inset 0 0 0 1px rgb(134 239 172 / 40%), 0 0 0 2px
+    rgb(34 197 94 / 20%);
+}
+
 .seat-pod.is-empty {
   border-style: dashed;
   border-color: rgb(148 163 184 / 24%);
@@ -527,6 +533,19 @@ button {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+}
+
+.seat-win-badge {
+  margin: 6px 0 0;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgb(34 197 94 / 70%);
+  background: rgb(20 83 45 / 60%);
+  color: #dcfce7;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .seat-time-wrapper {

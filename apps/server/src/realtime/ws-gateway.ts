@@ -30,10 +30,12 @@ import type {
 } from "./ws-gateway/types";
 
 export class WsGateway {
+  private static readonly DEFAULT_REVEAL_WAIT_MS = 3_000;
   private readonly sessionStore: WsGatewayOptions["sessionStore"];
   private readonly now: () => Date;
   private readonly tableService: RealtimeTableService;
   private readonly actionTimeoutMs: number;
+  private readonly revealWaitMs: number;
   private readonly setTimeoutFn: (
     callback: () => void,
     timeoutMs: number,
@@ -41,12 +43,15 @@ export class WsGateway {
   private readonly clearTimeoutFn: (timeoutId: TimerHandle) => void;
   private readonly connections = new Set<TrackedConnection>();
   private readonly actionTimersByTableId = new Map<string, TimerHandle>();
+  private readonly revealWaitTimersByTableId = new Map<string, TimerHandle>();
 
   constructor(options: WsGatewayOptions) {
     this.sessionStore = options.sessionStore;
     this.now = options.now ?? (() => new Date());
     this.tableService = options.tableService ?? createRealtimeTableService();
     this.actionTimeoutMs = options.actionTimeoutMs ?? DEFAULT_ACTION_TIMEOUT_MS;
+    this.revealWaitMs =
+      options.revealWaitMs ?? WsGateway.DEFAULT_REVEAL_WAIT_MS;
     this.setTimeoutFn =
       options.setTimeoutFn ??
       ((callback, timeoutMs) => globalThis.setTimeout(callback, timeoutMs));
@@ -261,7 +266,7 @@ export class WsGateway {
           for (const event of reconnectResult.events) {
             this.broadcastToTable(reconnectResult.tableId, event, session.user);
           }
-          this.scheduleAutoAction(reconnectResult.tableId);
+          this.scheduleTableTimers(reconnectResult.tableId);
         }
       }
 
@@ -331,7 +336,7 @@ export class WsGateway {
             ),
           );
         }
-        this.scheduleAutoAction(resumeTableId);
+        this.scheduleTableTimers(resumeTableId);
         return;
       }
 
@@ -366,13 +371,19 @@ export class WsGateway {
       for (const event of result.events) {
         this.broadcastToTable(result.tableId, event, session.user);
       }
-      this.scheduleAutoAction(result.tableId);
+      this.scheduleTableTimers(result.tableId);
     });
   }
 
   schedulePendingActions(tableIds: string[]): void {
     for (const tableId of tableIds) {
       this.scheduleAutoAction(tableId);
+    }
+  }
+
+  schedulePendingRevealWaits(tableIds: string[]): void {
+    for (const tableId of tableIds) {
+      this.scheduleRevealWait(tableId);
     }
   }
 
@@ -393,8 +404,13 @@ export class WsGateway {
       for (const event of result.events) {
         this.broadcastToTable(result.tableId, event, connection.currentUser);
       }
-      this.scheduleAutoAction(result.tableId);
+      this.scheduleTableTimers(result.tableId);
     }
+  }
+
+  private scheduleTableTimers(tableId: string): void {
+    this.scheduleAutoAction(tableId);
+    this.scheduleRevealWait(tableId);
   }
 
   private scheduleAutoAction(tableId: string): void {
@@ -421,6 +437,27 @@ export class WsGateway {
     this.actionTimersByTableId.delete(tableId);
   }
 
+  private scheduleRevealWait(tableId: string): void {
+    this.clearRevealWaitTimer(tableId);
+    if (!this.tableService.hasPendingRevealWait(tableId)) {
+      return;
+    }
+
+    const timeoutId = this.setTimeoutFn(() => {
+      void this.runRevealWait(tableId);
+    }, this.revealWaitMs);
+    this.revealWaitTimersByTableId.set(tableId, timeoutId);
+  }
+
+  private clearRevealWaitTimer(tableId: string): void {
+    const existing = this.revealWaitTimersByTableId.get(tableId);
+    if (!existing) {
+      return;
+    }
+    this.clearTimeoutFn(existing);
+    this.revealWaitTimersByTableId.delete(tableId);
+  }
+
   private async runAutoAction(tableId: string, seatNo: number): Promise<void> {
     this.actionTimersByTableId.delete(tableId);
 
@@ -434,7 +471,23 @@ export class WsGateway {
       for (const event of result.events) {
         this.broadcastToTable(result.tableId, event);
       }
-      this.scheduleAutoAction(result.tableId);
+      this.scheduleTableTimers(result.tableId);
+    }
+  }
+
+  private async runRevealWait(tableId: string): Promise<void> {
+    this.revealWaitTimersByTableId.delete(tableId);
+
+    const result = await this.tableService.executeRevealWaitTimeout({
+      tableId,
+      occurredAt: this.now(),
+    });
+
+    if (result.ok) {
+      for (const event of result.events) {
+        this.broadcastToTable(result.tableId, event);
+      }
+      this.scheduleTableTimers(result.tableId);
     }
   }
 

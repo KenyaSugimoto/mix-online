@@ -149,6 +149,14 @@ const formatSuitSymbol = (suit: CardSuit) => {
 
 const formatActionLabel = (action: string) => action.replaceAll("_", " ");
 
+const formatSignedChips = (amount: number) => {
+  if (amount === 0) {
+    return formatChipsToUsd(0);
+  }
+  const sign = amount > 0 ? "+" : "-";
+  return `${sign}${formatChipsToUsd(Math.abs(amount))}`;
+};
+
 const resolveSeatCards = (
   cardsBySeatNo: TableStoreSnapshot["cardsBySeatNo"],
   seatNo: number,
@@ -203,11 +211,13 @@ export const TableScreen = (props: {
     cardsBySeatNo: TableStoreSnapshot["cardsBySeatNo"];
     eventLogs: TableStoreSnapshot["eventLogs"];
     lastActionBySeatNo: TableStoreSnapshot["lastActionBySeatNo"];
+    latestDealEndSummary: TableStoreSnapshot["latestDealEndSummary"];
   }>({
     lastErrorMessage: null,
     cardsBySeatNo: {},
     eventLogs: [],
     lastActionBySeatNo: {},
+    latestDealEndSummary: null,
   });
 
   useEffect(() => {
@@ -236,6 +246,7 @@ export const TableScreen = (props: {
         cardsBySeatNo: {},
         eventLogs: [],
         lastActionBySeatNo: {},
+        latestDealEndSummary: null,
       });
     }
 
@@ -292,6 +303,7 @@ export const TableScreen = (props: {
         cardsBySeatNo: snapshot.cardsBySeatNo,
         eventLogs: snapshot.eventLogs,
         lastActionBySeatNo: snapshot.lastActionBySeatNo,
+        latestDealEndSummary: snapshot.latestDealEndSummary,
       });
       setState((previousState) => {
         if (previousState.status !== LobbyStateStatus.LOADED) {
@@ -386,6 +398,17 @@ export const TableScreen = (props: {
   const recentEventLogs = useMemo(
     () => [...realtimeState.eventLogs].reverse().slice(0, 14),
     [realtimeState.eventLogs],
+  );
+
+  const latestDeltaBySeatNo = useMemo(
+    () =>
+      Object.fromEntries(
+        (realtimeState.latestDealEndSummary?.results ?? []).map((result) => [
+          result.seatNo,
+          result.delta,
+        ]),
+      ) as Record<number, number>,
+    [realtimeState.latestDealEndSummary],
   );
 
   useEffect(() => {
@@ -568,6 +591,8 @@ export const TableScreen = (props: {
               {seats.map((seat) => {
                 const isEmptySeat = seat.status === SeatStatus.EMPTY;
                 const isToAct = toActSeatNo === seat.seatNo;
+                const seatWinDelta = latestDeltaBySeatNo[seat.seatNo] ?? 0;
+                const isWinner = seatWinDelta > 0;
                 const seatCards = resolveSeatCards(
                   realtimeState.cardsBySeatNo,
                   seat.seatNo,
@@ -585,7 +610,7 @@ export const TableScreen = (props: {
                     key={seat.seatNo}
                     className={`seat-pod seat-pos-${seatPositionClass} ${
                       isToAct ? "is-to-act" : ""
-                    } ${isEmptySeat ? "is-empty" : ""}`}
+                    } ${isWinner ? "is-winner" : ""} ${isEmptySeat ? "is-empty" : ""}`}
                     data-seat-no={seat.seatNo}
                   >
                     <header className="seat-pod-header">
@@ -612,6 +637,11 @@ export const TableScreen = (props: {
                         {seatLastAction ? (
                           <p className="seat-last-action">
                             {formatActionLabel(seatLastAction.action)}
+                          </p>
+                        ) : null}
+                        {isWinner ? (
+                          <p className="seat-win-badge">
+                            WON {formatSignedChips(seatWinDelta)}
                           </p>
                         ) : null}
                         <div

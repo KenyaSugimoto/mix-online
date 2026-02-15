@@ -1,7 +1,7 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.37  
-Last Updated: 2026-02-14  
+Version: v1.38  
+Last Updated: 2026-02-15  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
 詳細設計: [`詳細設計書_mvp.md`](./詳細設計書_mvp.md)
@@ -35,7 +35,7 @@ Last Updated: 2026-02-14
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
-| M5 | リリース準備完了 | IN_PROGRESS | 82% | Codex | TBA | M5-19 PR2で卓UI（レイアウト/カード可視化/操作導線/進行ログ）を実装し、M5-12再開条件を満たした |
+| M5 | リリース準備完了 | IN_PROGRESS | 85% | Codex | TBA | M5-23でハンド終了後のリビール待機フェーズ（次ハンド開始ディレイ）を実装し、終局直後のカード確認時間を確保した |
 
 ---
 
@@ -86,7 +86,7 @@ Last Updated: 2026-02-14
 | M5-22 | テーブルカード表示UI（配札カード可視化） | P1 | DONE | 3rd〜7thで配札済カードをUIに可視化し、手番追跡を画面上で行える | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-19 | テーブルUI再設計（ゲームテーブル表示、カード可視化、操作導線改善） | P1 | DONE | 画面設計書の卓UI要件（座席/カード/操作導線）を満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css) |
 | M5-20 | Realtime契約/E2E強化（HP-04/HP-06/HP-10の自動化） | P1 | NOT_STARTED | 手動検証依存を減らし、進行停止回帰をCIで検知できる | [`apps/server/src/__tests__/e2e`](../../apps/server/src/__tests__/e2e), [`apps/server/src/__tests__/integration/ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
-| M5-23 | ハンド終了後のリビール待機フェーズ追加（次ハンド開始ディレイ） | P1 | NOT_STARTED | 7th完了時/途中終局時ともに、次ハンド開始前に数秒間カードを確認できる待機フェーズが入る | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-23 | ハンド終了後のリビール待機フェーズ追加（次ハンド開始ディレイ） | P1 | DONE | 7th完了時/途中終局時ともに、`DealEndEvent` 直後はカード表示を保持し、数秒後に次ハンド開始へ遷移する | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-24 | 手番持ち時間表示の同期不具合修正（秒数/バー） | P1 | NOT_STARTED | 現在手番者の残り秒数とバーが実時間で正しく減少し、手番交代時に初期化される | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-25 | 配札ランダム性の不具合修正（スート偏り/固定配札の解消） | P0 | NOT_STARTED | 通常対局で毎回同一カード列にならず、4スートを含むランダム配札が行われる | [`apps/server/src/realtime/table-service/gameplay.ts`](../../apps/server/src/realtime/table-service/gameplay.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | ユーザーが任意の表示名へ変更できる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -135,6 +135,7 @@ Last Updated: 2026-02-14
 | M5-18 | TableStore投影強化（DealCard/StreetAdvance/Showdown/DealEnd反映 + console追跡） | P1 | DONE | 2026-02-14 | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
 | M5-21 | テーブルアクションUI固定額化（amount入力撤去 + 許可アクションのみボタン表示） | P0 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-22 | テーブルカード表示UI（配札カード可視化） | P1 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M5-23 | ハンド終了後のリビール待機フェーズ追加（次ハンド開始ディレイ） | P1 | DONE | 2026-02-15 | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`apps/server/src/realtime/ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | M5-13 | テーブルUIギャップ解消（`reason`/`appliesFrom` 表示、状態不整合検知ログ） | P1 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-19 | テーブルUI再設計（ゲームテーブル表示、カード可視化、操作導線改善） | P1 | DONE | 2026-02-14 | [`docs/mvp/plans/M5-19_table-ui-redesign_plan_2026-02-14.md`](./plans/M5-19_table-ui-redesign_plan_2026-02-14.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | 2026-02-14 | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/contract.ts`](../../apps/server/src/repository/auth/contract.ts), [`apps/server/src/repository/auth/in-memory.ts`](../../apps/server/src/repository/auth/in-memory.ts), [`apps/server/src/repository/auth/supabase.ts`](../../apps/server/src/repository/auth/supabase.ts), [`apps/server/src/__tests__/integration/http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`docs/mvp/openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -178,6 +179,7 @@ Last Updated: 2026-02-14
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-15 | M5-23 リビール待機フェーズ導入方針 | `DealEndEvent` 後は即 `DealInitEvent` を出さず `HAND_END` を維持し、サーバータイマー満了時に `SEATED_WAIT_NEXT_HAND` 活性化と次ハンド開始判定を実行する。クライアントは `DealEndEvent` でカードをクリアせず、待機中も最終盤面を表示し続ける。 | 終局直後に結果確認する時間を確保しつつ、途中参加席の `NEXT_HAND_ACTIVATE` タイミングを「次ハンド開始時」に維持するため | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`apps/server/src/realtime/ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | 2026-02-14 | M5-15 表示名編集UI方針 | ロビーに表示名編集フォーム（編集モード切替/保存中disable/成功・失敗メッセージ表示）を追加し、`PATCH /api/auth/me/display-name` の結果で `authState` を即時更新する。 | API実装（M5-14）後にユーザーが画面から完結して表示名を変更できる導線を確立し、次画面遷移を待たず表示を同期させるため | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/auth-api.ts`](../../apps/web/src/auth-api.ts), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | 2026-02-14 | M5-14 表示名変更APIの入力制約 | `PATCH /api/auth/me/display-name` は `displayName` を trim 後 1〜64文字で受理し、認証ユーザーの `users.display_name` を更新して `user` を返す。失敗時は `BAD_REQUEST` / `AUTH_EXPIRED` を返す。 | OpenAPI `UserProfile.displayName` の制約（1〜64）と整合させつつ、空白のみ入力や不正payloadを早期に拒否してUI実装（M5-15）と契約を固定するため | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/contract.ts`](../../apps/server/src/repository/auth/contract.ts), [`docs/mvp/openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | 2026-02-14 | M5-19 追加UI調整（カード段差の有効化 + 枠視認性改善） | 表向きカードの段差表現を `margin-top` から `position/top` ベースへ切替え、確実に上方向へオフセットされるよう修正。カード境界の判読性向上のため、表カードの枠色/背景/内側シャドウと裏カード枠色を調整した。 | 実機確認で「段差が視認できない」「境界が曖昧」という課題が残ったため、レイアウト実装を安定化して読み取りやすさを優先するため | [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |

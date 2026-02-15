@@ -356,13 +356,7 @@ const finishUncontestedHand = (params: {
     },
   ];
 
-  table.currentHand = null;
-  table.status = TableStatus.WAITING;
-
-  events.push(...applySeatTransitionsAfterHand(table));
-  if (canStartHand(table)) {
-    events.push(...startThirdStreet(table));
-  }
+  table.pendingNextHandStart = true;
 
   return events;
 };
@@ -478,13 +472,7 @@ const finishShowdownHand = (params: {
     },
   ];
 
-  table.currentHand = null;
-  table.status = TableStatus.WAITING;
-
-  events.push(...applySeatTransitionsAfterHand(table));
-  if (canStartHand(table)) {
-    events.push(...startThirdStreet(table));
-  }
+  table.pendingNextHandStart = true;
 
   return events;
 };
@@ -512,6 +500,7 @@ export const startThirdStreet = (table: TableState): PendingEvent[] => {
     return [];
   }
 
+  table.pendingNextHandStart = false;
   table.status = TableStatus.DEALING;
   const handId = randomUUID();
   const handNo = table.nextHandNo;
@@ -661,6 +650,25 @@ export const startThirdStreet = (table: TableState): PendingEvent[] => {
   };
 
   return [dealInitEvent, postAnteEvent, dealCards3rdEvent];
+};
+
+export const startNextHandAfterRevealWait = (
+  table: TableState,
+): PendingEvent[] => {
+  if (!table.pendingNextHandStart || table.status !== TableStatus.HAND_END) {
+    return [];
+  }
+
+  table.pendingNextHandStart = false;
+  table.currentHand = null;
+  table.status = TableStatus.WAITING;
+
+  const events: PendingEvent[] = [...applySeatTransitionsAfterHand(table)];
+  if (canStartHand(table)) {
+    events.push(...startThirdStreet(table));
+  }
+
+  return events;
 };
 
 /**
