@@ -83,6 +83,15 @@ export type TableStoreEventLogEntry =
       fromStreet: (typeof STREETS)[number];
       toStreet: (typeof STREETS)[number] | null;
       reason: (typeof STREET_ADVANCE_REASONS)[number];
+    }
+  | {
+      kind: "player_action";
+      occurredAt: string;
+      seatNo: number;
+      action: TableCommandAction;
+      street: (typeof STREETS)[number];
+      amount: number | null;
+      streetBetTo: number | null;
     };
 
 export type TableStoreLastAction = {
@@ -605,8 +614,9 @@ const pushEventLog = (
 const buildEventLog = (
   event: TableEventMessage,
 ): TableStoreEventLogEntry | null => {
+  const payload = event.payload;
+
   if (event.eventName === TableEventName.SeatStateChangedEvent) {
-    const payload = event.payload;
     if (
       isInteger(payload.seatNo) &&
       isEnumValue(payload.previousStatus, SEAT_STATUSES) &&
@@ -627,7 +637,6 @@ const buildEventLog = (
   }
 
   if (event.eventName === TableEventName.StreetAdvanceEvent) {
-    const payload = event.payload;
     if (
       isEnumValue(payload.fromStreet, STREETS) &&
       (payload.toStreet === null || isEnumValue(payload.toStreet, STREETS)) &&
@@ -641,6 +650,111 @@ const buildEventLog = (
         reason: payload.reason,
       };
     }
+  }
+
+  if (
+    event.eventName === TableEventName.BringInEvent &&
+    isBringInPayload(payload)
+  ) {
+    return {
+      kind: "player_action",
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.BRING_IN,
+      street: payload.street,
+      amount: payload.amount,
+      streetBetTo: payload.amount,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.CompleteEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return {
+      kind: "player_action",
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.COMPLETE,
+      street: payload.street,
+      amount: payload.streetBetTo,
+      streetBetTo: payload.streetBetTo,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.BetEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return {
+      kind: "player_action",
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.BET,
+      street: payload.street,
+      amount: payload.streetBetTo,
+      streetBetTo: payload.streetBetTo,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.RaiseEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return {
+      kind: "player_action",
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.RAISE,
+      street: payload.street,
+      amount: payload.streetBetTo,
+      streetBetTo: payload.streetBetTo,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.CallEvent &&
+    isChipActionPayload(payload)
+  ) {
+    return {
+      kind: "player_action",
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.CALL,
+      street: payload.street,
+      amount: payload.streetBetTo,
+      streetBetTo: payload.streetBetTo,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.CheckEvent &&
+    isActionPayload(payload)
+  ) {
+    return {
+      kind: "player_action",
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.CHECK,
+      street: payload.street,
+      amount: null,
+      streetBetTo: null,
+    };
+  }
+
+  if (
+    event.eventName === TableEventName.FoldEvent &&
+    isActionPayload(payload)
+  ) {
+    return {
+      kind: "player_action",
+      occurredAt: event.occurredAt,
+      seatNo: payload.seatNo,
+      action: TableCommandAction.FOLD,
+      street: payload.street,
+      amount: null,
+      streetBetTo: null,
+    };
   }
 
   return null;
@@ -2069,12 +2183,16 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       message.eventName === TableEventName.DealInitEvent
         ? {}
         : (showdownBySeatNo ?? state.showdownBySeatNo);
+    const nextEventLogs =
+      message.eventName === TableEventName.DealInitEvent
+        ? []
+        : pushEventLog(state.eventLogs, buildEventLog(message));
 
     patchState({
       table: nextTable,
       tableSeq: message.tableSeq,
       cardsBySeatNo: nextCardsBySeatNo,
-      eventLogs: pushEventLog(state.eventLogs, buildEventLog(message)),
+      eventLogs: nextEventLogs,
       lastActionBySeatNo: nextLastActionBySeatNo,
       showdownBySeatNo: nextShowdownBySeatNo,
       latestDealEndSummary: nextLatestDealEndSummary,

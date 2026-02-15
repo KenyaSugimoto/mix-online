@@ -133,8 +133,8 @@ describe("table-control", () => {
         raiseCount: 0,
       }),
     ).toEqual([
-      TableCommandAction.CALL,
       TableCommandAction.FOLD,
+      TableCommandAction.CALL,
       TableCommandAction.COMPLETE,
     ]);
   });
@@ -159,8 +159,8 @@ describe("table-control", () => {
         raiseCount: 0,
       }),
     ).toEqual([
-      TableCommandAction.CALL,
       TableCommandAction.FOLD,
+      TableCommandAction.CALL,
       TableCommandAction.RAISE,
     ]);
   });
@@ -173,7 +173,7 @@ describe("table-control", () => {
         smallBet: 20,
         raiseCount: 4,
       }),
-    ).toEqual([TableCommandAction.CALL, TableCommandAction.FOLD]);
+    ).toEqual([TableCommandAction.FOLD, TableCommandAction.CALL]);
 
     expect(
       resolveTableActActionOptions({
@@ -182,7 +182,7 @@ describe("table-control", () => {
         smallBet: 20,
         raiseCount: 4,
       }),
-    ).toEqual([TableCommandAction.CALL, TableCommandAction.FOLD]);
+    ).toEqual([TableCommandAction.FOLD, TableCommandAction.CALL]);
   });
 
   it("必要情報が不足する場合は候補を返さない", () => {
@@ -229,8 +229,8 @@ describe("table-control", () => {
         raiseCount: 0,
       }),
     ).toEqual([
-      TableCommandAction.CALL,
       TableCommandAction.FOLD,
+      TableCommandAction.CALL,
       TableCommandAction.RAISE,
     ]);
   });
