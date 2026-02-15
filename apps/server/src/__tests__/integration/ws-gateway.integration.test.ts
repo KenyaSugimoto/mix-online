@@ -4,6 +4,7 @@ import {
   SeatStateChangeReason,
   SeatStatus,
   SnapshotReason,
+  TableCommandAction,
   TableEventName,
 } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
@@ -226,6 +227,183 @@ describe("WebSocketゲートウェイ統合", () => {
       expect(message.payload.stack).toBe(1000);
     } finally {
       socket.terminate();
+      await server.close();
+    }
+  });
+
+  it("ハンド終局後に /api/history/hands で履歴が参照できる", async () => {
+    const now = new Date("2026-02-11T12:00:00.000Z");
+    const tableId = "22222222-2222-4222-8222-222222222222";
+    const user2 = {
+      userId: "00000000-0000-4000-8000-000000000002",
+      displayName: "U2",
+      walletBalance: 4000,
+    };
+    const server = startRealtimeServer({ port: 0, now: () => now });
+    const session1 = server.sessionStore.create(TEST_USER, now);
+    const session2 = server.sessionStore.create(user2, now);
+    const socket1 = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+      headers: {
+        Cookie: createSessionCookie(session1.sessionId),
+      },
+    });
+    const socket2 = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+      headers: {
+        Cookie: createSessionCookie(session2.sessionId),
+      },
+    });
+
+    try {
+      await waitForOpen(socket1);
+      await waitForOpen(socket2);
+
+      socket1.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111131",
+          sentAt: now.toISOString(),
+          payload: {
+            tableId,
+            buyIn: 1000,
+          },
+        }),
+      );
+      const joined1 = (await waitForMessage(socket1)) as {
+        eventName?: string;
+        payload?: {
+          seatNo?: number;
+          user?: {
+            userId?: string;
+          };
+        };
+      };
+      const seatNoByUserId = new Map<string, number>();
+      if (
+        joined1.eventName === TableEventName.SeatStateChangedEvent &&
+        joined1.payload?.seatNo &&
+        joined1.payload.user?.userId
+      ) {
+        seatNoByUserId.set(joined1.payload.user.userId, joined1.payload.seatNo);
+      }
+
+      socket2.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111132",
+          sentAt: now.toISOString(),
+          payload: {
+            tableId,
+            buyIn: 1000,
+          },
+        }),
+      );
+      const openingEvents = (await waitForMessages(socket1, 4)) as Array<{
+        eventName?: string;
+        payload?: {
+          seatNo?: number;
+          bringInSeatNo?: number;
+          nextToActSeatNo?: number | null;
+          user?: {
+            userId?: string;
+          };
+        };
+      }>;
+      for (const event of openingEvents) {
+        if (
+          event.eventName === TableEventName.SeatStateChangedEvent &&
+          event.payload?.seatNo &&
+          event.payload.user?.userId
+        ) {
+          seatNoByUserId.set(event.payload.user.userId, event.payload.seatNo);
+        }
+      }
+      const user1SeatNo = seatNoByUserId.get(TEST_USER.userId);
+      const user2SeatNo = seatNoByUserId.get(user2.userId);
+      expect(typeof user1SeatNo).toBe("number");
+      expect(typeof user2SeatNo).toBe("number");
+      const dealCards3rd = openingEvents.find(
+        (event) => event.eventName === TableEventName.DealCards3rdEvent,
+      );
+      const bringInSeatNo = dealCards3rd?.payload?.bringInSeatNo;
+      expect(
+        bringInSeatNo === user1SeatNo || bringInSeatNo === user2SeatNo,
+      ).toBe(true);
+
+      const bringInSocket = bringInSeatNo === user1SeatNo ? socket1 : socket2;
+      bringInSocket.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.ACT,
+          requestId: "11111111-1111-4111-8111-111111111133",
+          sentAt: now.toISOString(),
+          payload: {
+            tableId,
+            action: TableCommandAction.BRING_IN,
+          },
+        }),
+      );
+      const bringInEvent = (await waitForMessage(socket1)) as {
+        eventName?: string;
+        payload?: {
+          nextToActSeatNo?: number | null;
+        };
+      };
+      expect(bringInEvent.eventName).toBe(TableEventName.BringInEvent);
+      const nextToActSeatNo = bringInEvent.payload?.nextToActSeatNo;
+      expect(
+        nextToActSeatNo === user1SeatNo || nextToActSeatNo === user2SeatNo,
+      ).toBe(true);
+
+      const foldSocket = nextToActSeatNo === user1SeatNo ? socket1 : socket2;
+      foldSocket.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.ACT,
+          requestId: "11111111-1111-4111-8111-111111111134",
+          sentAt: now.toISOString(),
+          payload: {
+            tableId,
+            action: TableCommandAction.FOLD,
+          },
+        }),
+      );
+      await waitForMessage(socket1);
+
+      let historyListBody: { items: Array<{ handId: string }> } = { items: [] };
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const historyListResponse = await server.app.request(
+          "/api/history/hands",
+          {
+            headers: {
+              cookie: `session=${session1.sessionId}`,
+            },
+          },
+        );
+        expect(historyListResponse.status).toBe(200);
+        historyListBody = (await historyListResponse.json()) as {
+          items: Array<{ handId: string }>;
+        };
+        if (historyListBody.items.length > 0) {
+          break;
+        }
+        await new Promise((resolve) => {
+          setTimeout(resolve, 50);
+        });
+      }
+      expect(historyListBody.items.length).toBeGreaterThan(0);
+
+      const targetHandId = historyListBody.items[0]?.handId;
+      expect(targetHandId).toBeDefined();
+      const historyDetailResponse = await server.app.request(
+        `/api/history/hands/${targetHandId}`,
+        {
+          headers: {
+            cookie: `session=${session1.sessionId}`,
+          },
+        },
+      );
+      expect(historyDetailResponse.status).toBe(200);
+    } finally {
+      socket1.terminate();
+      socket2.terminate();
       await server.close();
     }
   });

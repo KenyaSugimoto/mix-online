@@ -35,7 +35,7 @@ Last Updated: 2026-02-15
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
-| M5 | リリース準備完了 | IN_PROGRESS | 90% | Codex | TBA | M5-27でショーダウン役表示（SHOWのみ役名表示、MUCK非表示）を実装した |
+| M5 | リリース準備完了 | IN_PROGRESS | 90% | Codex | TBA | M5-27でショーダウン役表示（SHOWのみ役名表示、MUCK非表示）を実装した。M5-12 は履歴反映不具合により再確認中 |
 
 ---
 
@@ -45,7 +45,7 @@ Last Updated: 2026-02-15
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M5-12 | ローカル統合プレイ確認（HTTP+WS接続経路固定、手動2ユーザー検証） | P0 | IN_PROGRESS | ローカルで2人1ハンド完了を再現し、確認ログを記録できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-12 | ローカル統合プレイ確認（HTTP+WS接続経路固定、手動2ユーザー検証） | P0 | IN_PROGRESS | ローカルで2人1ハンド完了を再現し、確認ログを記録できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`scripts/m5-12-preflight.mjs`](../../scripts/m5-12-preflight.mjs), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md), [`M5-12_local-integration-checklog_template.md`](./plans/M5-12_local-integration-checklog_template.md), [`M5-12_local-integration-checklog_20260215.md`](./plans/M5-12_local-integration-checklog_20260215.md), [`M5-12_preflight-log_20260215-2.md`](./plans/M5-12_preflight-log_20260215-2.md) |
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | M5-12 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Next
@@ -128,9 +128,9 @@ Last Updated: 2026-02-15
 | 領域 | できること（確認済み） | まだできないこと / 制約 | リリース判定 |
 | --- | --- | --- | --- |
 | 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる。初期表示名は匿名ID（`Player-XXXXXX`）で採番し、再ログインで上書きしない。さらに `PATCH /api/auth/me/display-name` とロビー画面の表示名編集導線（`M5-15`）を実装済み | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える） | P0主要対応完了 |
-| Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立。Supabase環境変数設定時はRepository経由で実データを返却できる | Realtimeの永続化は未接続のため、実プレイ後の履歴反映は `M5-12` で再確認が必要 | P0主要対応完了 |
+| Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立。Supabase環境変数設定時はRepository経由で実データを返却できる | Realtime進行結果が履歴へ反映されない不具合を確認。`M5-12` で再検証中 | P0主要対応完了 |
 | Realtimeプレイ | `/ws` 接続、着席、3rd開始に加え、`StreetAdvance/DealCard/Showdown/DealEnd` で終局まで進行でき、`table.act` の受理アクションとUI提示候補を一致させた。さらに viewer別カードマスク（`DOWN_SELF`/`DOWN_HIDDEN`）と `table.snapshot` のカード復元情報を配信できる | 履歴永続化との完全整合・E2E拡張（`M5-20`）は未完 | P0主要対応完了 |
-| ゲーム画面UI | 席状態ごとの操作可否、手番タイマー、卓メタ情報、6席フェルトレイアウト、配札カード可視化（viewer別秘匿）、固定額アクションドック、進行ログ（`reason`/`appliesFrom`）を実装済み | 2ユーザー手動統合プレイ（M5-12）による最終確認は未実施 | P0主要対応完了 |
+| ゲーム画面UI | 席状態ごとの操作可否、手番タイマー、卓メタ情報、6席フェルトレイアウト、配札カード可視化（viewer別秘匿）、固定額アクションドック、進行ログ（`reason`/`appliesFrom`）を実装済み | 2ユーザー手動統合プレイでは進行できるが、履歴反映不具合の修正・再確認が必要（`M5-12`） | P0主要対応完了 |
 | 運用/リリース準備 | 品質ゲート（lint/contract-literals/typecheck/test）とCIの段階E2Eは稼働 | 監視・Runbook・非機能検証が未着手 | P1対応が必要 |
 
 ---
@@ -146,7 +146,8 @@ Last Updated: 2026-02-15
 | 2026-02-14 | OAuth callbackが固定ユーザーを発行しており、実ユーザー識別ができない | 高 | `M5-10` で code exchange + user永続化 + セッション統合テストを実施 | CLOSED |
 | 2026-02-14 | 表示名変更のUI導線が未実装のため、API実装後も画面から直接変更できない | 中 | `M5-15`（UI）でプロフィール編集導線を追加した | CLOSED |
 | 2026-02-14 | Lobby/Table/History がMVP固定データ依存で本番データ経路を検証できない | 高 | `M5-11` でSupabase Repositoryへ切替。環境変数未設定時のみMVP fallbackを許容 | CLOSED |
-| 2026-02-14 | Webクライアントの `/ws` 接続経路がローカル起動構成と不整合になる可能性 | 中 | `M5-12` でVite proxyに `/ws` を追加して経路を固定。残件は2ユーザー手動試験の記録化 | IN_PROGRESS |
+| 2026-02-14 | Webクライアントの `/ws` 接続経路がローカル起動構成と不整合になる可能性 | 中 | `M5-12` でVite proxyに `/ws` を追加して経路を固定。`2026-02-15` に `m5-12:preflight` で `/api`/`/ws` の直結・proxy疎通OKを記録済み | CLOSED |
+| 2026-02-15 | ハンド終局後に `/api/history/hands` に履歴が表示されない | 高 | Realtimeイベントから履歴を集約するランタイム履歴リポジトリを導入し、WS処理でイベント取り込みを実装。統合テスト追加後に手動再確認する | IN_PROGRESS |
 | 2026-02-14 | 画面設計書のUIログ要件（`reason`/`appliesFrom`保持）が未充足 | 中 | `M5-13` でUI反映 + 画面仕様テストケースを追加 | CLOSED |
 | 2026-02-11 | テーブル進行ロジックの複雑化で回帰が起きやすい | 高 | `M5-26`（進行ロジック回帰耐性強化）をBacklog追加し、Street遷移・手番・Showdown境界の高リスク経路をテスト拡張する | OPEN |
 
@@ -156,6 +157,8 @@ Last Updated: 2026-02-15
 
 | Date | Topic | Decision | Reason | Related Docs |
 | --- | --- | --- | --- | --- |
+| 2026-02-15 | M5-12 再オープン（履歴反映不具合） | 2ユーザー手動検証で「終局後に履歴APIが空」を確認したため、`M5-12` を `IN_PROGRESS` に戻し、Realtimeイベントを履歴APIへ集約する修正を優先実施する。完了判定は再検証後に更新する。 | 接続経路の疎通だけでは履歴反映の成立を担保できず、M5-01以降へ進む前提を満たしていないため。 | [`M5-12_local-integration-checklog_20260215.md`](./plans/M5-12_local-integration-checklog_20260215.md), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md), [`apps/server/src/realtime/server.ts`](../../apps/server/src/realtime/server.ts), [`apps/server/src/repository/history/runtime.ts`](../../apps/server/src/repository/history/runtime.ts) |
+| 2026-02-15 | M5-12 接続確認ログ運用 | 手動2ユーザー検証の前段として `m5-12:preflight` を追加し、`/api` と `/ws` の直結・Vite proxy 経路を自動確認してMarkdownログ化する。手動検証結果は専用テンプレートに記録する。 | M5-12 の残件である「確認ログを記録できる状態」を再現可能な手順として固定し、接続経路トラブルと手動操作トラブルを切り分けやすくするため。 | [`scripts/m5-12-preflight.mjs`](../../scripts/m5-12-preflight.mjs), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md), [`M5-12_local-integration-checklog_template.md`](./plans/M5-12_local-integration-checklog_template.md) |
 | 2026-02-15 | M5-27 ショーダウン役表示方針 | `ShowdownEvent.players` の公開アクションを `SHOW/MUCK` で明示し、サーバーはポット非勝者を `MUCK` として `cardsDown=[]` / `handLabel=null` を返す。Webは `SHOW` の席のみ `handLabel` を表示し、`MUCK` は役名を表示しない。 | 要件定義「自動マック」と M5-27受け入れ条件（Muckプレイヤーの役非表示）をUI/契約で一貫して満たすため。 | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml), [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`要件定義書_mvp.md`](./要件定義書_mvp.md) |
 | 2026-02-15 | M5-25 配札ランダム性修正方針 | `startThirdStreet` で標準デッキをそのまま使う実装を廃止し、`createShuffledDeck`（Fisher-Yates + `crypto.randomInt`）で毎ハンド配札順をランダム化する。あわせて、shuffle単体テストと「連続ハンドで同一3rd配札列を許容しない」回帰テストを追加する。 | 実対局で同一カード列とスート偏りが再現しており、ゲーム成立性と信頼性を損なうため。乱数シャッフルを配札開始の必須前処理として固定し、テストで再発を防止するため。 | [`apps/server/src/realtime/table-service/deck.ts`](../../apps/server/src/realtime/table-service/deck.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/deck.unit.test.ts`](../../apps/server/src/__tests__/unit/deck.unit.test.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts) |
 | 2026-02-15 | M5-23 リビール待機フェーズ導入方針 | `DealEndEvent` 後は即 `DealInitEvent` を出さず `HAND_END` を維持し、サーバータイマー満了時に `SEATED_WAIT_NEXT_HAND` 活性化と次ハンド開始判定を実行する。クライアントは `DealEndEvent` でカードをクリアせず、待機中も最終盤面を表示し続ける。 | 終局直後に結果確認する時間を確保しつつ、途中参加席の `NEXT_HAND_ACTIVATE` タイミングを「次ハンド開始時」に維持するため | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`apps/server/src/realtime/ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
@@ -252,4 +255,4 @@ Last Updated: 2026-02-15
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了、M5-12の接続経路固定、M5-16完了、M5-17完了、M5-18完了、M5-19完了、M5-21完了、M5-22完了、M5-13完了、M5-27完了 | M5-12（ローカル統合プレイ確認） | Realtime契約未検証範囲、DEC-01 が残存 | M5-12 実施 -> M5-20 着手 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了、M5-16完了、M5-17完了、M5-18完了、M5-19完了、M5-21完了、M5-22完了、M5-13完了、M5-27完了 | M5-12（ローカル統合プレイ確認・履歴反映修正） | Realtime契約未検証範囲、DEC-01 が残存 | M5-12 再検証 -> M5-20 着手 |

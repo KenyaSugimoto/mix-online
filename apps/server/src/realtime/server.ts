@@ -14,6 +14,7 @@ import {
 } from "../repository/auth";
 import {
   type HistoryRepository,
+  createRuntimeHistoryRepository,
   createSupabaseHistoryRepository,
 } from "../repository/history";
 import {
@@ -190,6 +191,49 @@ const resolveHistoryRepository = (params: {
   return undefined;
 };
 
+const mergeHistoryRepositories = (params: {
+  primary: HistoryRepository | undefined;
+  secondary: HistoryRepository;
+}): HistoryRepository => {
+  if (!params.primary) {
+    return params.secondary;
+  }
+
+  return {
+    async listHands(userId) {
+      const [primaryItems, secondaryItems] = await Promise.all([
+        params.primary?.listHands(userId) ?? [],
+        params.secondary.listHands(userId),
+      ]);
+
+      const mergedByHandId = new Map<string, (typeof primaryItems)[number]>();
+      for (const item of primaryItems) {
+        mergedByHandId.set(item.handId, item);
+      }
+      for (const item of secondaryItems) {
+        if (!mergedByHandId.has(item.handId)) {
+          mergedByHandId.set(item.handId, item);
+        }
+      }
+
+      return [...mergedByHandId.values()].sort((left, right) => {
+        const endedAtCompare = right.endedAt.localeCompare(left.endedAt);
+        if (endedAtCompare !== 0) {
+          return endedAtCompare;
+        }
+        return right.handId.localeCompare(left.handId);
+      });
+    },
+    async getHandDetail(userId, handId) {
+      const primaryDetail = await params.primary?.getHandDetail(userId, handId);
+      if (primaryDetail) {
+        return primaryDetail;
+      }
+      return params.secondary.getHandDetail(userId, handId);
+    },
+  };
+};
+
 export const startRealtimeServer = (
   options: StartRealtimeServerOptions = {},
 ): RealtimeServer => {
@@ -219,6 +263,11 @@ export const startRealtimeServer = (
     repositoryFromOptions: options.historyRepository,
     supabaseConfig,
   });
+  const runtimeHistoryRepository = createRuntimeHistoryRepository();
+  const mergedHistoryRepository = mergeHistoryRepositories({
+    primary: historyRepository,
+    secondary: runtimeHistoryRepository,
+  });
   const webClientOrigin =
     options.webClientOrigin ??
     process.env.WEB_CLIENT_ORIGIN ??
@@ -231,13 +280,16 @@ export const startRealtimeServer = (
     authUserRepository,
     lobbyTableRepository,
     tableDetailRepository,
-    historyRepository,
+    historyRepository: mergedHistoryRepository,
     webClientOrigin,
   });
   const wsGateway = createWsGateway({
     sessionStore,
     now: options.now,
     tableService,
+    onTableEvents: (events) => {
+      runtimeHistoryRepository.recordEvents(events);
+    },
     actionTimeoutMs: options.actionTimeoutMs,
   });
   // Pending状態のテーブルについて、アクション自動実行タイマーをスケジュールする (サーバ再起動対策)
