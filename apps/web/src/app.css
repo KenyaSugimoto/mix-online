@@ -548,6 +548,32 @@ button {
   letter-spacing: 0.06em;
 }
 
+.seat-showdown-label {
+  margin: 6px 0 0;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgb(56 189 248 / 70%);
+  background: rgb(12 74 110 / 56%);
+  color: #e0f2fe;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.seat-showdown-muck {
+  margin: 6px 0 0;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgb(148 163 184 / 55%);
+  background: rgb(15 23 42 / 55%);
+  color: #e2e8f0;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
 .seat-time-wrapper {
   margin: 6px 0 8px;
   display: grid;

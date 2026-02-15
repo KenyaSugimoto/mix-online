@@ -406,8 +406,10 @@ const finishShowdownHand = (params: {
   }
 
   const handLabelByUserId = new Map<string, string | null>();
+  const winningSeatNos = new Set<number>();
   for (const potResult of outcome.potResults) {
     for (const winner of potResult.winners) {
+      winningSeatNos.add(winner.seatNo);
       if (!handLabelByUserId.has(winner.userId)) {
         handLabelByUserId.set(winner.userId, winner.handLabel);
       }
@@ -445,15 +447,20 @@ const finishShowdownHand = (params: {
       payload: {
         hasShowdown: true,
         showdownOrder,
-        players: inHandPlayers.map((player) => ({
-          seatNo: player.seatNo,
-          userId: player.userId,
-          displayName: player.displayName,
-          action: ShowdownAction.SHOW,
-          cardsUp: player.cardsUp,
-          cardsDown: player.cardsDown,
-          handLabel: handLabelByUserId.get(player.userId) ?? null,
-        })),
+        players: inHandPlayers.map((player) => {
+          const showed = winningSeatNos.has(player.seatNo);
+          return {
+            seatNo: player.seatNo,
+            userId: player.userId,
+            displayName: player.displayName,
+            action: showed ? ShowdownAction.SHOW : ShowdownAction.MUCK,
+            cardsUp: player.cardsUp,
+            cardsDown: showed ? player.cardsDown : [],
+            handLabel: showed
+              ? (handLabelByUserId.get(player.userId) ?? null)
+              : null,
+          };
+        }),
         potResults: outcome.potResults,
       },
     },

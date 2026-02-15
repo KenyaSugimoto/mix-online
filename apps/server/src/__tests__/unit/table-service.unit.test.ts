@@ -1,4 +1,6 @@
 import {
+  CardRank,
+  CardSuit,
   DealEndReason,
   RealtimeErrorCode,
   type RealtimeTableCommand,
@@ -6,6 +8,7 @@ import {
   type RealtimeTableEventMessage,
   SeatStateChangeReason,
   SeatStatus,
+  ShowdownAction,
   SnapshotReason,
   Street,
   StreetAdvanceReason,
@@ -894,6 +897,8 @@ describe("RealtimeTableService 席管理", () => {
               inHand: boolean;
               allIn: boolean;
               actedThisRound: boolean;
+              cardsUp: Array<{ rank: string; suit: string }>;
+              cardsDown: Array<{ rank: string; suit: string }>;
             }>;
           } | null;
         }
@@ -944,6 +949,28 @@ describe("RealtimeTableService 席管理", () => {
     secondSeat.allIn = false;
     firstSeat.actedThisRound = false;
     secondSeat.actedThisRound = true;
+    firstSeat.cardsUp = [
+      { rank: CardRank.A, suit: CardSuit.S },
+      { rank: CardRank.K, suit: CardSuit.S },
+      { rank: CardRank.Q, suit: CardSuit.S },
+      { rank: CardRank.J, suit: CardSuit.S },
+    ];
+    firstSeat.cardsDown = [
+      { rank: CardRank.T, suit: CardSuit.S },
+      { rank: CardRank.N2, suit: CardSuit.C },
+      { rank: CardRank.N3, suit: CardSuit.D },
+    ];
+    secondSeat.cardsUp = [
+      { rank: CardRank.K, suit: CardSuit.H },
+      { rank: CardRank.K, suit: CardSuit.D },
+      { rank: CardRank.N9, suit: CardSuit.C },
+      { rank: CardRank.N8, suit: CardSuit.D },
+    ];
+    secondSeat.cardsDown = [
+      { rank: CardRank.N7, suit: CardSuit.H },
+      { rank: CardRank.N6, suit: CardSuit.C },
+      { rank: CardRank.N5, suit: CardSuit.D },
+    ];
 
     const check = await service.executeCommand({
       command: createCommand({
@@ -976,8 +1003,20 @@ describe("RealtimeTableService 席管理", () => {
 
     const showdown = expectEvent(check.events[2], TableEventName.ShowdownEvent);
     expect(showdown.payload.hasShowdown).toBe(true);
-    expect(showdown.payload.players.length).toBeGreaterThanOrEqual(2);
+    expect(showdown.payload.players).toHaveLength(2);
     expect(showdown.payload.potResults.length).toBeGreaterThanOrEqual(1);
+    const firstShowdownPlayer = showdown.payload.players.find(
+      (player) => player.seatNo === firstSeat.seatNo,
+    );
+    const secondShowdownPlayer = showdown.payload.players.find(
+      (player) => player.seatNo === secondSeat.seatNo,
+    );
+    expect(firstShowdownPlayer?.action).toBe(ShowdownAction.SHOW);
+    expect(firstShowdownPlayer?.handLabel).not.toBeNull();
+    expect((firstShowdownPlayer?.cardsDown.length ?? 0) > 0).toBe(true);
+    expect(secondShowdownPlayer?.action).toBe(ShowdownAction.MUCK);
+    expect(secondShowdownPlayer?.handLabel).toBeNull();
+    expect(secondShowdownPlayer?.cardsDown).toEqual([]);
 
     const dealEnd = expectEvent(check.events[3], TableEventName.DealEndEvent);
     expect(dealEnd.payload.endReason).toBe(DealEndReason.SHOWDOWN);

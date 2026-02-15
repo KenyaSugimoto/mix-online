@@ -118,6 +118,7 @@ flowchart TD
 - 伏せ札は viewer 別マスクを前提とし、`DOWN_SELF` は自席のみ実カード表示、`DOWN_HIDDEN` は裏面表示とする。
 - 表向きカード（`UP_3`〜`UP_6`）は伏せ札との判別性を上げるため、少し上にずらして表示する。
 - スートは文字ではなく記号（`♠` / `♥` / `♦` / `♣`）で表示し、`♠` / `♣` は黒、`♥` / `♦` は赤で描画する。
+- `ShowdownEvent` 受信時は、`players[].action=SHOW` の席にのみ `handLabel`（役名）を表示する。`action=MUCK` の席は `handLabel` を表示しない（必要に応じて `MUCK` 表示のみ行う）。
 - 進行ログ欄は卓右上の折りたたみUI（既定: 折りたたみ）に配置し、必要時に展開して `SeatStateChangedEvent.reason/appliesFrom` と `StreetAdvanceEvent.reason` を確認できるようにする。
 
 ---

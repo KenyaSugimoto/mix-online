@@ -17,6 +17,7 @@ import {
   SEAT_STATE_CHANGE_APPLIES_FROM,
   SEAT_STATE_CHANGE_REASONS,
   SEAT_STATUSES,
+  SHOWDOWN_ACTIONS,
   SNAPSHOT_REASONS,
   STREETS,
   STREET_ADVANCE_REASONS,
@@ -94,6 +95,16 @@ export type TableStoreLastActionBySeatNo = Partial<
   Record<number, TableStoreLastAction>
 >;
 
+export type TableStoreShowdownBySeatNo = Partial<
+  Record<
+    number,
+    {
+      action: (typeof SHOWDOWN_ACTIONS)[number];
+      handLabel: string | null;
+    }
+  >
+>;
+
 export type TableStoreLatestDealEndSummary = {
   occurredAt: string;
   endReason: (typeof DEAL_END_REASONS)[number] | null;
@@ -112,6 +123,7 @@ export type TableStoreState = {
   cardsBySeatNo: TableStoreCardsBySeatNo;
   eventLogs: TableStoreEventLogEntry[];
   lastActionBySeatNo: TableStoreLastActionBySeatNo;
+  showdownBySeatNo: TableStoreShowdownBySeatNo;
   latestDealEndSummary: TableStoreLatestDealEndSummary | null;
   connectionStatus: TableStoreConnectionStatus;
   syncStatus: TableStoreSyncStatus;
@@ -938,6 +950,12 @@ type StreetAdvancePayload = {
   reason: (typeof STREET_ADVANCE_REASONS)[number];
 };
 
+type ShowdownPlayerPayload = {
+  seatNo: number;
+  action: (typeof SHOWDOWN_ACTIONS)[number];
+  handLabel: string | null;
+};
+
 type ShowdownPayload = {
   hasShowdown: boolean;
 };
@@ -1167,6 +1185,16 @@ const cloneLastActionBySeatNo = (
     ]),
   );
 
+const cloneShowdownBySeatNo = (
+  showdownBySeatNo: TableStoreShowdownBySeatNo,
+): TableStoreShowdownBySeatNo =>
+  Object.fromEntries(
+    Object.entries(showdownBySeatNo).map(([seatNo, showdown]) => [
+      Number(seatNo),
+      showdown ? { ...showdown } : showdown,
+    ]),
+  );
+
 const cloneLatestDealEndSummary = (
   summary: TableStoreLatestDealEndSummary | null,
 ): TableStoreLatestDealEndSummary | null => {
@@ -1211,6 +1239,50 @@ const resolveLatestDealEndSummary = (
     results,
     winnerSeatNos,
   };
+};
+
+const resolveShowdownBySeatNo = (
+  event: TableEventMessage,
+): TableStoreShowdownBySeatNo | null => {
+  if (event.eventName !== TableEventName.ShowdownEvent) {
+    return null;
+  }
+
+  const payload = event.payload;
+  if (
+    !isRecord(payload) ||
+    payload.hasShowdown !== true ||
+    !Array.isArray(payload.players)
+  ) {
+    return null;
+  }
+
+  const players: ShowdownPlayerPayload[] = [];
+  for (const player of payload.players) {
+    if (
+      !isRecord(player) ||
+      !isInteger(player.seatNo) ||
+      !isEnumValue(player.action, SHOWDOWN_ACTIONS) ||
+      !isNullableString(player.handLabel)
+    ) {
+      return null;
+    }
+    players.push({
+      seatNo: player.seatNo,
+      action: player.action,
+      handLabel: player.handLabel,
+    });
+  }
+
+  return Object.fromEntries(
+    players.map((player) => [
+      player.seatNo,
+      {
+        action: player.action,
+        handLabel: player.handLabel,
+      },
+    ]),
+  );
 };
 
 const applyEventToCardsBySeatNo = (
@@ -1765,6 +1837,7 @@ const cloneSnapshot = (state: TableStoreState): TableStoreSnapshot => ({
   cardsBySeatNo: cloneCardsBySeatNo(state.cardsBySeatNo),
   eventLogs: state.eventLogs.map((entry) => ({ ...entry })),
   lastActionBySeatNo: cloneLastActionBySeatNo(state.lastActionBySeatNo),
+  showdownBySeatNo: cloneShowdownBySeatNo(state.showdownBySeatNo),
   latestDealEndSummary: cloneLatestDealEndSummary(state.latestDealEndSummary),
 });
 
@@ -1813,6 +1886,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
     cardsBySeatNo: {},
     eventLogs: [],
     lastActionBySeatNo: {},
+    showdownBySeatNo: {},
     latestDealEndSummary: null,
     connectionStatus: TableStoreConnectionStatus.IDLE,
     syncStatus: TableStoreSyncStatus.IDLE,
@@ -1990,6 +2064,11 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       message.eventName === TableEventName.DealInitEvent
         ? null
         : (dealEndSummary ?? state.latestDealEndSummary);
+    const showdownBySeatNo = resolveShowdownBySeatNo(message);
+    const nextShowdownBySeatNo =
+      message.eventName === TableEventName.DealInitEvent
+        ? {}
+        : (showdownBySeatNo ?? state.showdownBySeatNo);
 
     patchState({
       table: nextTable,
@@ -1997,6 +2076,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       cardsBySeatNo: nextCardsBySeatNo,
       eventLogs: pushEventLog(state.eventLogs, buildEventLog(message)),
       lastActionBySeatNo: nextLastActionBySeatNo,
+      showdownBySeatNo: nextShowdownBySeatNo,
       latestDealEndSummary: nextLatestDealEndSummary,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
       lastErrorCode: null,
@@ -2016,6 +2096,7 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
         message.payload.table.currentHand,
       ),
       lastActionBySeatNo: {},
+      showdownBySeatNo: {},
       latestDealEndSummary: null,
       tableSeq: message.tableSeq,
       syncStatus: TableStoreSyncStatus.IN_SYNC,
