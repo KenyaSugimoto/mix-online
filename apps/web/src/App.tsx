@@ -36,6 +36,8 @@ type AuthState =
 const ThemeOption = {
   DARK_EMERALD: "dark-emerald",
   DARK_NEON_POKER: "dark-neon-poker",
+  POKERSTARS: "pokerstars",
+  WSOP: "wsop",
 } as const;
 
 type ThemeOptionValue = (typeof ThemeOption)[keyof typeof ThemeOption];
@@ -45,11 +47,15 @@ const THEME_STORAGE_KEY = "mix-online-theme";
 const THEME_LABELS: Record<ThemeOptionValue, string> = {
   [ThemeOption.DARK_EMERALD]: "Dark Emerald",
   [ThemeOption.DARK_NEON_POKER]: "Neon Poker Game",
+  [ThemeOption.POKERSTARS]: "PokerStars",
+  [ThemeOption.WSOP]: "WSOP",
 };
 
 const THEME_OPTIONS = [
   ThemeOption.DARK_EMERALD,
   ThemeOption.DARK_NEON_POKER,
+  ThemeOption.POKERSTARS,
+  ThemeOption.WSOP,
 ] as const;
 
 const DEFAULT_THEME: ThemeOptionValue = ThemeOption.DARK_EMERALD;
@@ -57,7 +63,9 @@ const DEFAULT_THEME: ThemeOptionValue = ThemeOption.DARK_EMERALD;
 const toThemeOption = (value: string | null): ThemeOptionValue => {
   if (
     value === ThemeOption.DARK_EMERALD ||
-    value === ThemeOption.DARK_NEON_POKER
+    value === ThemeOption.DARK_NEON_POKER ||
+    value === ThemeOption.POKERSTARS ||
+    value === ThemeOption.WSOP
   ) {
     return value;
   }
