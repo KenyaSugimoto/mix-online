@@ -2,6 +2,8 @@ import { GameType, PotSide } from "@mix-online/shared";
 import { describe, expect, it } from "vitest";
 import {
   createShowdownOutcome,
+  labelForHighScoreJa,
+  labelForLowScore,
   splitAmountAcrossWinners,
 } from "../../realtime/showdown-evaluator";
 
@@ -284,5 +286,104 @@ describe("ShowdownEvaluator", () => {
       { seatNo: 3, amount: 28 },
       { seatNo: 1, amount: 27 },
     ]);
+  });
+
+  describe("labelForHighScoreJa", () => {
+    it("正しい日本語役名を返す", () => {
+      expect(labelForHighScoreJa([8])).toBe("ストレートフラッシュ");
+      expect(labelForHighScoreJa([7])).toBe("フォーカード");
+      expect(labelForHighScoreJa([6])).toBe("フルハウス");
+      expect(labelForHighScoreJa([5])).toBe("フラッシュ");
+      expect(labelForHighScoreJa([4])).toBe("ストレート");
+      expect(labelForHighScoreJa([3])).toBe("スリーカード");
+      expect(labelForHighScoreJa([2])).toBe("ツーペア");
+      expect(labelForHighScoreJa([1])).toBe("ワンペア");
+      expect(labelForHighScoreJa([0])).toBe("ハイカード");
+    });
+
+    it("不正な値でもハイカードを返す", () => {
+      expect(labelForHighScoreJa([])).toBe("ハイカード");
+    });
+  });
+
+  describe("labelForLowScore", () => {
+    it("ローランクをハイフン区切りで返す", () => {
+      expect(labelForLowScore([7, 5, 4, 3, 1])).toBe("7-5-4-3-A");
+      expect(labelForLowScore([8, 6, 4, 2, 1])).toBe("8-6-4-2-A");
+      expect(labelForLowScore([6, 4, 3, 2, 1])).toBe("6-4-3-2-A");
+    });
+
+    it("nullまたは空配列なら「ローなし」を返す", () => {
+      expect(labelForLowScore(null)).toBe("ローなし");
+      expect(labelForLowScore([])).toBe("ローなし");
+    });
+  });
+
+  describe("Stud Hiショーダウン フォーマット", () => {
+    it("役表示が H: [日本語役名] 形式である", () => {
+      const outcome = createShowdownOutcome({
+        gameType: GameType.STUD_HI,
+        dealerSeatNo: 1,
+        players: [
+          {
+            seatNo: 1,
+            userId: "u1",
+            displayName: "U1",
+            contribution: 100,
+            highScoreOverride: [1], // ワンペア
+            ...emptyCards,
+          },
+        ],
+      });
+
+      expect(outcome.potResults[0]?.winners[0]?.handLabel).toBe("H: ワンペア");
+    });
+  });
+
+  describe("Razzショーダウン フォーマット", () => {
+    it("役表示が L: [ランク文字列] 形式である", () => {
+      const outcome = createShowdownOutcome({
+        gameType: GameType.RAZZ,
+        dealerSeatNo: 1,
+        players: [
+          {
+            seatNo: 1,
+            userId: "u1",
+            displayName: "U1",
+            contribution: 100,
+            lowScoreOverride: [7, 5, 4, 3, 1],
+            ...emptyCards,
+          },
+        ],
+      });
+
+      expect(outcome.potResults[0]?.winners[0]?.handLabel).toBe("L: 7-5-4-3-A");
+    });
+  });
+
+  describe("Stud8 Hi/Lo分割 フォーマット", () => {
+    it("Hi側に H: [役名]、Lo側に L: [ランク] を付与する", () => {
+      const outcome = createShowdownOutcome({
+        gameType: GameType.STUD_8,
+        dealerSeatNo: 1,
+        players: [
+          {
+            seatNo: 1,
+            userId: "u1",
+            displayName: "U1",
+            contribution: 100,
+            highScoreOverride: [2], // ツーペア
+            lowScoreOverride: [7, 5, 4, 3, 1],
+            ...emptyCards,
+          },
+        ],
+      });
+
+      const hiPot = outcome.potResults.find((p) => p.side === PotSide.HI);
+      const loPot = outcome.potResults.find((p) => p.side === PotSide.LO);
+
+      expect(hiPot?.winners[0]?.handLabel).toBe("H: ツーペア");
+      expect(loPot?.winners[0]?.handLabel).toBe("L: 7-5-4-3-A");
+    });
   });
 });

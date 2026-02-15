@@ -8,3 +8,4 @@ export type {
 } from "./showdown/types";
 export { buildSidePots, splitAmountAcrossWinners } from "./showdown/pot";
 export { createShowdownOutcome } from "./showdown/outcome";
+export { labelForHighScoreJa, labelForLowScore } from "./showdown/scoring";
