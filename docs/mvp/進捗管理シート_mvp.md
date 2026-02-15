@@ -35,7 +35,7 @@ Last Updated: 2026-02-15
 | M2 | ロビー/履歴API実装 | DONE | 100% | Codex | 2026-02-11 | M2-01〜M2-06完了 |
 | M3 | Realtime + Game Engine成立 | DONE | 100% | Codex | 2026-02-13 | M3-01〜M3-11完了 |
 | M4 | Web統合（ロビー〜プレイ） | DONE | 100% | Codex | 2026-02-14 | M4-01〜M4-06完了 |
-| M5 | リリース準備完了 | IN_PROGRESS | 94% | Codex | TBA | M5-28 をDONE化。次タスクは M5-29（テーブル画面の情報整理）。運用系（M5-01/M5-02）は優先度を下げて後続対応とする。 |
+| M5 | リリース準備完了 | IN_PROGRESS | 96% | Codex | TBA | M5-28, M5-29 をDONE化。M5-29では進行ログ（アクション履歴）機能を実装し、ゲーム画面UIの情報表示を完成。次タスクは M5-30/31。運用系（M5-01/M5-02）は優先度を下げて後続対応とする。 |
 
 ---
 
@@ -137,7 +137,7 @@ Last Updated: 2026-02-15
 | 認証 | `/api/auth/google/start` / callback / `/api/auth/me` / `/api/auth/logout` の導線は成立し、callbackでGoogle code exchange後に実ユーザーをセッション化できる。初期表示名は匿名ID（`Player-XXXXXX`）で採番し、再ログインで上書きしない。さらに `PATCH /api/auth/me/display-name` とロビー画面の表示名編集導線（`M5-15`）を実装済み | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で消える） | P0主要対応完了 |
 | Lobby/Table/History API | OpenAPI準拠のエンドポイントとWeb画面連携は成立。Supabase環境変数設定時はRepository経由で実データを返却できる。`M5-12` で終局後の履歴反映を手動2ユーザー検証で確認済み | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 未設定時は in-memory fallback（再起動で履歴が消える） | P0主要対応完了 |
 | Realtimeプレイ | `/ws` 接続、着席、3rd開始に加え、`StreetAdvance/DealCard/Showdown/DealEnd` で終局まで進行でき、`table.act` の受理アクションとUI提示候補を一致させた。さらに viewer別カードマスク（`DOWN_SELF`/`DOWN_HIDDEN`）と `table.snapshot` のカード復元情報を配信できる | 履歴永続化との完全整合・E2E拡張（`M5-20`）は未完 | P0主要対応完了 |
-| ゲーム画面UI | 席状態ごとの操作可否、手番タイマー、卓メタ情報、6席フェルトレイアウト、配札カード可視化（viewer別秘匿）、固定額アクションドック、進行ログ（`reason`/`appliesFrom`）を実装済み | UI/UXの改善要望は `M5-28` を完了し、残タスク（`M5-29`〜`M5-33`）を管理中 | P0主要対応完了 |
+| ゲーム画面UI | 席状態ごとの操作可否、手番タイマー、卓メタ情報、6席フェルトレイアウト、配札カード可視化（viewer別秘匿）、アクションボタン（Fold→Call→Raise の順）、進行ログ（ストリート単位グループ化、Seat番号 + Action + Amount 表示、自動スクロール対応）を実装済み。`M5-28`/`M5-29` で表示方針確定・実装完了 | UI/UXの改善要望の残タスク（`M5-30`〜`M5-33`）を管理中 | P0主要対応完了 |
 | 運用/リリース準備 | 品質ゲート（lint/contract-literals/typecheck/test）とCIの段階E2Eは稼働 | 監視・Runbook・非機能検証が未着手 | P1対応が必要 |
 
 ---
@@ -270,4 +270,4 @@ Last Updated: 2026-02-15
 
 | Week | Done | In Progress | Risks | Next Focus |
 | --- | --- | --- | --- | --- |
-| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了、M5-12完了、M5-16完了、M5-17完了、M5-18完了、M5-19完了、M5-21完了、M5-22完了、M5-13完了、M5-27完了、M5-28完了 | M5-29（UI/UX改善） | Realtime契約未検証範囲、DEC-01、運用整備（M5-01/M5-02）、UI/UX改善（M5-30〜M5-33）が残存 | M5-29 完了 -> M5-30/31 の順で進行 |
+| 2026-W07 | 初版ドキュメント整備、実装タスク分解（Next/Backlog拡張）、M0-01〜M0-04完了、M1-01〜M1-04完了、M2-01〜M2-06完了、M3-01〜M3-11完了、M4-01〜M4-06完了、M5-00（現況監査）完了、M5-10完了、M5-11完了、M5-12完了、M5-16完了、M5-17完了、M5-18完了、M5-19完了、M5-21完了、M5-22完了、M5-13完了、M5-27完了、M5-28完了、M5-29完了 | M5-30/31（UI/UX改善・座席管理） | Realtime契約未検証範囲、DEC-01、運用整備（M5-01/M5-02）、UI/UX改善（M5-30〜M5-33）が残存 | M5-30/31 の実装並列進行 |
