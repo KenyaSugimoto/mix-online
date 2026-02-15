@@ -29,6 +29,12 @@ import type {
   WsGatewayOptions,
 } from "./ws-gateway/types";
 
+type ActionTimerState = {
+  seatNo: number;
+  deadlineAtMs: number;
+  timeoutId: TimerHandle | null;
+};
+
 export class WsGateway {
   private static readonly DEFAULT_REVEAL_WAIT_MS = 3_000;
   private readonly sessionStore: WsGatewayOptions["sessionStore"];
@@ -45,7 +51,7 @@ export class WsGateway {
   ) => TimerHandle;
   private readonly clearTimeoutFn: (timeoutId: TimerHandle) => void;
   private readonly connections = new Set<TrackedConnection>();
-  private readonly actionTimersByTableId = new Map<string, TimerHandle>();
+  private readonly actionTimersByTableId = new Map<string, ActionTimerState>();
   private readonly revealWaitTimersByTableId = new Map<string, TimerHandle>();
 
   constructor(options: WsGatewayOptions) {
@@ -430,17 +436,45 @@ export class WsGateway {
   }
 
   private scheduleAutoAction(tableId: string): void {
-    this.clearAutoActionTimer(tableId);
-
     const seatNo = this.tableService.getNextToActSeatNo(tableId);
     if (seatNo === null) {
+      this.clearAutoActionTimer(tableId);
       return;
     }
 
+    const nowMs = this.now().getTime();
+    const existingTimerState = this.actionTimersByTableId.get(tableId);
+    if (existingTimerState && existingTimerState.seatNo === seatNo) {
+      if (existingTimerState.deadlineAtMs <= nowMs) {
+        this.clearAutoActionTimer(tableId);
+        void this.runAutoAction(tableId, seatNo);
+        return;
+      }
+
+      if (existingTimerState.timeoutId !== null) {
+        return;
+      }
+
+      const timeoutId = this.setTimeoutFn(() => {
+        void this.runAutoAction(tableId, seatNo);
+      }, existingTimerState.deadlineAtMs - nowMs);
+      this.actionTimersByTableId.set(tableId, {
+        ...existingTimerState,
+        timeoutId,
+      });
+      return;
+    }
+
+    this.clearAutoActionTimer(tableId);
+    const deadlineAtMs = nowMs + this.actionTimeoutMs;
     const timeoutId = this.setTimeoutFn(() => {
       void this.runAutoAction(tableId, seatNo);
     }, this.actionTimeoutMs);
-    this.actionTimersByTableId.set(tableId, timeoutId);
+    this.actionTimersByTableId.set(tableId, {
+      seatNo,
+      deadlineAtMs,
+      timeoutId,
+    });
   }
 
   private clearAutoActionTimer(tableId: string): void {
@@ -449,7 +483,9 @@ export class WsGateway {
       return;
     }
 
-    this.clearTimeoutFn(existing);
+    if (existing.timeoutId !== null) {
+      this.clearTimeoutFn(existing.timeoutId);
+    }
     this.actionTimersByTableId.delete(tableId);
   }
 
@@ -475,7 +511,7 @@ export class WsGateway {
   }
 
   private async runAutoAction(tableId: string, seatNo: number): Promise<void> {
-    this.actionTimersByTableId.delete(tableId);
+    this.clearAutoActionTimer(tableId);
 
     const result = await this.tableService.executeAutoAction({
       tableId,
