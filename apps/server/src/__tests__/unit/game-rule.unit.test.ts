@@ -82,4 +82,54 @@ describe("GameRule", () => {
     expect(studFirst).toBe(2);
     expect(razzFirst).toBe(1);
   });
+
+  it("5th以降のStudは最新1枚ではなく公開ボード全体で先手を判定する", () => {
+    const studRule = resolveGameRule(GameType.STUD_HI);
+
+    const firstToAct = studRule.determineFirstToAct(Street.FIFTH, [
+      {
+        seatNo: 1,
+        upCards: [
+          { rank: CardRank.A, suit: CardSuit.S },
+          { rank: CardRank.K, suit: CardSuit.H },
+          { rank: CardRank.Q, suit: CardSuit.D },
+        ],
+      },
+      {
+        seatNo: 2,
+        upCards: [
+          { rank: CardRank.J, suit: CardSuit.C },
+          { rank: CardRank.J, suit: CardSuit.S },
+          { rank: CardRank.N2, suit: CardSuit.H },
+        ],
+      },
+    ]);
+
+    expect(firstToAct).toBe(2);
+  });
+
+  it("5th以降のRazzは最新1枚ではなく公開ボード全体で先手を判定する", () => {
+    const razzRule = resolveGameRule(GameType.RAZZ);
+
+    const firstToAct = razzRule.determineFirstToAct(Street.SIXTH, [
+      {
+        seatNo: 1,
+        upCards: [
+          { rank: CardRank.K, suit: CardSuit.S },
+          { rank: CardRank.A, suit: CardSuit.H },
+          { rank: CardRank.N2, suit: CardSuit.D },
+        ],
+      },
+      {
+        seatNo: 2,
+        upCards: [
+          { rank: CardRank.Q, suit: CardSuit.C },
+          { rank: CardRank.J, suit: CardSuit.D },
+          { rank: CardRank.N3, suit: CardSuit.H },
+        ],
+      },
+    ]);
+
+    expect(firstToAct).toBe(2);
+  });
 });

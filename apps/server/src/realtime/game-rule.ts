@@ -87,6 +87,129 @@ const razzWeakSuitScore = (suit: CardSuitType): number =>
 
 const getUpCard = (player: StreetViewPlayer) => player.upCards.at(-1);
 
+const compareStudShowing = (
+  left: StreetViewPlayer,
+  right: StreetViewPlayer,
+): number => {
+  const leftCountByRank = new Map<number, number>();
+  const rightCountByRank = new Map<number, number>();
+
+  for (const card of left.upCards) {
+    const rank = studRankHighValue(card.rank);
+    leftCountByRank.set(rank, (leftCountByRank.get(rank) ?? 0) + 1);
+  }
+  for (const card of right.upCards) {
+    const rank = studRankHighValue(card.rank);
+    rightCountByRank.set(rank, (rightCountByRank.get(rank) ?? 0) + 1);
+  }
+
+  const leftGroups = [...leftCountByRank.entries()].sort((a, b) => {
+    if (a[1] !== b[1]) {
+      return b[1] - a[1];
+    }
+    return b[0] - a[0];
+  });
+  const rightGroups = [...rightCountByRank.entries()].sort((a, b) => {
+    if (a[1] !== b[1]) {
+      return b[1] - a[1];
+    }
+    return b[0] - a[0];
+  });
+
+  const groupLength = Math.max(leftGroups.length, rightGroups.length);
+  for (let index = 0; index < groupLength; index += 1) {
+    const leftGroup = leftGroups[index];
+    const rightGroup = rightGroups[index];
+
+    const leftCount = leftGroup?.[1] ?? 0;
+    const rightCount = rightGroup?.[1] ?? 0;
+    if (leftCount !== rightCount) {
+      return rightCount - leftCount;
+    }
+
+    const leftRank = leftGroup?.[0] ?? 0;
+    const rightRank = rightGroup?.[0] ?? 0;
+    if (leftRank !== rightRank) {
+      return rightRank - leftRank;
+    }
+  }
+
+  const leftCards = [...left.upCards].sort((a, b) => {
+    const byRank = studRankHighValue(b.rank) - studRankHighValue(a.rank);
+    if (byRank !== 0) {
+      return byRank;
+    }
+    return studWeakSuitScore(a.suit) - studWeakSuitScore(b.suit);
+  });
+  const rightCards = [...right.upCards].sort((a, b) => {
+    const byRank = studRankHighValue(b.rank) - studRankHighValue(a.rank);
+    if (byRank !== 0) {
+      return byRank;
+    }
+    return studWeakSuitScore(a.suit) - studWeakSuitScore(b.suit);
+  });
+
+  const cardLength = Math.max(leftCards.length, rightCards.length);
+  for (let index = 0; index < cardLength; index += 1) {
+    const leftCard = leftCards[index];
+    const rightCard = rightCards[index];
+
+    const leftRank = leftCard ? studRankHighValue(leftCard.rank) : 0;
+    const rightRank = rightCard ? studRankHighValue(rightCard.rank) : 0;
+    if (leftRank !== rightRank) {
+      return rightRank - leftRank;
+    }
+
+    const leftSuit = leftCard ? studWeakSuitScore(leftCard.suit) : 99;
+    const rightSuit = rightCard ? studWeakSuitScore(rightCard.suit) : 99;
+    if (leftSuit !== rightSuit) {
+      return leftSuit - rightSuit;
+    }
+  }
+
+  return left.seatNo - right.seatNo;
+};
+
+const compareRazzShowing = (
+  left: StreetViewPlayer,
+  right: StreetViewPlayer,
+): number => {
+  const leftCards = [...left.upCards].sort((a, b) => {
+    const byRank = razzRankLowValue(b.rank) - razzRankLowValue(a.rank);
+    if (byRank !== 0) {
+      return byRank;
+    }
+    return razzWeakSuitScore(a.suit) - razzWeakSuitScore(b.suit);
+  });
+  const rightCards = [...right.upCards].sort((a, b) => {
+    const byRank = razzRankLowValue(b.rank) - razzRankLowValue(a.rank);
+    if (byRank !== 0) {
+      return byRank;
+    }
+    return razzWeakSuitScore(a.suit) - razzWeakSuitScore(b.suit);
+  });
+
+  const cardLength = Math.max(leftCards.length, rightCards.length);
+  for (let index = 0; index < cardLength; index += 1) {
+    const leftCard = leftCards[index];
+    const rightCard = rightCards[index];
+
+    const leftRank = leftCard ? razzRankLowValue(leftCard.rank) : 99;
+    const rightRank = rightCard ? razzRankLowValue(rightCard.rank) : 99;
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    const leftSuit = leftCard ? razzWeakSuitScore(leftCard.suit) : 99;
+    const rightSuit = rightCard ? razzWeakSuitScore(rightCard.suit) : 99;
+    if (leftSuit !== rightSuit) {
+      return leftSuit - rightSuit;
+    }
+  }
+
+  return left.seatNo - right.seatNo;
+};
+
 const selectStudBringIn = (players: StreetViewPlayer[]): number => {
   const ordered = [...players].sort((left, right) => {
     const leftPair = left.hasPairOnBoard ?? false;
@@ -154,23 +277,7 @@ const createStudRule = (
       return this.determineBringIn(players);
     }
 
-    const ordered = [...players].sort((left, right) => {
-      const leftCard = getUpCard(left);
-      const rightCard = getUpCard(right);
-      if (!leftCard || !rightCard) {
-        return left.seatNo - right.seatNo;
-      }
-
-      const byRank =
-        studRankHighValue(rightCard.rank) - studRankHighValue(leftCard.rank);
-      if (byRank !== 0) {
-        return byRank;
-      }
-
-      return (
-        studWeakSuitScore(leftCard.suit) - studWeakSuitScore(rightCard.suit)
-      );
-    });
+    const ordered = [...players].sort(compareStudShowing);
 
     return ordered[0]?.seatNo ?? null;
   },
@@ -189,23 +296,7 @@ const createRazzRule = (): GameRule => ({
       return this.determineBringIn(players);
     }
 
-    const ordered = [...players].sort((left, right) => {
-      const leftCard = getUpCard(left);
-      const rightCard = getUpCard(right);
-      if (!leftCard || !rightCard) {
-        return left.seatNo - right.seatNo;
-      }
-
-      const byRank =
-        razzRankLowValue(leftCard.rank) - razzRankLowValue(rightCard.rank);
-      if (byRank !== 0) {
-        return byRank;
-      }
-
-      return (
-        razzWeakSuitScore(leftCard.suit) - razzWeakSuitScore(rightCard.suit)
-      );
-    });
+    const ordered = [...players].sort(compareRazzShowing);
 
     return ordered[0]?.seatNo ?? null;
   },
