@@ -15,9 +15,9 @@ import {
   TableStatus,
   ThirdStreetCardPosition,
 } from "@mix-online/shared";
-import { createStandardDeck } from "../../testing/fixed-deck-harness";
 import { resolveGameRule } from "../game-rule";
 import { createShowdownOutcome } from "../showdown-evaluator";
+import { createShuffledDeck } from "./deck";
 import { canStartHand } from "./turn";
 import type {
   CardValue,
@@ -583,7 +583,7 @@ export const startThirdStreet = (table: TableState): PendingEvent[] => {
     },
   };
 
-  const deck = createStandardDeck();
+  const deck = createShuffledDeck();
   hand.deck = deck;
   const thirdStreetCards: Array<{
     seatNo: number;
