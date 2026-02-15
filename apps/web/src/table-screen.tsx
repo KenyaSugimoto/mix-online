@@ -22,7 +22,7 @@ import {
   type TableStoreSnapshot,
   createTableStore,
 } from "./table-store";
-import { LobbyStateStatus, LocaleCode } from "./web-constants";
+import { LobbyStateStatus } from "./web-constants";
 
 type TableScreenState =
   | {
@@ -409,7 +409,8 @@ export const TableScreen = (props: {
   const isYourTurn =
     !!table &&
     !!mySeat &&
-    mySeat.status === SeatStatus.ACTIVE &&
+    (mySeat.status === SeatStatus.ACTIVE ||
+      mySeat.status === SeatStatus.LEAVE_PENDING) &&
     toActSeatNo === mySeat.seatNo;
 
   const controlState = resolveTableControlState({
@@ -526,6 +527,29 @@ export const TableScreen = (props: {
     }
 
     store.sendActionCommand(action);
+  };
+
+  const handleLeaveReservationChange = (shouldReserve: boolean) => {
+    const store = tableStoreRef.current;
+    if (!store) {
+      return;
+    }
+
+    if (shouldReserve) {
+      store.sendSeatCommand(RealtimeTableCommandType.SIT_OUT);
+      return;
+    }
+
+    store.sendSeatCommand(RealtimeTableCommandType.RETURN);
+  };
+
+  const handleReturnToSeat = () => {
+    const store = tableStoreRef.current;
+    if (!store) {
+      return;
+    }
+
+    store.sendSeatCommand(RealtimeTableCommandType.RETURN);
   };
 
   if (state.status === LobbyStateStatus.LOADING) {
@@ -770,6 +794,45 @@ export const TableScreen = (props: {
 
           <section className="surface inline-panel table-side-card action-bottom-dock">
             <div className="action-dock-left">
+              {mySeat &&
+              (mySeat.status === SeatStatus.ACTIVE ||
+                mySeat.status === SeatStatus.LEAVE_PENDING) ? (
+                <div className="seat-reservation-panel">
+                  <label
+                    className="seat-reservation-toggle"
+                    htmlFor="leave-reservation-checkbox"
+                  >
+                    <input
+                      id="leave-reservation-checkbox"
+                      type="checkbox"
+                      checked={mySeat.status === SeatStatus.LEAVE_PENDING}
+                      onChange={(event) =>
+                        handleLeaveReservationChange(event.target.checked)
+                      }
+                    />
+                    次ハンドで離席する
+                  </label>
+                  <p className="seat-reservation-note">
+                    現在ハンドの終了後に離席し、いつでも着席で復帰できます。
+                  </p>
+                </div>
+              ) : null}
+
+              {mySeat?.status === SeatStatus.SIT_OUT ? (
+                <div className="seat-reservation-panel">
+                  <button
+                    className="ghost-button seat-return-button"
+                    type="button"
+                    onClick={handleReturnToSeat}
+                  >
+                    着席する
+                  </button>
+                  <p className="seat-reservation-note">
+                    次ハンド開始時に再び参加します。
+                  </p>
+                </div>
+              ) : null}
+
               <h3>アクション</h3>
 
               {controlState.actionInputEnabled &&

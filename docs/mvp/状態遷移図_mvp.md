@@ -53,9 +53,10 @@ stateDiagram-v2
   SEATED_WAIT_NEXT_HAND --> EMPTY: table.leave\n(即時離席/払い戻し)
   SEATED_WAIT_NEXT_HAND --> DISCONNECTED: 切断検知
 
-  ACTIVE --> SIT_OUT: table.sitOut\n(appliesFrom=IMMEDIATE,\n次ハンドから不参加)
-  ACTIVE --> LEAVE_PENDING: table.leave\n(ハンド参加中)
-  ACTIVE --> EMPTY: table.leave\n(ハンド非参加中)
+  ACTIVE --> LEAVE_PENDING: table.sitOut\n(ハンド進行中,\n次ハンド離席予約)
+  ACTIVE --> SIT_OUT: table.sitOut\n(ハンド非進行中)
+  ACTIVE --> ACTIVE: table.return\n(離席予約解除)
+  ACTIVE --> EMPTY: table.leave\n(即時離席/払い戻し)
   ACTIVE --> EMPTY: ハンド精算後 stack==0\nreason=AUTO_LEAVE_ZERO_STACK
   ACTIVE --> DISCONNECTED: 切断検知
 
@@ -63,7 +64,7 @@ stateDiagram-v2
   SIT_OUT --> EMPTY: table.leave\n(即時離席/払い戻し)
   SIT_OUT --> DISCONNECTED: 切断検知
 
-  LEAVE_PENDING --> EMPTY: ハンド終了直後\nreason=LEAVE
+  LEAVE_PENDING --> SIT_OUT: ハンド終了直後\nreason=SIT_OUT
   LEAVE_PENDING --> DISCONNECTED: 切断検知
 
   DISCONNECTED --> ACTIVE: 再接続\nrestoredSeatStatus=ACTIVE
@@ -122,7 +123,7 @@ stateDiagram-v2
   - `DealEndEvent` 処理後に双方 `HAND_END` へ揃うこと
 - 席遷移とハンド参加可否の整合:
   - `SEATED_WAIT_NEXT_HAND` / `SIT_OUT` / `DISCONNECTED` は新規ハンド不参加であること
-  - `LEAVE_PENDING` はハンド終了直後に必ず `EMPTY` へ収束すること
+  - `LEAVE_PENDING` はハンド終了直後に必ず `SIT_OUT` へ収束すること
 - 切断復帰の整合:
   - `disconnect_streak` は再接続時に0へリセット
   - 3ハンド連続切断時に `EMPTY`（自動LEAVE）へ到達すること

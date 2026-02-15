@@ -6,6 +6,7 @@ import {
   type RealtimeTableCommand,
   RealtimeTableCommandType,
   type RealtimeTableEventMessage,
+  SeatStateChangeAppliesFrom,
   SeatStateChangeReason,
   SeatStatus,
   ShowdownAction,
@@ -174,6 +175,185 @@ describe("RealtimeTableService 席管理", () => {
     expect(leaveEvent.tableSeq).toBe(4);
     expect(leaveEvent.payload.currentStatus).toBe(SeatStatus.EMPTY);
     expect(leaveEvent.payload.reason).toBe(SeatStateChangeReason.LEAVE);
+  });
+
+  it("進行中ハンド中の sitOut は LEAVE_PENDING として予約し、return で解除できる", async () => {
+    const service = createRealtimeTableService();
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const user1SeatNo = expectEvent(
+      joined1.events[0],
+      TableEventName.SeatStateChangedEvent,
+    ).payload.seatNo;
+
+    const reserveSitOut = await service.executeCommand({
+      command: createCommand({ type: RealtimeTableCommandType.SIT_OUT }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    expect(reserveSitOut.ok).toBe(true);
+    if (!reserveSitOut.ok) {
+      return;
+    }
+
+    const reservedEvent = expectEvent(
+      reserveSitOut.events[0],
+      TableEventName.SeatStateChangedEvent,
+    );
+    expect(reservedEvent.payload.seatNo).toBe(user1SeatNo);
+    expect(reservedEvent.payload.previousStatus).toBe(SeatStatus.ACTIVE);
+    expect(reservedEvent.payload.currentStatus).toBe(SeatStatus.LEAVE_PENDING);
+    expect(reservedEvent.payload.reason).toBe(
+      SeatStateChangeReason.LEAVE_PENDING,
+    );
+    expect(reservedEvent.payload.appliesFrom).toBe(
+      SeatStateChangeAppliesFrom.NEXT_HAND,
+    );
+
+    const cancelReservation = await service.executeCommand({
+      command: createCommand({ type: RealtimeTableCommandType.RETURN }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    expect(cancelReservation.ok).toBe(true);
+    if (!cancelReservation.ok) {
+      return;
+    }
+
+    const cancelEvent = expectEvent(
+      cancelReservation.events[0],
+      TableEventName.SeatStateChangedEvent,
+    );
+    expect(cancelEvent.payload.seatNo).toBe(user1SeatNo);
+    expect(cancelEvent.payload.previousStatus).toBe(SeatStatus.LEAVE_PENDING);
+    expect(cancelEvent.payload.currentStatus).toBe(SeatStatus.ACTIVE);
+    expect(cancelEvent.payload.reason).toBe(SeatStateChangeReason.RETURN);
+    expect(cancelEvent.payload.appliesFrom).toBe(
+      SeatStateChangeAppliesFrom.IMMEDIATE,
+    );
+  });
+
+  it("LEAVE_PENDING はハンド終了後の reveal wait 完了で SIT_OUT へ遷移し次ハンド不参加になる", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      executeRevealWaitTimeout: ReturnType<
+        typeof createRealtimeTableService
+      >["executeRevealWaitTimeout"];
+      tables: Map<
+        string,
+        {
+          status: TableStatus;
+          pendingNextHandStart: boolean;
+          currentHand: object | null;
+        }
+      >;
+    };
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const user1SeatNo = expectEvent(
+      joined1.events[0],
+      TableEventName.SeatStateChangedEvent,
+    ).payload.seatNo;
+
+    const reserveSitOut = await service.executeCommand({
+      command: createCommand({ type: RealtimeTableCommandType.SIT_OUT }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    expect(reserveSitOut.ok).toBe(true);
+    if (!reserveSitOut.ok) {
+      return;
+    }
+
+    const table = service.tables.get(TABLE_ID);
+    if (!table || !table.currentHand) {
+      throw new Error("進行中ハンドが見つかりません。");
+    }
+    table.status = TableStatus.HAND_END;
+    table.pendingNextHandStart = true;
+
+    const revealWaitDone = await service.executeRevealWaitTimeout({
+      tableId: TABLE_ID,
+      occurredAt: NOW,
+    });
+    expect(revealWaitDone.ok).toBe(true);
+    if (!revealWaitDone.ok) {
+      return;
+    }
+
+    const sitOutEvent = revealWaitDone.events.find(
+      (
+        event,
+      ): event is Extract<
+        RealtimeTableEventMessage,
+        { eventName: typeof TableEventName.SeatStateChangedEvent }
+      > =>
+        event.eventName === TableEventName.SeatStateChangedEvent &&
+        event.payload.seatNo === user1SeatNo &&
+        event.payload.currentStatus === SeatStatus.SIT_OUT,
+    );
+    expect(sitOutEvent).toBeDefined();
+    if (!sitOutEvent) {
+      return;
+    }
+    expect(sitOutEvent.payload.previousStatus).toBe(SeatStatus.LEAVE_PENDING);
+    expect(sitOutEvent.payload.reason).toBe(SeatStateChangeReason.SIT_OUT);
+    expect(sitOutEvent.payload.appliesFrom).toBe(
+      SeatStateChangeAppliesFrom.IMMEDIATE,
+    );
+    expect(
+      revealWaitDone.events.some(
+        (event) => event.eventName === TableEventName.DealInitEvent,
+      ),
+    ).toBe(false);
   });
 
   it("buyIn 範囲外を拒否する", async () => {

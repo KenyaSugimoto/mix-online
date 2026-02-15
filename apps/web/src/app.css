@@ -908,6 +908,38 @@ button {
   color: #deceaa;
 }
 
+.seat-reservation-panel {
+  display: grid;
+  gap: 6px;
+}
+
+.seat-reservation-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #efe4c7;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.seat-reservation-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2fa86a;
+}
+
+.seat-reservation-note {
+  margin: 0;
+  color: #deceaa;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.seat-return-button {
+  min-width: 110px;
+  width: fit-content;
+}
+
 .action-dock-right {
   flex: 1;
   display: flex;
@@ -1481,6 +1513,18 @@ button {
 
   .table-center-core {
     width: 100%;
+  }
+
+  .action-bottom-dock {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .action-dock-right {
+    border-left: none;
+    border-top: 1px solid rgb(216 193 138 / 30%);
+    padding-left: 0;
+    padding-top: 12px;
   }
 
   .seat-cards {
