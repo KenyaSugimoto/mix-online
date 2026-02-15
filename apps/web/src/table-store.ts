@@ -34,6 +34,7 @@ import type { SeatCommandType } from "./table-control";
 
 const DEFAULT_RECONNECT_DELAY_MS = 1_000;
 const DEFAULT_RESUME_ACK_TIMEOUT_MS = 1_500;
+const DEFAULT_ACTION_TIMEOUT_MS = 30_000;
 const OPEN_READY_STATE = 1;
 
 export const TableStoreConnectionStatus = {
@@ -264,6 +265,32 @@ const isEnumValue = <T extends readonly string[]>(
   values: T,
 ): value is T[number] => isString(value) && values.includes(value as T[number]);
 
+const resolvePayloadActionDeadlineAt = (payload: Record<string, unknown>) => {
+  const actionDeadlineAt = payload.actionDeadlineAt;
+  return isString(actionDeadlineAt) ? actionDeadlineAt : null;
+};
+
+const resolveActionDeadlineAt = (params: {
+  toActSeatNo: number | null;
+  payloadActionDeadlineAt: string | null;
+  occurredAt: string;
+}) => {
+  if (params.toActSeatNo === null) {
+    return null;
+  }
+
+  if (params.payloadActionDeadlineAt !== null) {
+    return params.payloadActionDeadlineAt;
+  }
+
+  const occurredAtMs = new Date(params.occurredAt).getTime();
+  if (Number.isNaN(occurredAtMs)) {
+    return null;
+  }
+
+  return new Date(occurredAtMs + DEFAULT_ACTION_TIMEOUT_MS).toISOString();
+};
+
 const isCardValue = (
   value: unknown,
 ): value is {
@@ -473,6 +500,27 @@ const normalizeTableForCurrentUser = (
       seat.userId === currentUserId,
   })),
 });
+
+const normalizeTableCurrentHandDeadline = (
+  table: TableDetail,
+  occurredAt: string,
+): TableDetail => {
+  if (table.currentHand === null) {
+    return table;
+  }
+
+  return {
+    ...table,
+    currentHand: {
+      ...table.currentHand,
+      actionDeadlineAt: resolveActionDeadlineAt({
+        toActSeatNo: table.currentHand.toActSeatNo,
+        payloadActionDeadlineAt: table.currentHand.actionDeadlineAt,
+        occurredAt,
+      }),
+    },
+  };
+};
 
 const updateSeat = (
   table: TableDetail,
@@ -737,6 +785,13 @@ const mapSnapshotTable = (
     seats: nextSeats,
     currentHand: snapshot.payload.table.currentHand
       ? {
+          toActSeatNo: snapshot.payload.table.currentHand.toActSeatNo,
+          actionDeadlineAt: resolveActionDeadlineAt({
+            toActSeatNo: snapshot.payload.table.currentHand.toActSeatNo,
+            payloadActionDeadlineAt:
+              snapshot.payload.table.currentHand.actionDeadlineAt,
+            occurredAt: snapshot.occurredAt,
+          }),
           handId: snapshot.payload.table.currentHand.handId,
           handNo: snapshot.payload.table.currentHand.handNo,
           status: snapshot.payload.table.currentHand.status,
@@ -744,8 +799,6 @@ const mapSnapshotTable = (
           potTotal: snapshot.payload.table.currentHand.potTotal,
           streetBetTo: snapshot.payload.table.currentHand.streetBetTo,
           raiseCount: snapshot.payload.table.currentHand.raiseCount,
-          toActSeatNo: snapshot.payload.table.currentHand.toActSeatNo,
-          actionDeadlineAt: snapshot.payload.table.currentHand.actionDeadlineAt,
         }
       : null,
   } satisfies TableDetail;
@@ -1226,6 +1279,7 @@ const applyEventToTable = (
   currentUserId: string | null,
 ) => {
   const payload = event.payload;
+  const payloadActionDeadlineAt = resolvePayloadActionDeadlineAt(payload);
 
   if (
     event.eventName === TableEventName.SeatStateChangedEvent &&
@@ -1379,6 +1433,11 @@ const applyEventToTable = (
       {
         street: Street.THIRD,
         toActSeatNo: payload.bringInSeatNo,
+        actionDeadlineAt: resolveActionDeadlineAt({
+          toActSeatNo: payload.bringInSeatNo,
+          payloadActionDeadlineAt,
+          occurredAt: event.occurredAt,
+        }),
       },
       event.handId,
     );
@@ -1400,6 +1459,11 @@ const applyEventToTable = (
           streetBetTo: payload.amount,
           raiseCount: 0,
           toActSeatNo: payload.nextToActSeatNo,
+          actionDeadlineAt: resolveActionDeadlineAt({
+            toActSeatNo: payload.nextToActSeatNo,
+            payloadActionDeadlineAt,
+            occurredAt: event.occurredAt,
+          }),
         },
         event.handId,
       ),
@@ -1427,6 +1491,11 @@ const applyEventToTable = (
           streetBetTo: payload.streetBetTo,
           raiseCount: payload.raiseCount,
           toActSeatNo: payload.nextToActSeatNo,
+          actionDeadlineAt: resolveActionDeadlineAt({
+            toActSeatNo: payload.nextToActSeatNo,
+            payloadActionDeadlineAt,
+            occurredAt: event.occurredAt,
+          }),
         },
         event.handId,
       ),
@@ -1454,6 +1523,11 @@ const applyEventToTable = (
           streetBetTo: payload.streetBetTo,
           raiseCount: payload.raiseCount,
           toActSeatNo: payload.nextToActSeatNo,
+          actionDeadlineAt: resolveActionDeadlineAt({
+            toActSeatNo: payload.nextToActSeatNo,
+            payloadActionDeadlineAt,
+            occurredAt: event.occurredAt,
+          }),
         },
         event.handId,
       ),
@@ -1481,6 +1555,11 @@ const applyEventToTable = (
           streetBetTo: payload.streetBetTo,
           raiseCount: payload.raiseCount,
           toActSeatNo: payload.nextToActSeatNo,
+          actionDeadlineAt: resolveActionDeadlineAt({
+            toActSeatNo: payload.nextToActSeatNo,
+            payloadActionDeadlineAt,
+            occurredAt: event.occurredAt,
+          }),
         },
         event.handId,
       ),
@@ -1508,6 +1587,11 @@ const applyEventToTable = (
           streetBetTo: payload.streetBetTo,
           raiseCount: payload.raiseCount,
           toActSeatNo: payload.nextToActSeatNo,
+          actionDeadlineAt: resolveActionDeadlineAt({
+            toActSeatNo: payload.nextToActSeatNo,
+            payloadActionDeadlineAt,
+            occurredAt: event.occurredAt,
+          }),
         },
         event.handId,
       ),
@@ -1532,6 +1616,11 @@ const applyEventToTable = (
         street: payload.street,
         potTotal: payload.potAfter,
         toActSeatNo: payload.nextToActSeatNo,
+        actionDeadlineAt: resolveActionDeadlineAt({
+          toActSeatNo: payload.nextToActSeatNo,
+          payloadActionDeadlineAt,
+          occurredAt: event.occurredAt,
+        }),
       },
       event.handId,
     );
@@ -1550,6 +1639,11 @@ const applyEventToTable = (
         street: payload.street,
         potTotal: payload.potAfter,
         toActSeatNo: payload.nextToActSeatNo,
+        actionDeadlineAt: resolveActionDeadlineAt({
+          toActSeatNo: payload.nextToActSeatNo,
+          payloadActionDeadlineAt,
+          occurredAt: event.occurredAt,
+        }),
       },
       event.handId,
     );
@@ -1568,6 +1662,11 @@ const applyEventToTable = (
         street: payload.street,
         potTotal: payload.potAfter,
         toActSeatNo: payload.toActSeatNo,
+        actionDeadlineAt: resolveActionDeadlineAt({
+          toActSeatNo: payload.toActSeatNo,
+          payloadActionDeadlineAt,
+          occurredAt: event.occurredAt,
+        }),
       },
       event.handId,
     );
@@ -1590,6 +1689,11 @@ const applyEventToTable = (
         raiseCount:
           payload.toStreet === null ? (table.currentHand?.raiseCount ?? 0) : 0,
         toActSeatNo: payload.nextToActSeatNo,
+        actionDeadlineAt: resolveActionDeadlineAt({
+          toActSeatNo: payload.nextToActSeatNo,
+          payloadActionDeadlineAt,
+          occurredAt: event.occurredAt,
+        }),
       },
       event.handId,
     );
@@ -1607,6 +1711,7 @@ const applyEventToTable = (
       {
         status: HandStatus.SHOWDOWN,
         toActSeatNo: null,
+        actionDeadlineAt: null,
       },
       event.handId,
     );
@@ -1698,7 +1803,10 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
 
   let state: TableStoreState = {
     table: normalizeTableForCurrentUser(
-      options.initialTable,
+      normalizeTableCurrentHandDeadline(
+        options.initialTable,
+        now().toISOString(),
+      ),
       inferredCurrentUserId,
     ),
     tableSeq: 0,
@@ -2058,7 +2166,10 @@ export const createTableStore = (options: TableStoreOptions): TableStore => {
       inferredCurrentUserId = resolveCurrentUserId(table);
     }
     patchState({
-      table: normalizeTableForCurrentUser(table, inferredCurrentUserId),
+      table: normalizeTableForCurrentUser(
+        normalizeTableCurrentHandDeadline(table, now().toISOString()),
+        inferredCurrentUserId,
+      ),
     });
   };
 

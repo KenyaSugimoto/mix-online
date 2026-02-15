@@ -437,10 +437,105 @@ describe("table-store", () => {
     expect(snapshot.table.status).toBe(TableStatus.BETTING);
     expect(snapshot.table.gameType).toBe(GameType.RAZZ);
     expect(snapshot.table.currentHand?.street).toBe(Street.FOURTH);
+    expect(snapshot.table.currentHand?.actionDeadlineAt).toBe(
+      new Date(BASE_TIME.getTime() + 30_000).toISOString(),
+    );
     expect(snapshot.cardsBySeatNo[1]?.length).toBe(4);
     expect(snapshot.cardsBySeatNo[1]?.[0]?.visibility).toBe(
       CardVisibility.DOWN_SELF,
     );
+  });
+
+  it("手番更新イベントごとに actionDeadlineAt を同期し、手番なしでクリアする", () => {
+    const sockets: FakeWebSocket[] = [];
+    const store = createTableStore({
+      tableId: "22222222-2222-4222-8222-222222222222",
+      initialTable: createInitialTable(),
+      createWebSocket: () => {
+        const socket = new FakeWebSocket();
+        sockets.push(socket);
+        return socket;
+      },
+      now: () => BASE_TIME,
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+      resumeAckTimeoutMs: 10_000,
+    });
+
+    store.start();
+    const socket = sockets[0] as FakeWebSocket;
+    socket.emitOpen();
+
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 1,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 1,
+        occurredAt: BASE_TIME.toISOString(),
+        eventName: TableEventName.CheckEvent,
+        payload: {
+          street: Street.THIRD,
+          seatNo: 1,
+          potAfter: 10,
+          nextToActSeatNo: 2,
+          isAuto: false,
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().table.currentHand?.actionDeadlineAt).toBe(
+      new Date(BASE_TIME.getTime() + 30_000).toISOString(),
+    );
+
+    const nextOccurredAt = new Date(BASE_TIME.getTime() + 8_000);
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 2,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 2,
+        occurredAt: nextOccurredAt.toISOString(),
+        eventName: TableEventName.CallEvent,
+        payload: {
+          street: Street.THIRD,
+          seatNo: 2,
+          potAfter: 20,
+          nextToActSeatNo: 1,
+          stackAfter: 980,
+          streetBetTo: 10,
+          raiseCount: 0,
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().table.currentHand?.actionDeadlineAt).toBe(
+      new Date(nextOccurredAt.getTime() + 30_000).toISOString(),
+    );
+
+    const clearOccurredAt = new Date(BASE_TIME.getTime() + 16_000);
+    socket.emitMessage(
+      JSON.stringify({
+        type: "table.event",
+        tableId: "22222222-2222-4222-8222-222222222222",
+        tableSeq: 3,
+        handId: "33333333-3333-4333-8333-333333333333",
+        handSeq: 3,
+        occurredAt: clearOccurredAt.toISOString(),
+        eventName: TableEventName.FoldEvent,
+        payload: {
+          street: Street.THIRD,
+          seatNo: 1,
+          potAfter: 20,
+          nextToActSeatNo: null,
+          remainingPlayers: 1,
+          isAuto: false,
+        },
+      }),
+    );
+
+    expect(store.getSnapshot().table.currentHand?.actionDeadlineAt).toBeNull();
   });
 
   it("JOIN と ACT コマンドを送信できる", () => {
