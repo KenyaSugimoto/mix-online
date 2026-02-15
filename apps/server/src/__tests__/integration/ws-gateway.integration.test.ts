@@ -83,6 +83,46 @@ const waitForMessages = (
     socket.on("error", onError);
   });
 
+const collectMessagesForDuration = (
+  socket: WebSocket,
+  durationMs: number,
+): Promise<unknown[]> =>
+  new Promise((resolve, reject) => {
+    const messages: unknown[] = [];
+    const cleanup = () => {
+      clearTimeout(timeout);
+      socket.off("message", onMessage);
+      socket.off("error", onError);
+    };
+
+    const onMessage = (message: WebSocket.RawData) => {
+      try {
+        messages.push(JSON.parse(message.toString("utf-8")));
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    };
+
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve(messages);
+    }, durationMs);
+
+    socket.on("message", onMessage);
+    socket.on("error", onError);
+  });
+
+const waitFor = (durationMs: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, durationMs);
+  });
+
 describe("WebSocketゲートウェイ統合", () => {
   it("pingコマンドにpongを返す", async () => {
     const now = new Date("2026-02-11T12:00:00.000Z");
@@ -686,6 +726,165 @@ describe("WebSocketゲートウェイ統合", () => {
       expect(resumed.events[0]?.tableSeq).toBeGreaterThan(latestBeforeRestart);
     } finally {
       await server2.close();
+    }
+  });
+
+  it("M5-39 切断中でも手番タイムアウト期限を延長せず自動FOLDする", async () => {
+    const tableId = "44444444-4444-4444-8444-444444444444";
+    const user2 = {
+      userId: "00000000-0000-4000-8000-000000000002",
+      displayName: "U2",
+      walletBalance: 4000,
+    };
+    const server = startRealtimeServer({
+      port: 0,
+      now: () => new Date(),
+      actionTimeoutMs: 120,
+    });
+    const session1 = server.sessionStore.create(TEST_USER, new Date());
+    const session2 = server.sessionStore.create(user2, new Date());
+    const socket1 = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+      headers: {
+        Cookie: createSessionCookie(session1.sessionId),
+      },
+    });
+    const socket2 = new WebSocket(`ws://127.0.0.1:${server.port}/ws`, {
+      headers: {
+        Cookie: createSessionCookie(session2.sessionId),
+      },
+    });
+
+    try {
+      await waitForOpen(socket1);
+      await waitForOpen(socket2);
+
+      socket1.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111141",
+          sentAt: new Date().toISOString(),
+          payload: {
+            tableId,
+            buyIn: 1000,
+          },
+        }),
+      );
+      const joined1 = (await waitForMessage(socket1)) as {
+        eventName?: string;
+        payload?: {
+          seatNo?: number;
+          user?: {
+            userId?: string;
+          };
+        };
+      };
+
+      socket2.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.JOIN,
+          requestId: "11111111-1111-4111-8111-111111111142",
+          sentAt: new Date().toISOString(),
+          payload: {
+            tableId,
+            buyIn: 1000,
+          },
+        }),
+      );
+      const openingEvents = (await waitForMessages(socket1, 4)) as Array<{
+        eventName?: string;
+        payload?: {
+          seatNo?: number;
+          bringInSeatNo?: number;
+          nextToActSeatNo?: number | null;
+          user?: {
+            userId?: string;
+          };
+          isAuto?: boolean;
+        };
+      }>;
+
+      const seatNoByUserId = new Map<string, number>();
+      if (
+        joined1.eventName === TableEventName.SeatStateChangedEvent &&
+        joined1.payload?.seatNo &&
+        joined1.payload.user?.userId
+      ) {
+        seatNoByUserId.set(joined1.payload.user.userId, joined1.payload.seatNo);
+      }
+      for (const event of openingEvents) {
+        if (
+          event.eventName === TableEventName.SeatStateChangedEvent &&
+          event.payload?.seatNo &&
+          event.payload.user?.userId
+        ) {
+          seatNoByUserId.set(event.payload.user.userId, event.payload.seatNo);
+        }
+      }
+
+      const user1SeatNo = seatNoByUserId.get(TEST_USER.userId) ?? null;
+      const user2SeatNo = seatNoByUserId.get(user2.userId) ?? null;
+      expect(user1SeatNo).not.toBeNull();
+      expect(user2SeatNo).not.toBeNull();
+
+      const bringInSeatNo = openingEvents.find(
+        (event) => event.eventName === TableEventName.DealCards3rdEvent,
+      )?.payload?.bringInSeatNo;
+      expect(bringInSeatNo).not.toBeUndefined();
+      if (!user1SeatNo || !user2SeatNo || !bringInSeatNo) {
+        return;
+      }
+
+      const bringInSocket = bringInSeatNo === user1SeatNo ? socket1 : socket2;
+      bringInSocket.send(
+        JSON.stringify({
+          type: RealtimeTableCommandType.ACT,
+          requestId: "11111111-1111-4111-8111-111111111143",
+          sentAt: new Date().toISOString(),
+          payload: {
+            tableId,
+            action: TableCommandAction.BRING_IN,
+          },
+        }),
+      );
+
+      const bringInEvent = (await waitForMessage(socket1)) as {
+        eventName?: string;
+        payload?: {
+          nextToActSeatNo?: number | null;
+        };
+      };
+      expect(bringInEvent.eventName).toBe(TableEventName.BringInEvent);
+      const timeoutSeatNo = bringInEvent.payload?.nextToActSeatNo ?? null;
+      expect(timeoutSeatNo).not.toBeNull();
+      if (!timeoutSeatNo) {
+        return;
+      }
+
+      const timeoutSocket = timeoutSeatNo === user1SeatNo ? socket1 : socket2;
+      const observerSocket = timeoutSeatNo === user1SeatNo ? socket2 : socket1;
+
+      await waitFor(90);
+      timeoutSocket.terminate();
+      const observed = (await collectMessagesForDuration(
+        observerSocket,
+        100,
+      )) as Array<{
+        eventName?: string;
+        payload?: {
+          isAuto?: boolean;
+        };
+      }>;
+
+      const autoFoldEvent = observed.find(
+        (message) =>
+          message.eventName === TableEventName.FoldEvent &&
+          message.payload?.isAuto === true,
+      );
+      expect(autoFoldEvent).toBeDefined();
+    } finally {
+      socket1.terminate();
+      socket2.terminate();
+      await server.close();
     }
   });
 });
