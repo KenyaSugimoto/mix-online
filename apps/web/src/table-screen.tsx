@@ -185,7 +185,49 @@ const formatEventLogLabel = (
     return `Seat ${entry.seatNo}: ${entry.previousStatus} -> ${entry.currentStatus} (reason=${entry.reason}, appliesFrom=${entry.appliesFrom})`;
   }
 
-  return `Street: ${formatStreetLabel(entry.fromStreet)} -> ${formatStreetLabel(entry.toStreet)} (reason=${entry.reason})`;
+  if (entry.kind === "street_advance") {
+    return `Street: ${formatStreetLabel(entry.fromStreet)} -> ${formatStreetLabel(entry.toStreet)} (reason=${entry.reason})`;
+  }
+
+  return "";
+};
+
+type PlayerActionEntry = Extract<
+  TableStoreSnapshot["eventLogs"][number],
+  { kind: "player_action" }
+>;
+
+type ActionsByStreet = Map<string, PlayerActionEntry[]>;
+
+const STREET_ORDER = [
+  Street.THIRD,
+  Street.FOURTH,
+  Street.FIFTH,
+  Street.SIXTH,
+  Street.SEVENTH,
+] as const;
+
+const groupActionsByStreet = (
+  eventLogs: TableStoreSnapshot["eventLogs"],
+): ActionsByStreet => {
+  // DealInitEvent でリセットされるため、すべてのプレイヤーアクションは現在のハンドに属する
+  const playerActions = eventLogs.filter(
+    (entry): entry is PlayerActionEntry => entry.kind === "player_action",
+  );
+
+  const grouped = new Map<string, PlayerActionEntry[]>();
+
+  for (const action of playerActions) {
+    const street = action.street;
+
+    if (!grouped.has(street)) {
+      grouped.set(street, []);
+    }
+
+    grouped.get(street)?.push(action);
+  }
+
+  return grouped;
 };
 
 export const TableScreen = (props: {
@@ -196,6 +238,7 @@ export const TableScreen = (props: {
   const { tableId, currentUserId, onGoLobby } = props;
   const tableStoreRef = useRef<TableStore | null>(null);
   const tableStoreUnsubscribeRef = useRef<(() => void) | null>(null);
+  const actionHistoryRef = useRef<HTMLDivElement>(null);
   const [requestVersion, setRequestVersion] = useState(0);
   const [state, setState] = useState<TableScreenState>({
     status: LobbyStateStatus.LOADING,
@@ -405,6 +448,19 @@ export const TableScreen = (props: {
     [realtimeState.eventLogs],
   );
 
+  const actionsByStreet = useMemo(
+    () => groupActionsByStreet(realtimeState.eventLogs),
+    [realtimeState.eventLogs],
+  );
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally track eventLogs for auto-scroll
+  useEffect(() => {
+    if (actionHistoryRef.current) {
+      actionHistoryRef.current.scrollTop =
+        actionHistoryRef.current.scrollHeight;
+    }
+  }, [realtimeState.eventLogs]);
+
   const latestDeltaBySeatNo = useMemo(
     () =>
       Object.fromEntries(
@@ -549,36 +605,6 @@ export const TableScreen = (props: {
             className="surface inline-panel poker-stage-panel"
             aria-label="ゲームテーブル"
           >
-            <details className="event-log-flyout">
-              <summary>進行ログ</summary>
-              <div className="event-log-flyout-body">
-                {recentEventLogs.length === 0 ? (
-                  <p className="status-chip">ログ待機中です。</p>
-                ) : (
-                  <ol className="event-log-list" aria-label="イベントログ">
-                    {recentEventLogs.map((entry, index) => (
-                      <li
-                        key={`${entry.kind}-${entry.occurredAt}-${index}`}
-                        className="event-log-item"
-                      >
-                        <p className="event-log-main">
-                          {formatEventLogLabel(entry)}
-                        </p>
-                        <time
-                          className="event-log-time"
-                          dateTime={entry.occurredAt}
-                        >
-                          {new Date(entry.occurredAt).toLocaleTimeString(
-                            LocaleCode.JA_JP,
-                          )}
-                        </time>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-            </details>
-
             <div className="poker-stage-grid">
               <article className="table-center-core">
                 <p className="table-center-label">Main Pot</p>
@@ -743,29 +769,83 @@ export const TableScreen = (props: {
           </section>
 
           <section className="surface inline-panel table-side-card action-bottom-dock">
-            <h3>アクション</h3>
-            <p>
-              {controlState.actionInputEnabled
-                ? "手番中です。許可アクションのみ選択できます。"
-                : "手番外のためアクションは無効です。"}
-            </p>
-            {controlState.actionInputEnabled &&
-            tableActActionOptions.length > 0 ? (
-              <div className="action-dock-buttons">
-                {tableActActionOptions.map((action) => (
-                  <button
-                    key={action}
-                    className="primary-button action-dock-button"
-                    type="button"
-                    onClick={() => handleActionCommand(action)}
-                  >
-                    {action}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="status-chip">操作可能なアクションはありません。</p>
-            )}
+            <div className="action-dock-left">
+              <h3>アクション</h3>
+              <p>
+                {controlState.actionInputEnabled
+                  ? "手番中です。許可アクションのみ選択できます。"
+                  : "手番外のためアクションは無効です。"}
+              </p>
+              {controlState.actionInputEnabled &&
+              tableActActionOptions.length > 0 ? (
+                <div className="action-dock-buttons">
+                  {tableActActionOptions.map((action) => (
+                    <button
+                      key={action}
+                      className="primary-button action-dock-button"
+                      type="button"
+                      onClick={() => handleActionCommand(action)}
+                    >
+                      {action}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="status-chip">
+                  操作可能なアクションはありません。
+                </p>
+              )}
+            </div>
+
+            <div className="action-dock-right" ref={actionHistoryRef}>
+              <h3>進行ログ</h3>
+              {actionsByStreet.size === 0 ? (
+                <p className="status-chip">ログ待機中です。</p>
+              ) : (
+                <div
+                  className="action-history-list"
+                  aria-label="アクション履歴"
+                >
+                  {STREET_ORDER.filter((street) =>
+                    actionsByStreet.has(street),
+                  ).map((street) => {
+                    const actions = actionsByStreet.get(street) ?? [];
+                    return (
+                      <section
+                        key={street}
+                        className="action-history-street-group"
+                      >
+                        <h4 className="action-history-street-header">
+                          --- {formatStreetLabel(street)} Street ---
+                        </h4>
+                        <div className="action-history-actions">
+                          {actions.map(
+                            (action: PlayerActionEntry, index: number) => (
+                              <div
+                                key={`${action.seatNo}-${action.occurredAt}-${index}`}
+                                className="action-history-action-item"
+                              >
+                                <span className="action-history-seat">
+                                  Seat{action.seatNo}
+                                </span>
+                                <span className="action-history-action-label">
+                                  {formatActionLabel(action.action)}
+                                </span>
+                                {action.amount !== null ? (
+                                  <span className="action-history-amount">
+                                    {formatChipsToUsd(action.amount)}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </section>
         </div>
 

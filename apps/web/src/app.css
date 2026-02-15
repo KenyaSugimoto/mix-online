@@ -887,12 +887,42 @@ button {
 }
 
 .action-bottom-dock {
+  display: flex;
+  gap: 20px;
   border-color: rgb(216 193 138 / 46%);
 }
 
-.action-bottom-dock p {
+.action-dock-left {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-dock-left h3 {
+  margin: 0;
+}
+
+.action-dock-left p {
   margin: 0 0 8px;
   color: #deceaa;
+}
+
+.action-dock-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 150px;
+  overflow-y: auto;
+  border-left: 1px solid rgb(216 193 138 / 30%);
+  padding-left: 16px;
+  min-height: 0;
+}
+
+.action-dock-right h3 {
+  margin: 0;
+  color: #ece2c7;
 }
 
 .command-preview {
@@ -970,6 +1000,44 @@ button {
 .event-log-time {
   font-size: 0.72rem;
   color: #cdb98b;
+}
+
+.action-history-list {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-history-street-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.action-history-street-header {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ece2c7;
+  font-family: "Courier New", monospace;
+}
+
+.action-history-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: "Courier New", monospace;
+  font-size: 0.82rem;
+  color: #ece2c7;
+}
+
+.action-history-action-item {
+  display: grid;
+  grid-template-columns: 60px 120px 1fr;
+  gap: 12px;
+  align-items: center;
 }
 
 .join-modal-backdrop {

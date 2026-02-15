@@ -165,18 +165,18 @@ export const resolveTableActActionOptions = (params: {
 
     if (streetBetTo < smallBet) {
       return [
-        TableCommandAction.CALL,
         TableCommandAction.FOLD,
+        TableCommandAction.CALL,
         TableCommandAction.COMPLETE,
       ];
     }
     return canRaise
       ? [
-          TableCommandAction.CALL,
           TableCommandAction.FOLD,
+          TableCommandAction.CALL,
           TableCommandAction.RAISE,
         ]
-      : [TableCommandAction.CALL, TableCommandAction.FOLD];
+      : [TableCommandAction.FOLD, TableCommandAction.CALL];
   }
 
   if (streetBetTo === 0) {
@@ -185,11 +185,11 @@ export const resolveTableActActionOptions = (params: {
 
   return canRaise
     ? [
-        TableCommandAction.CALL,
         TableCommandAction.FOLD,
+        TableCommandAction.CALL,
         TableCommandAction.RAISE,
       ]
-    : [TableCommandAction.CALL, TableCommandAction.FOLD];
+    : [TableCommandAction.FOLD, TableCommandAction.CALL];
 };
 
 export const formatSeatStatusLabel = (status: SeatStatusType) => {
