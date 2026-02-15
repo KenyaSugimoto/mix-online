@@ -14,6 +14,7 @@ import { formatChipsToUsd } from "./auth-api";
 import { TableApiError, type TableDetail, getTableDetail } from "./table-api";
 import {
   type TableActActionOption,
+  formatSeatStatusLabel,
   resolveTableActActionOptions,
   resolveTableControlState,
 } from "./table-control";
@@ -646,6 +647,9 @@ export const TableScreen = (props: {
               {seats.map((seat) => {
                 const isEmptySeat = seat.status === SeatStatus.EMPTY;
                 const isToAct = toActSeatNo === seat.seatNo;
+                const isSeatSitOut =
+                  seat.status === SeatStatus.SIT_OUT ||
+                  seat.status === SeatStatus.LEAVE_PENDING;
                 const seatWinDelta = latestDeltaBySeatNo[seat.seatNo] ?? 0;
                 const isWinner = seatWinDelta > 0;
                 const seatCards = resolveSeatCards(
@@ -688,6 +692,11 @@ export const TableScreen = (props: {
                           {seat.displayName ?? "Unknown"}
                           {seat.isYou ? " (You)" : ""}
                         </p>
+                        {isSeatSitOut ? (
+                          <p className="seat-status-badge">
+                            {formatSeatStatusLabel(seat.status)}
+                          </p>
+                        ) : null}
                         <p className="seat-stack">
                           {formatChipsToUsd(seat.stack)}
                         </p>
@@ -813,7 +822,7 @@ export const TableScreen = (props: {
                     次ハンドで離席する
                   </label>
                   <p className="seat-reservation-note">
-                    現在ハンドの終了後に離席し、いつでも着席で復帰できます。
+                    現在ハンド終了後に離席します。予約解除はチェックを外してください。
                   </p>
                 </div>
               ) : null}

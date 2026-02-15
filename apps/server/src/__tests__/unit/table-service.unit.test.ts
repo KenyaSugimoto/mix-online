@@ -1925,6 +1925,96 @@ describe("RealtimeTableService 席管理", () => {
     expect(reconnectedEvent.payload.disconnectStreakResetTo).toBe(0);
   });
 
+  it("WAITING中に再接続で2人ACTIVEへ復帰した場合はハンドを自動再開する", async () => {
+    const service = createRealtimeTableService() as unknown as {
+      executeCommand: ReturnType<
+        typeof createRealtimeTableService
+      >["executeCommand"];
+      handleDisconnect: ReturnType<
+        typeof createRealtimeTableService
+      >["handleDisconnect"];
+      handleReconnect: ReturnType<
+        typeof createRealtimeTableService
+      >["handleReconnect"];
+      tables: Map<
+        string,
+        {
+          status: TableStatus;
+          currentHand: object | null;
+          pendingNextHandStart: boolean;
+        }
+      >;
+    };
+    const user1 = createUser(1);
+    const user2 = createUser(2);
+
+    const joined1 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user1,
+      occurredAt: NOW,
+    });
+    const joined2 = await service.executeCommand({
+      command: createCommand({
+        type: RealtimeTableCommandType.JOIN,
+        payload: { buyIn: 1000 },
+      }),
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(joined1.ok).toBe(true);
+    expect(joined2.ok).toBe(true);
+    if (!joined1.ok || !joined2.ok) {
+      return;
+    }
+
+    const disconnected = await service.handleDisconnect({
+      tableId: TABLE_ID,
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(disconnected.ok).toBe(true);
+    if (!disconnected.ok) {
+      return;
+    }
+
+    const table = service.tables.get(TABLE_ID);
+    if (!table) {
+      throw new Error("テーブル状態が見つかりません。");
+    }
+    table.status = TableStatus.WAITING;
+    table.currentHand = null;
+    table.pendingNextHandStart = false;
+
+    const reconnected = await service.handleReconnect({
+      tableId: TABLE_ID,
+      user: user2,
+      occurredAt: NOW,
+    });
+    expect(reconnected.ok).toBe(true);
+    if (!reconnected.ok) {
+      return;
+    }
+
+    expect(
+      reconnected.events.some(
+        (event) => event.eventName === TableEventName.PlayerReconnectedEvent,
+      ),
+    ).toBe(true);
+    expect(
+      reconnected.events.some(
+        (event) => event.eventName === TableEventName.DealInitEvent,
+      ),
+    ).toBe(true);
+    expect(
+      reconnected.events.some(
+        (event) => event.eventName === TableEventName.DealCards3rdEvent,
+      ),
+    ).toBe(true);
+  });
+
   it("タイムアウト自動アクションで isAuto=true の CheckEvent を発行する", async () => {
     const service = createRealtimeTableService() as unknown as {
       executeCommand: ReturnType<

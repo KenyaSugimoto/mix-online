@@ -702,6 +702,19 @@ button {
   color: #f7efda;
 }
 
+.seat-status-badge {
+  margin: 6px 0 0;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgb(89 222 146 / 70%);
+  background: rgb(20 78 52 / 60%);
+  color: #e3ffef;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
 .seat-stack {
   margin: 0;
   font-size: 0.82rem;
