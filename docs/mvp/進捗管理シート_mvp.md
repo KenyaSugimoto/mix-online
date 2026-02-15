@@ -1,6 +1,6 @@
 # Mix Stud Online 進捗管理シート（MVP）
 
-Version: v1.38  
+Version: v1.40  
 Last Updated: 2026-02-15  
 実装フロー: [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md)  
 要件: [`要件定義書_mvp.md`](./要件定義書_mvp.md)  
@@ -45,52 +45,26 @@ Last Updated: 2026-02-15
 
 | ID | Task | Priority | Status | Acceptance Criteria | Link |
 | --- | --- | --- | --- | --- | --- |
-| M5-00 | M4完了時点のリリース監査（できること/未対応の棚卸し） | P0 | DONE | 監査結果を進捗管理シートと実装推進ガイドへ反映済み | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
-| M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | DONE | `/api/auth/me` が固定ユーザー以外を返せる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-11 | Lobby/Table/History のMVP固定データ撤廃（DB Repositoryへ切替） | P0 | DONE | Supabase環境変数設定時に実データ返却、未設定時はMVP fallbackを維持 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/repository`](../../apps/server/src/repository), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-12 | ローカル統合プレイ確認（HTTP+WS接続経路固定、手動2ユーザー検証） | P0 | IN_PROGRESS | ローカルで2人1ハンド完了を再現し、確認ログを記録できる | [`apps/web/vite.config.ts`](../../apps/web/vite.config.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
-| M5-16 | Realtimeハンド進行成立（StreetAdvance/DealCard/Showdown/DealEnd 実装） | P0 | DONE | `table.act` 後に `toActSeatNo=null` でも遷移継続し、3rd〜終局（UNCONTESTED/SHOWDOWN）まで進行できる | [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
-| M5-17 | `table.act` 契約整合（PokerActionLogic準拠の合法アクション制御） | P0 | DONE | クライアント提示アクションとサーバー受理アクションが一致し、非合法操作をUIで抑止できる | [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`docs/mvp/PokerActionLogic.md`](./PokerActionLogic.md), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
-| M5-21 | テーブルアクションUI固定額化（amount入力撤去 + 許可アクションのみボタン表示） | P0 | DONE | Fixed Limit前提で `table.act` は action-only送信となり、局面で許可されたアクションのみボタン表示される | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
-| M5-18 | TableStore投影強化（DealCard/StreetAdvance/Showdown/DealEnd反映 + console追跡） | P1 | DONE | `table.event` と `table.snapshot` のカード系投影が破綻せず、進行ログ（reason/appliesFrom）を保持できる | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml) |
-| M5-19 | テーブルUI再設計（ゲームテーブル表示、カード可視化、操作導線改善） | P1 | DONE | PR1で契約/Store基盤、PR2で卓UI（レイアウト/カード描画/導線）を実装した | [`docs/mvp/plans/M5-19_table-ui-redesign_plan_2026-02-14.md`](./plans/M5-19_table-ui-redesign_plan_2026-02-14.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css) |
-| M5-22 | テーブルカード表示UI（配札カード可視化） | P1 | DONE | 3rd〜7thで配札済カードをUIに可視化し、手番追跡を画面上で行える | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
-| M5-13 | テーブルUIギャップ解消（`reason`/`appliesFrom` 表示、状態不整合検知ログ） | P1 | DONE | `reason`/`appliesFrom` を進行ログに反映し、画面上で遷移理由を追跡できる | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | M5-12 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Next
 
 | ID | Task | Priority | Status | Ready条件 | Link |
 | --- | --- | --- | --- | --- | --- |
-| M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | M5-10 完了 | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | DONE | M5-14 完了 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
 | M5-02 | 運用Runbook整備（デプロイ手順、ローリング更新、障害復旧） | P1 | NOT_STARTED | M5-01 完了 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) |
 
 ## Backlog
 
 | ID | Task | Priority | Status | 受け入れ観点（要約） | Link |
 | --- | --- | --- | --- | --- | --- |
-| M4-01 | Web認証導線（ログイン開始、callback後初期化、未認証ガード） | P0 | DONE | HP-01 のUI導線成立 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
-| M4-02 | ロビー画面実装（卓一覧表示、参加導線、空席/ゲーム種表示） | P0 | DONE | ロビー仕様表示項目を完全充足 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
-| M4-03 | テーブル画面実装（席状態別UI、手番タイマー、アクション入力） | P0 | DONE | 状態別UI制御と操作可否が仕様一致 | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
-| M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | DONE | 欠番検知→resume→再収束の動作確認 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
-| M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | DONE | HP-08 のUI要件を満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`openapi.yaml`](./openapi.yaml) |
-| M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | DONE | 主要シナリオを段階導入し回帰検知可能 | [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md), [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
 | M5-01 | 構造化ログ/メトリクス/アラート導入（Cloud Logging/Monitoring） | P1 | NOT_STARTED | 監視最小セットと閾値を運用可能化 | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-02 | 運用Runbook整備（デプロイ手順、ローリング更新、障害復旧） | P1 | NOT_STARTED | 第三者が復旧手順を再現できる | [`全体アーキテクチャ図_mvp.md`](./全体アーキテクチャ図_mvp.md) |
 | M5-03 | 非機能検証（レイテンシp95、5xx率、再接続品質） | P1 | NOT_STARTED | 非機能目標の測定結果が取得可能 | [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-16 | Realtimeハンド進行成立（StreetAdvance/DealCard/Showdown/DealEnd 実装） | P0 | DONE | 1ハンドが3rd〜終局まで停止せず進み、席/卓/履歴が整合する | [`apps/server/src/realtime/table-service`](../../apps/server/src/realtime/table-service), [`asyncapi.yaml`](./asyncapi.yaml), [`状態遷移図_mvp.md`](./状態遷移図_mvp.md) |
-| M5-17 | `table.act` 契約整合（PokerActionLogic準拠の合法アクション制御） | P0 | DONE | UI提示とサーバー受理のアクション差分を解消する | [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`docs/mvp/PokerActionLogic.md`](./PokerActionLogic.md), [`asyncapi.yaml`](./asyncapi.yaml) |
-| M5-18 | TableStore投影強化（DealCard/StreetAdvance/Showdown/DealEnd反映 + console追跡） | P1 | DONE | 主要Realtimeイベントで卓状態/手番/進行追跡（console）が破綻しない | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`asyncapi.yaml`](./asyncapi.yaml) |
-| M5-21 | テーブルアクションUI固定額化（amount入力撤去 + 許可アクションのみボタン表示） | P0 | DONE | Fixed Limit前提の操作導線として、許可アクションのみをボタン表示し誤操作を抑止できる | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
-| M5-22 | テーブルカード表示UI（配札カード可視化） | P1 | DONE | 3rd〜7thで配札済カードをUIに可視化し、手番追跡を画面上で行える | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
-| M5-19 | テーブルUI再設計（ゲームテーブル表示、カード可視化、操作導線改善） | P1 | DONE | 画面設計書の卓UI要件（座席/カード/操作導線）を満たす | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css) |
 | M5-20 | Realtime契約/E2E強化（HP-04/HP-06/HP-10の自動化） | P1 | NOT_STARTED | 手動検証依存を減らし、進行停止回帰をCIで検知できる | [`apps/server/src/__tests__/e2e`](../../apps/server/src/__tests__/e2e), [`apps/server/src/__tests__/integration/ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
-| M5-23 | ハンド終了後のリビール待機フェーズ追加（次ハンド開始ディレイ） | P1 | DONE | 7th完了時/途中終局時ともに、`DealEndEvent` 直後はカード表示を保持し、数秒後に次ハンド開始へ遷移する | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
-| M5-24 | 手番持ち時間表示の同期不具合修正（秒数/バー） | P1 | DONE | 現在手番者の残り秒数とバーが実時間で正しく減少し、手番交代時に初期化される | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
+| M5-27 | ショーダウン役表示の追加（Muckしなかったプレイヤーの役を表示） | P1 | NOT_STARTED | Showdown時に公開対象プレイヤーの役名をUI表示し、Muckしたプレイヤーの役は表示しない | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`docs/mvp/asyncapi.yaml`](./asyncapi.yaml), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-25 | 配札ランダム性の不具合修正（スート偏り/固定配札の解消） | P0 | NOT_STARTED | 通常対局で毎回同一カード列にならず、4スートを含むランダム配札が行われる | [`apps/server/src/realtime/table-service/gameplay.ts`](../../apps/server/src/realtime/table-service/gameplay.ts), [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
-| M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | ユーザーが任意の表示名へ変更できる | [`openapi.yaml`](./openapi.yaml), [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
-| M5-15 | 表示名変更UI追加（プロフィール編集導線） | P1 | DONE | 表示名変更を画面から完結できる | [`画面設計書_mvp.md`](./画面設計書_mvp.md), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx) |
+| M5-26 | Realtime進行ロジックの回帰耐性強化（高リスク経路のシナリオ追加） | P1 | NOT_STARTED | Street遷移・手番・ショーダウン境界の回帰をCIで継続検知できる | [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/server/src/__tests__/integration/ws-contract.integration.test.ts`](../../apps/server/src/__tests__/integration/ws-contract.integration.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
 | DEC-01 | 未決事項の合意（プレイヤー名変更、最低バイイン、オッドチップ詳細） | P1 | NOT_STARTED | 仕様合意をADR化し関連仕様へ反映 | [`要件定義書_mvp.md`](./要件定義書_mvp.md), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 
 ## Done
@@ -128,6 +102,7 @@ Last Updated: 2026-02-15
 | M4-04 | クライアント `TableStore` 実装（`tableSeq` 欠番検知、resume再同期） | P0 | DONE | 2026-02-13 | [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md), [`asyncapi.yaml`](./asyncapi.yaml) |
 | M4-05 | 履歴画面実装（一覧/詳細、ページング、損益表示） | P1 | DONE | 2026-02-14 | [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`apps/web/src/routes.ts`](../../apps/web/src/routes.ts), [`apps/web/src/history-api.ts`](../../apps/web/src/history-api.ts), [`apps/web/src/history-api.test.ts`](../../apps/web/src/history-api.test.ts), [`apps/web/src/history-screen.tsx`](../../apps/web/src/history-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`openapi.yaml`](./openapi.yaml) |
 | M4-06 | E2E導入（HP -> NG -> ED の順でCI組み込み） | P0 | DONE | 2026-02-14 | [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), [`apps/server/src/__tests__/e2e/hp.e2e.test.ts`](../../apps/server/src/__tests__/e2e/hp.e2e.test.ts), [`apps/server/src/__tests__/e2e/ng.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ng.e2e.test.ts), [`apps/server/src/__tests__/e2e/ed.e2e.test.ts`](../../apps/server/src/__tests__/e2e/ed.e2e.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-00 | M4完了時点のリリース監査（できること/未対応の棚卸し） | P0 | DONE | 2026-02-14 | [`進捗管理シート_mvp.md`](./進捗管理シート_mvp.md), [`実装推進ガイド_mvp.md`](./実装推進ガイド_mvp.md) |
 | M5-10 | 認証の実ユーザー連携（Google code exchange + user永続化） | P0 | DONE | 2026-02-14 | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/google-oauth-client.ts`](../../apps/server/src/google-oauth-client.ts), [`apps/server/src/repository/auth/index.ts`](../../apps/server/src/repository/auth/index.ts), [`apps/server/src/__tests__/integration/http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-11 | Lobby/Table/History のMVP固定データ撤廃（DB Repositoryへ切替） | P0 | DONE | 2026-02-14 | [`apps/server/src/repository/lobby/supabase.ts`](../../apps/server/src/repository/lobby/supabase.ts), [`apps/server/src/repository/table-detail/supabase.ts`](../../apps/server/src/repository/table-detail/supabase.ts), [`apps/server/src/repository/history/supabase.ts`](../../apps/server/src/repository/history/supabase.ts), [`apps/server/src/realtime/server.ts`](../../apps/server/src/realtime/server.ts), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
 | M5-16 | Realtimeハンド進行成立（StreetAdvance/DealCard/Showdown/DealEnd 実装） | P0 | DONE | 2026-02-14 | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service/act-command.ts`](../../apps/server/src/realtime/table-service/act-command.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`packages/shared/src/index.ts`](../../packages/shared/src/index.ts) |
@@ -136,6 +111,7 @@ Last Updated: 2026-02-15
 | M5-21 | テーブルアクションUI固定額化（amount入力撤去 + 許可アクションのみボタン表示） | P0 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-control.ts`](../../apps/web/src/table-control.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-22 | テーブルカード表示UI（配札カード可視化） | P1 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-23 | ハンド終了後のリビール待機フェーズ追加（次ハンド開始ディレイ） | P1 | DONE | 2026-02-15 | [`apps/server/src/realtime/table-service/hand.ts`](../../apps/server/src/realtime/table-service/hand.ts), [`apps/server/src/realtime/table-service.ts`](../../apps/server/src/realtime/table-service.ts), [`apps/server/src/realtime/ws-gateway.ts`](../../apps/server/src/realtime/ws-gateway.ts), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`apps/server/src/__tests__/unit/table-service.unit.test.ts`](../../apps/server/src/__tests__/unit/table-service.unit.test.ts), [`apps/web/src/table-store.test.ts`](../../apps/web/src/table-store.test.ts), [`E2Eシナリオ集_mvp.md`](./E2Eシナリオ集_mvp.md) |
+| M5-24 | 手番持ち時間表示の同期不具合修正（秒数/バー） | P1 | DONE | 2026-02-15 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/table-store.ts`](../../apps/web/src/table-store.ts), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-13 | テーブルUIギャップ解消（`reason`/`appliesFrom` 表示、状態不整合検知ログ） | P1 | DONE | 2026-02-14 | [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-19 | テーブルUI再設計（ゲームテーブル表示、カード可視化、操作導線改善） | P1 | DONE | 2026-02-14 | [`docs/mvp/plans/M5-19_table-ui-redesign_plan_2026-02-14.md`](./plans/M5-19_table-ui-redesign_plan_2026-02-14.md), [`apps/web/src/table-screen.tsx`](../../apps/web/src/table-screen.tsx), [`apps/web/src/app.css`](../../apps/web/src/app.css), [`apps/web/src/App.tsx`](../../apps/web/src/App.tsx), [`画面設計書_mvp.md`](./画面設計書_mvp.md) |
 | M5-14 | 表示名変更API追加（`PATCH /api/auth/me/display-name`） | P1 | DONE | 2026-02-14 | [`apps/server/src/app.ts`](../../apps/server/src/app.ts), [`apps/server/src/repository/auth/contract.ts`](../../apps/server/src/repository/auth/contract.ts), [`apps/server/src/repository/auth/in-memory.ts`](../../apps/server/src/repository/auth/in-memory.ts), [`apps/server/src/repository/auth/supabase.ts`](../../apps/server/src/repository/auth/supabase.ts), [`apps/server/src/__tests__/integration/http-api.integration.test.ts`](../../apps/server/src/__tests__/integration/http-api.integration.test.ts), [`docs/mvp/openapi.yaml`](./openapi.yaml), [`詳細設計書_mvp.md`](./詳細設計書_mvp.md) |
@@ -171,7 +147,7 @@ Last Updated: 2026-02-15
 | 2026-02-14 | Lobby/Table/History がMVP固定データ依存で本番データ経路を検証できない | 高 | `M5-11` でSupabase Repositoryへ切替。環境変数未設定時のみMVP fallbackを許容 | CLOSED |
 | 2026-02-14 | Webクライアントの `/ws` 接続経路がローカル起動構成と不整合になる可能性 | 中 | `M5-12` でVite proxyに `/ws` を追加して経路を固定。残件は2ユーザー手動試験の記録化 | IN_PROGRESS |
 | 2026-02-14 | 画面設計書のUIログ要件（`reason`/`appliesFrom`保持）が未充足 | 中 | `M5-13` でUI反映 + 画面仕様テストケースを追加 | CLOSED |
-| 2026-02-11 | テーブル進行ロジックの複雑化で回帰が起きやすい | 高 | GameRule単体テストを先行整備 | OPEN |
+| 2026-02-11 | テーブル進行ロジックの複雑化で回帰が起きやすい | 高 | `M5-26`（進行ロジック回帰耐性強化）をBacklog追加し、Street遷移・手番・Showdown境界の高リスク経路をテスト拡張する | OPEN |
 
 ---
 
